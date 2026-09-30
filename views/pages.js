@@ -51,7 +51,6 @@ function landing({ elections, demo, counts }) {
     <div class="hero-actions">
       <a class="btn primary lg" href="/register">${icon('lotus', 20)} ابدأ التحقق والتصويت</a>
       <a class="btn ghost lg" href="/results">${icon('eye', 20)} شاهد النتائج</a>
-      <a class="btn ghost lg" href="/admin" style="border-color:rgba(212,168,75,0.6)">${icon('lock', 20)} دخول لوحة الأدمن</a>
     </div>
     <ul class="hero-stats">
       <li><b>${counts.elections}</b><span>انتخابات على المنصة</span></li>
@@ -209,64 +208,63 @@ ${devHint}
 /* ------------------------------------------------------------------ التحقق */
 function verifyPage({ voter, election, demo, rollCard }) {
   const cardImg = (rollCard && rollCard.card_image) || '/cards/31005292501518.jpg';
+  const faceImg = (rollCard && rollCard.face_image) || cardImg;
   const hasStoredCard = !!(rollCard && rollCard.card_image);
   return `
 <section class="page-head">
-  <h1>مطابقة الوجه بالبطاقة المسجّلة</h1>
+  <h1>التحقق البيومتري من الوجه الحي</h1>
   <p class="muted">مرحبًا <b>${esc(voter.full_name)}</b> — الرقم القومي <span class="mono">${esc(voter.national_id_masked)}</span>${election ? ` · ${esc(election.title)}` : ''}</p>
 </section>
 
 <div id="verify-app" class="verify-app card" data-demo="${demo ? '1' : '0'}" data-has-db-card="1">
   <canvas id="canvas" hidden></canvas>
+  <img id="db-face-ref" src="${esc(faceImg)}" crossorigin="anonymous" alt="" hidden>
 
-  <div class="v-step" data-step="intro">
-    <div class="result-head ok" style="margin-bottom:16px">
-      ${icon('check', 24)}
-      <div>
-        <h2 style="margin:0">تمت مطابقة بياناتك مع البطاقة المسجّلة في قاعدة البيانات ✓</h2>
-        <p class="muted" style="margin:4px 0 0">مش محتاج تصوّر أو ترفع بطاقتك — البطاقة المعتمدة مسجّلة عندنا، والخطوة الجاية هي مطابقة وجهك الحي بصورة البطاقة.</p>
+  <div class="v-step" data-step="selfie">
+    <div class="verify-grid">
+      <!-- العمود الأيمن: البطاقة المسجّلة في قاعدة البيانات -->
+      <div class="db-card-box">
+        <div class="cam-status-pill live" style="margin-bottom:10px">
+          ${icon('check', 16)} تمت مطابقة البيانات مع قاعدة البيانات
+        </div>
+        <h3 style="margin-bottom:6px">بطاقتك المسجّلة لدينا</h3>
+        <p class="muted small" style="margin-bottom:12px">سيتم مطابقة ملامح وجهك الحقيقي مع صورة الوجه المسجّلة في هذه البطاقة بالذكاء الاصطناعي.</p>
+        ${hasStoredCard ? `<img id="db-card-img" src="${esc(cardImg)}" crossorigin="anonymous" alt="بطاقة الرقم القومي المسجّلة">` : `<div class="notice ok">بيانات البطاقة موثّقة في السجل</div>`}
       </div>
-    </div>
 
-    ${hasStoredCard ? `
-    <div class="card" style="background:rgba(212,168,75,0.06);border:1px solid rgba(212,168,75,0.28);margin-bottom:18px;text-align:center">
-      <p class="muted small" style="margin-bottom:10px">${icon('scarab', 16)} <b>بطاقة الرقم القومي المعتمدة في قاعدة البيانات:</b></p>
-      <img src="${esc(cardImg)}" alt="بطاقة الرقم القومي المسجّلة" style="max-width:520px;width:100%;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,0.25)">
-    </div>` : ''}
+      <!-- العمود الأيسر: الكاميرا الحية ومطابقة الوجه -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <h2 style="margin:0">${icon('camera', 22)} كاميرا التحقق من الوجه</h2>
+          <span class="cam-status-pill" id="cam-status">اضغط «تشغيل الكاميرا» أو ارفع صورة</span>
+        </div>
+        <p class="muted small" style="margin:6px 0 8px">ضع وجهك في منتصف الدائرة والتقط صورة واضحة (أو ارفع صورة لوجهك):</p>
+        <ol class="challenge-list" id="challenge-list"></ol>
 
-    <ul class="ticks">
-      <li>تم التحقق من الاسم والرقم القومي وتاريخ الميلاد والمحافظة مقابل سجل البطاقات.</li>
-      <li>دلوقتي هنفتح الكاميرا الأمامية عشان نطابق وجهك الحقيقي بالوجه المسجّل في البطاقة.</li>
-      <li>شيل الكاب والكمامة والنظارة الشمسية ونفّذ حركات التحقق أمام الكاميرا.</li>
-    </ul>
-    <div class="row" style="margin-top:14px">
-      <button class="btn primary lg" id="btn-start-camera">${icon('camera', 20)} تشغيل الكاميرا ومطابقة الوجه الحي</button>
-      <button class="btn ghost lg" type="button" id="btn-intro-upload">${icon('ankh', 18)} رفع صورة للوجه (للتجربة بدون كاميرا)</button>
-      <input type="file" id="selfie-file" accept="image/*" hidden>
-    </div>
-    <p class="form-error" id="verify-error" role="alert" hidden></p>
-  </div>
+        <div class="camera-frame selfie">
+          <video id="video-selfie" playsinline autoplay muted></video>
+          <div class="frame-guide face-guide"><span>ضع وجهك داخل الإطار</span></div>
+          <div class="liveness-meter"><span id="liveness-bar"></span></div>
+        </div>
 
-  <div class="v-step" data-step="selfie" hidden>
-    <h2>التحقق من الوجه الحي ومطابقته ببطاقتك المسجّلة</h2>
-    <p class="muted">حُطّ وشك وسط الإطار، ونفّذ الحركات دي بالترتيب (أو ارفع صورة للوجه للتجربة):</p>
-    <ol class="challenge-list" id="challenge-list"></ol>
-    <div class="camera-frame selfie">
-      <video id="video-selfie" playsinline muted></video>
-      <div class="frame-guide face-guide"><span>ضع وجهك هنا</span></div>
-      <div class="frame-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div class="liveness-meter"><span id="liveness-bar"></span></div>
-    </div>
-    <div class="row">
-      <button class="btn primary" id="btn-capture-selfie">${icon('check', 18)} التقط السيلفي وطابق بالبطاقة</button>
-      <button class="btn ghost" type="button" id="btn-use-selfie-file">${icon('ankh', 18)} رفع صورة للوجه</button>
-      <button class="btn ghost" id="btn-selfie-restart">إعادة التحدي</button>
-    </div>
-    <div class="captured" id="selfie-preview" hidden>
-      <img id="selfie-img" alt="صورة السيلفي">
-      <div class="captured-actions">
-        <button class="btn primary lg" id="btn-selfie-ok">الصورة واضحة — مطابقة الوجه بالبطاقة المسجّلة</button>
-        <button class="btn ghost" id="btn-selfie-retake">إعادة</button>
+        <div class="row" style="justify-content:center;margin-top:10px">
+          <button class="btn primary" type="button" id="btn-start-camera">${icon('camera', 18)} تشغيل الكاميرا</button>
+          <button class="btn ok" type="button" id="btn-capture-selfie">${icon('check', 18)} التقاط السيلفي</button>
+          <button class="btn ghost" type="button" id="btn-use-selfie-file">${icon('scarab', 18)} رفع صورة للوجه</button>
+          <button class="btn ghost small" type="button" id="btn-switch-cam">تبديل الكاميرا</button>
+          <input type="file" id="selfie-file" accept="image/*" hidden>
+        </div>
+
+        <p class="form-error" id="verify-error" role="alert" hidden></p>
+
+        <div class="captured" id="selfie-preview" hidden>
+          <p class="small" style="font-weight:700;margin-bottom:8px">الصورة الملتقطة للمطابقة:</p>
+          <img id="selfie-img" alt="صورة السيلفي">
+          <div class="captured-actions">
+            <button class="btn primary lg" type="button" id="btn-selfie-ok">${icon('check', 18)} مطابقة الوجه بالبطاقة المسجّلة الآن</button>
+            <button class="btn ghost" type="button" id="btn-selfie-retake">إعادة الالتقاط</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -274,12 +272,13 @@ function verifyPage({ voter, election, demo, rollCard }) {
   <div class="v-step" data-step="processing" hidden>
     <div class="processing">
       <div class="spinner"></div>
-      <h2>جاري مطابقة الوجه مع البطاقة المسجّلة…</h2>
+      <h2 id="processing-title">جاري تحليل ملامح الوجه بالذكاء الاصطناعي…</h2>
+      <p class="muted small">يتم استخراج ١٢٨ نقطة بيومترية من الوجه ومقارنتها بصورة البطاقة المسجّلة في قاعدة البيانات</p>
       <ul class="progress-list" id="progress-list">
         <li data-k="card">استرجاع البطاقة المعتمدة من قاعدة البيانات</li>
-        <li data-k="live">كشف الحياة (مقاومة الصور والفيديوهات)</li>
-        <li data-k="face">مطابقة ملامح الوجه مع صورة البطاقة</li>
-        <li data-k="decision">القرار النهائي وإصدار رمز الاقتراع</li>
+        <li data-k="live">فحص وجود وجه بشري حقيقي وواضح</li>
+        <li data-k="face">مطابقة البصمة العصبية للوجه (128-D) مع البطاقة</li>
+        <li data-k="decision">إصدار القرار النهائي ورمز الاقتراع</li>
       </ul>
     </div>
   </div>
@@ -289,7 +288,7 @@ function verifyPage({ voter, election, demo, rollCard }) {
   </div>
 </div>
 
-<p class="muted small">الحماية: جلسة موقّعة، حد أدنى لعدد الإطارات، كشف إعادة استخدام نفس الصورة، وحدّ أقصى لعدد المحاولات لكل جهاز.</p>`;
+<p class="muted small">خصوصيتك محمية: تُستخدم صورة السيلفي للتحقق اللحظي من تطابق الوجه مع البطاقة المسجّلة فقط، ولا تُربط ورقة الاقتراع بهويتك.</p>`;
 }
 
 /* ------------------------------------------------------------------ الاقتراع */

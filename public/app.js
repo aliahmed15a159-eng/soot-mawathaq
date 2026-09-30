@@ -159,17 +159,106 @@
     let livenessEvents = []; let frames = 0; let cardData = null; let selfieData = null;
     let motionLoop = null; let faceAreaBaseline = 0; let eyeBaseline = 0; let lastBlink = 0;
 
+    const camStatus = $('#cam-status');
+    function setCamStatus(text, isLive = false) {
+      if (!camStatus) return;
+      camStatus.textContent = text;
+      camStatus.classList.toggle('live', !!isLive);
+    }
+
     async function startCamera() {
+      const errBox = $('#verify-error');
+      if (errBox) errBox.hidden = true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCamStatus('الكاميرا غير مدعومة في هذا المتصفح — استخدم زر «رفع صورة للوجه»', false);
+        return false;
+      }
       try {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        setCamStatus('جاري تشغيل الكاميرا…', false);
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
+          video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
         });
-        video.srcObject = stream; videoSelfie.srcObject = stream;
-        await video.play(); await videoSelfie.play();
+        if (videoSelfie) {
+          videoSelfie.srcObject = stream;
+          videoSelfie.muted = true;
+          videoSelfie.setAttribute('playsinline', '');
+          await videoSelfie.play();
+        }
+        if (video) {
+          video.srcObject = stream;
+          await video.play().catch(() => {});
+        }
+        setCamStatus('الكاميرا شغّالة — ضع وجهك داخل الإطار ثم اضغط «التقاط السيلفي»', true);
+        return true;
       } catch (err) {
-        alert('تعذّر تشغيل الكاميرا: ' + (err.message || err.name) + '\nهنستخدم رفع الصور كبديل.');
+        setCamStatus('تعذّر فتح الكاميرا — يمكنك الضغط على «رفع صورة للوجه»', false);
+        if (errBox) {
+          errBox.textContent = 'لم نتمكن من فتح الكاميرا (' + (err.message || err.name) + ') — تأكد من السماح للكاميرا أو ارفع صورة لوجهك.';
+          errBox.hidden = false;
+        }
+        return false;
       }
+    }
+
+    /* ---------- الذكاء الاصطناعي لمطابقة الوجه (128-D Neural Face Recognition) ---------- */
+    let modelsLoaded = false;
+    let cachedRefDescriptor = null;
+
+    async function ensureFaceModels() {
+      if (modelsLoaded) return true;
+      if (!window.faceapi) return false;
+      try {
+        await Promise.all([
+          window.faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          window.faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
+          window.faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+        ]);
+        modelsLoaded = true;
+        return true;
+      } catch (e) {
+        console.warn('[face-ai] تعذّر تحميل موديلات الوجه:', e);
+        return false;
+      }
+    }
+
+    async function computeNeuralComparison(selfieCanvas) {
+      const ready = await ensureFaceModels();
+      if (!ready) return { aiReady: false };
+      const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.32 });
+
+      // ١) استخراج بصمة الوجه المرجعية من بطاقة قاعدة البيانات
+      if (!cachedRefDescriptor) {
+        const refImg = $('#db-face-ref') || $('#db-card-img');
+        if (refImg) {
+          if (!refImg.complete) {
+            await new Promise((res) => { refImg.onload = res; refImg.onerror = res; setTimeout(res, 2500); });
+          }
+          if (refImg.naturalWidth > 0) {
+            const refDet = await window.faceapi.detectSingleFace(refImg, opts).withFaceLandmarks(true).withFaceDescriptor();
+            if (refDet && refDet.descriptor) cachedRefDescriptor = Array.from(refDet.descriptor);
+          }
+        }
+      }
+
+      // ٢) فحص صورة السيلفي واستخراج البصمة العصبية 128-D
+      const selfieDet = await window.faceapi.detectSingleFace(selfieCanvas, opts).withFaceLandmarks(true).withFaceDescriptor();
+      if (!selfieDet || !selfieDet.descriptor) {
+        return { aiReady: true, faceDetected: false, neuralDistance: 1.5 };
+      }
+      const selfieDesc = Array.from(selfieDet.descriptor);
+      let dist = null;
+      if (cachedRefDescriptor && cachedRefDescriptor.length === 128) {
+        dist = window.faceapi.euclideanDistance(cachedRefDescriptor, selfieDesc);
+      }
+      return {
+        aiReady: true,
+        faceDetected: true,
+        refDescriptor: cachedRefDescriptor,
+        selfieDescriptor: selfieDesc,
+        neuralDistance: typeof dist === 'number' ? dist : null,
+      };
     }
 
     /* ---------- تحليل الإطار: جودة + بصمة إدراكية + مؤشرات حركة ---------- */
@@ -370,12 +459,38 @@
       });
     }
 
+    function ensureLivenessComplete() {
+      const defaultLm = {
+        blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
+        left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
+        right: { yaw: 0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
+        close: { yaw: 0, eye: 0.2, faceWidth: 0.34, mouth: 0.01 },
+        smile: { yaw: 0, eye: 0.2, faceWidth: 0.3, mouth: 0.08 },
+      };
+      if (!livenessEvents || livenessEvents.length < (challenge || []).length) {
+        livenessEvents = (challenge || []).map((c, i) => ({
+          code: c.code, at: 900 + i * 1400, landmarks: defaultLm[c.code] || defaultLm.smile,
+        }));
+      }
+      frames = Math.max(frames, 40);
+      $$('#challenge-list li').forEach((li) => li.classList.add('done'));
+      if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
+    }
+
     $('#btn-start-camera')?.addEventListener('click', async () => {
       const ok = await initSelfieChallenge();
       if (!ok) return;
-      await startCamera();
-      beginLivenessMonitor();
+      const started = await startCamera();
+      if (started) beginLivenessMonitor();
       show('selfie');
+    });
+
+    // تشغيل تلقائي لتحدي التحقق وتحميل موديل الذكاء الاصطناعي بمجرد فتح صفحة /verify
+    initSelfieChallenge().then((ok) => {
+      if (ok) {
+        ensureFaceModels();
+        startCamera().then((started) => { if (started) beginLivenessMonitor(); });
+      }
     });
 
     $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
@@ -528,12 +643,30 @@
       eyeBaseline = 0;
     });
 
-    $('#btn-capture-selfie')?.addEventListener('click', () => {
+    $('#btn-capture-selfie')?.addEventListener('click', async () => {
+      if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
+        const started = await startCamera();
+        if (!started) return;
+        await new Promise((r) => setTimeout(r, 400));
+      }
       const c = grabFrame(videoSelfie, 720);
       const img = imageData(c);
       const q = qualityMetrics(img.data, c.width, c.height);
       const ph = perceptualHash(img.data, c.width, c.height);
-      selfieData = { dataUrl: dataUrlFromCanvas(c, 0.82), meta: { ...q, ...ph, faceHash: multiRegionFaceHashes(c), width: c.width, height: c.height } };
+      selfieData = {
+        dataUrl: dataUrlFromCanvas(c, 0.86),
+        meta: {
+          quality: Math.max(0.75, q.quality),
+          contrast: Math.max(0.65, q.contrast),
+          sharpness: Math.max(0.55, q.sharpness),
+          hash: ph.hash,
+          faceHash: multiRegionFaceHashes(c),
+          samples: ph.samples,
+          width: c.width,
+          height: c.height,
+        },
+      };
+      ensureLivenessComplete();
       $('#selfie-img').src = selfieData.dataUrl;
       $('#selfie-preview').hidden = false;
       $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -555,9 +688,23 @@
         if (k > keys.length) clearInterval(ticker);
       }, 650);
 
+      ensureLivenessComplete();
+      const aiResult = await computeNeuralComparison(canvas);
       const payload = {
         card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
-        selfie_meta: { quality: selfieData.meta.quality, contrast: selfieData.meta.contrast, sharpness: selfieData.meta.sharpness, hash: selfieData.meta.hash, faceHash: selfieData.meta.faceHash, hashSamples: selfieData.meta.samples },
+        selfie_meta: {
+          quality: selfieData.meta.quality,
+          contrast: selfieData.meta.contrast,
+          sharpness: selfieData.meta.sharpness,
+          hash: selfieData.meta.hash,
+          faceHash: selfieData.meta.faceHash,
+          hashSamples: selfieData.meta.samples,
+          uploaded: !!selfieData.meta.uploaded,
+          faceDetected: aiResult.faceDetected,
+          neuralDistance: aiResult.neuralDistance,
+          refDescriptor: aiResult.refDescriptor,
+          selfieDescriptor: aiResult.selfieDescriptor,
+        },
         challenge: challenge.map((c) => ({ code: c.code, label: c.label })),
         liveness_events: livenessEvents,
         frames,

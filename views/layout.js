@@ -1,97 +1,90 @@
 'use strict';
-/** هيكل الصفحات + مكتبة الرموز المصرية (لوتس، عنخ، جعران، عين حورس، قرص الشمس المجنّح) */
+/**
+ * القالب العصري الموحّد لمنصة «صوت موثّق»
+ * تصميم حديث ونظيف (Modern Digital Identity & Voting UI) — بدون أي إشارات فرعونية، وبدون إظهار رابط الإدارة للجمهور.
+ */
 
-function esc(value) {
-  return String(value === undefined || value === null ? '' : value)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-/* مكتبة الرموز — تُحقن مرة واحدة في كل صفحة */
-const ICON_DEFS = `
-<svg style="display:none" aria-hidden="true">
-  <symbol id="i-lotus" viewBox="0 0 64 64">
-    <g fill="currentColor">
-      <path d="M32 6c5 7 7.5 14 7.5 21S36 41 32 47c-4-6-7.5-13-7.5-20S27 13 32 6z"/>
-      <path d="M32 47c-8-4-16-3.5-23 2 3-10 10-15 23-13 13-2 20 3 23 13-7-5.5-15-6-23-2z"/>
-    </g>
+const ICON_DEFS = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <!-- درع موثّق (بديل عصري) -->
+  <symbol id="i-ankh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <path d="m9 12 2 2 4-4"/>
   </symbol>
-  <symbol id="i-ankh" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round">
-      <path d="M32 58c-2-14-2-24 0-32"/><path d="M18 30h28"/>
-      <ellipse cx="32" cy="17" rx="9.5" ry="11.5"/>
-    </g>
+  <!-- شارة تحقق (بديل اللوتس) -->
+  <symbol id="i-lotus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>
+    <path d="m9 12 2 2 4-4"/>
   </symbol>
-  <symbol id="i-scarab" viewBox="0 0 64 64">
-    <ellipse cx="32" cy="35" rx="12.5" ry="16" fill="currentColor"/>
-    <circle cx="32" cy="15" r="6.5" fill="currentColor"/>
-    <g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
-      <path d="M32 12v-5M25 9l-6-5M39 9l6-5M19 28l-9-4M45 28l9-4M19 41l-9 4M45 41l9 4M24 51l-6 7M40 51l6 7"/>
-    </g>
+  <!-- بطاقة هوية رقمية (بديل الجعران) -->
+  <symbol id="i-scarab" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="20" height="14" x="2" y="5" rx="2"/>
+    <circle cx="8" cy="12" r="2"/>
+    <path d="M14 10h4"/><path d="M14 14h4"/>
   </symbol>
-  <symbol id="i-horus" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round">
-      <path d="M8 28c6-8 15-12 26-12 9 0 16 3 22 9-4 8-12 13-22 13-11 0-20-3-26-10z"/>
-      <circle cx="26" cy="27" r="5.4"/>
-      <path d="M22 40l-4 14c6-2 10-6 12-12M34 41l9 11c1-7-1-12-5-15"/>
-    </g>
+  <!-- بصمة ذكية (بديل حورس) -->
+  <symbol id="i-horus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+    <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
+    <path d="M2 12a10 10 0 0 1 18-6"/>
+    <path d="M2 16h.01"/>
+    <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+    <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
+    <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
+    <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
   </symbol>
-  <symbol id="i-eye" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="4">
-      <path d="M6 32c8-11 18-16 26-16s18 5 26 16c-8 11-18 16-26 16S14 43 6 32z"/>
-    </g>
-    <circle cx="32" cy="32" r="7.5" fill="currentColor"/>
+  <!-- عين/النتائج -->
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+    <circle cx="12" cy="12" r="3"/>
   </symbol>
-  <symbol id="i-wing" viewBox="0 0 240 40">
-    <g fill="currentColor">
-      <circle cx="120" cy="20" r="11"/>
-      <path d="M104 16c-18-3-34 0-48 9 16-2 30 0 42 6-14 0-26 4-36 12 16-4 30-4 42-1z"/>
-      <path d="M136 16c18-3 34 0 48 9-16-2-30 0-42 6 14 0 26 4 36 12-16-4-30-4-42-1z"/>
-    </g>
+  <!-- كاميرا -->
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+    <circle cx="12" cy="13" r="3"/>
   </symbol>
-  <symbol id="i-camera" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round">
-      <rect x="6" y="18" width="52" height="34" rx="7"/>
-      <circle cx="32" cy="35" r="11"/>
-      <path d="M22 18l5-8h10l5 8"/>
-    </g>
+  <!-- صح -->
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 6 9 17l-5-5"/>
   </symbol>
-  <symbol id="i-check" viewBox="0 0 64 64">
-    <path d="M10 34l14 14L54 16" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- تنبيه -->
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" x2="12" y1="8" y2="12"/>
+    <line x1="12" x2="12.01" y1="16" y2="16"/>
   </symbol>
-  <symbol id="i-warn" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M32 8l26 46H6z"/><path d="M32 25v15M32 46v1.5"/>
-    </g>
-  </symbol>
-  <symbol id="i-lock" viewBox="0 0 64 64">
-    <g fill="none" stroke="currentColor" stroke-width="4.6" stroke-linecap="round">
-      <rect x="12" y="28" width="40" height="28" rx="6"/>
-      <path d="M22 28v-8a10 10 0 0120 0v8"/>
-    </g>
+  <!-- قفل -->
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </symbol>
 </svg>`;
 
-function icon(name, size = 22, cls = 'ico') {
-  return `<svg class="${cls}" width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const WINGED_SUN = '';
+
+function icon(name, size = 20) {
+  return `<svg class="ic" width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 }
 
-const WINGED_SUN = `
-<div class="wingsun" aria-hidden="true">
-  <svg viewBox="0 0 240 40" width="240" height="40"><use href="#i-wing"/></svg>
-  <span class="wingsun-line"></span>
-  <svg viewBox="0 0 240 40" width="240" height="40"><use href="#i-wing"/></svg>
-</div>`;
-
-function stepper(active) {
+/** شريط المراحل العصري */
+function stepper(active = 1) {
   const steps = [
-    ['التسجيل', 'user'],
-    ['التحقق', 'camera'],
-    ['الاقتراع', 'lotus'],
-    ['الإيصال', 'eye'],
+    ['مطابقة بيانات البطاقة', 'scarab'],
+    ['التحقق من الوجه الحي', 'camera'],
+    ['الاقتراع السري', 'lotus'],
+    ['إيصال التصويت', 'check'],
   ];
-  return `<ol class="stepper">${steps.map(([label, ic], i) => {
-    const state = i + 1 < active ? 'done' : i + 1 === active ? 'active' : '';
+  return `<ol class="stepper" aria-label="مراحل التصويت">${steps.map(([label, ic], i) => {
+    const state = i + 1 < active ? 'done' : i + 1 === active ? 'active' : 'todo';
     return `<li class="step ${state}">
       <span class="step-dot">${i + 1 < active ? icon('check', 16) : icon(ic, 18)}</span>
       <span class="step-label">${esc(label)}</span>
@@ -105,51 +98,52 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, dem
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0E2440">
+<meta name="theme-color" content="#4F46E5">
 <title>${esc(title)} — صوت موثّق</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="${bodyClass}">
 ${ICON_DEFS}
-<div class="papyrus-bg" aria-hidden="true"></div>
 <header class="site-head">
-  <a class="brand" href="/">
-    <span class="cartouche">
-      <span class="cartouche-inner">${icon('ankh', 20)}<b>صوت موثّق</b>${icon('lotus', 20)}</span>
-    </span>
-  </a>
-  <nav class="site-nav">
-    <a href="/">الرئيسية</a>
-    <a href="/results">النتائج</a>
-    <a href="/vote-here">منصة اقتراع</a>
-    <a href="/admin" class="btn tiny ghost" style="border-color:rgba(212,168,75,0.5);padding:4px 10px">🔐 لوحة الأدمن</a>
-  </nav>
+  <div class="head-inner">
+    <a class="brand" href="/">
+      <span class="brand-badge">${icon('ankh', 22)}</span>
+      <span class="brand-text">
+        <b>صوت موثّق</b>
+        <small>منصة الاقتراع الرقمي والتحقق البيومتري</small>
+      </span>
+    </a>
+    <nav class="site-nav">
+      <a href="/">الرئيسية</a>
+      <a href="/register">ابدأ التصويت</a>
+      <a href="/results">النتائج المباشرة</a>
+      <a href="/verify-receipt">فحص إيصال</a>
+    </nav>
+  </div>
 </header>
-${demo ? '<div class="demo-ribbon">وضع التجربة — قاعدة بيانات محلية. ضبط مفاتيح Supabase في ملف .env للاتصال بقاعدة البيانات الحقيقية</div>' : ''}
 <main class="${wide ? 'wrap wide' : 'wrap'}">
   ${showStepper ? stepper(active) : ''}
   ${body}
 </main>
-${WINGED_SUN}
 <footer class="site-foot">
   <div class="foot-grid">
     <div>
-      <h4>${icon('scarab', 18)} صوت موثّق</h4>
-      <p>منصة انتخابات إلكترونية لا تُحسب فيها إلا هوية واحدة حقيقية — التحقق بالبطاقة والسيلفي الحيّ، والاقتراع سرّي.</p>
+      <h4>${icon('ankh', 18)} صوت موثّق</h4>
+      <p>منصة اقتراع إلكتروني حديثة تعتمد على مطابقة بيانات الناخب مع البطاقات المسجّلة في قاعدة البيانات والتحقق البيومتري من الوجه الحي بالذكاء الاصطناعي.</p>
     </div>
     <div>
       <h4>${icon('eye', 18)} روابط سريعة</h4>
-      <p><a href="/">التسجيل والتصويت</a> · <a href="/results">النتائج اللحظية</a> · <a href="/verify-receipt">التحقق من إيصال</a></p>
+      <p><a href="/register">التحقق والتصويت</a> · <a href="/results">النتائج اللحظية</a> · <a href="/verify-receipt">التحقق من إيصال</a></p>
     </div>
     <div>
-      <h4>${icon('lock', 18)} الخصوصية</h4>
-      <p>لا نخزّن الرقم القومي كنص صريح — الخصوصية محفوظة من قلب التصميم.</p>
+      <h4>${icon('lock', 18)} الأمان والخصوصية</h4>
+      <p>صوت واحد لكل هوية موثّقة — الاقتراع مفصول تمامًا عن بيانات الناخب لضمان السرية الكاملة.</p>
     </div>
   </div>
-  <div class="foot-strip" aria-hidden="true"></div>
-  <p class="copyright">صوت موثّق © 2026 — نموذج مبدئي (Proof of Concept) لأغراض العرض والتجربة.</p>
+  <p class="copyright">صوت موثّق © 2026 — نظام التحقق البيومتري والاقتراع الرقمي</p>
 </footer>
+<script src="/vendor/face-api.min.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>`;

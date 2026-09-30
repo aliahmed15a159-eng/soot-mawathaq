@@ -21,7 +21,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
   '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png',
-  '.jpg': 'image/jpeg', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.json': 'application/json; charset=utf-8', '.bin': 'application/octet-stream', '.ico': 'image/x-icon',
 };
 
 const BOOT_AT = Date.now();
@@ -100,7 +100,7 @@ function serveStatic(req, res, pathname) {
   res.writeHead(200, {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': buf.length,
-    'Cache-Control': ext === '.woff2' || ext === '.svg' ? 'public, max-age=604800' : 'no-cache',
+    'Cache-Control': (ext === '.woff2' || ext === '.svg' || ext === '.bin' || pathname.startsWith('/models/') || pathname.startsWith('/vendor/')) ? 'public, max-age=604800' : 'no-cache',
   });
   res.end(buf);
   return true;

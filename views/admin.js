@@ -19,9 +19,7 @@ function adminLogin({ error, email = '' }) {
   ${error ? `<p class="form-error">${esc(error)}</p>` : ''}
   <div class="form-actions" style="display:flex;flex-direction:column;gap:8px">
     <button class="btn primary lg" type="submit" style="width:100%">${icon('lock', 18)} تسجيل الدخول للوحة الإدارة</button>
-    <button class="btn ghost small" type="button" onclick="document.getElementById('email').value='aliahmed055586@gmail.com';document.getElementById('password').value='01556377146';this.closest('form').submit();" style="width:100%">
-      ⚡ دخول فوري بحساب الأدمن (aliahmed055586@gmail.com)
-    </button>
+
   </div>
 </form>`;
 }
