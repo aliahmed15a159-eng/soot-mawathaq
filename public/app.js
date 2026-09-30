@@ -242,14 +242,27 @@
       if (!ready) return { aiReady: false };
       const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.28 });
 
-      // ١) استخراج بصمة الوجه المرجعية من بطاقة قاعدة البيانات
+      // ١) استخراج بصمة الوجه المرجعية من بطاقة قاعدة البيانات (مع إطار هامشي لضمان دقة كشف الوجه)
       if (!cachedRefDescriptor) {
-        const refEl = $('#db-face-ref') || $('#db-card-img');
-        if (refEl && refEl.src) {
+        const candidates = [$('#db-card-img'), $('#db-face-ref')].filter(Boolean);
+        for (const el of candidates) {
+          if (!el.src) continue;
           try {
-            const decodedRef = await loadDecodedImage(refEl.src);
-            const refDet = await window.faceapi.detectSingleFace(decodedRef, opts).withFaceLandmarks(true).withFaceDescriptor();
-            if (refDet && refDet.descriptor) cachedRefDescriptor = Array.from(refDet.descriptor);
+            const decodedRef = await loadDecodedImage(el.src);
+            let refDet = await window.faceapi.detectSingleFace(decodedRef, opts).withFaceLandmarks(true).withFaceDescriptor();
+            if (!refDet) {
+              const padC = document.createElement('canvas');
+              padC.width = 480; padC.height = 480;
+              const pctx = padC.getContext('2d');
+              pctx.fillStyle = '#e5e0d5';
+              pctx.fillRect(0, 0, 480, 480);
+              pctx.drawImage(decodedRef, 96, 96, 288, 288);
+              refDet = await window.faceapi.detectSingleFace(padC, opts).withFaceLandmarks(true).withFaceDescriptor();
+            }
+            if (refDet && refDet.descriptor) {
+              cachedRefDescriptor = Array.from(refDet.descriptor);
+              break;
+            }
           } catch (e) {
             console.warn('[face-ai] تعذّر قراءة صورة المرجع:', e);
           }

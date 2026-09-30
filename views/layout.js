@@ -101,7 +101,7 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, dem
 <meta name="theme-color" content="#4F46E5">
 <title>${esc(title)} — صوت موثّق</title>
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=4">
+<link rel="stylesheet" href="/styles.css?v=5">
 </head>
 <body class="${bodyClass}">
 ${ICON_DEFS}
@@ -144,7 +144,7 @@ ${ICON_DEFS}
   <p class="copyright">صوت موثّق © 2026 — نظام التحقق البيومتري والاقتراع الرقمي</p>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
-<script src="/app.js?v=4" defer></script>
+<script src="/app.js?v=5" defer></script>
 </body>
 </html>`;
 }
