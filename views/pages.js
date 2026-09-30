@@ -51,6 +51,7 @@ function landing({ elections, demo, counts }) {
     <div class="hero-actions">
       <a class="btn primary lg" href="/register">${icon('lotus', 20)} ابدأ التحقق والتصويت</a>
       <a class="btn ghost lg" href="/results">${icon('eye', 20)} شاهد النتائج</a>
+      <a class="btn ghost lg" href="/admin" style="border-color:rgba(212,168,75,0.6)">${icon('lock', 20)} دخول لوحة الأدمن</a>
     </div>
     <ul class="hero-stats">
       <li><b>${counts.elections}</b><span>انتخابات على المنصة</span></li>
@@ -62,7 +63,7 @@ function landing({ elections, demo, counts }) {
     <div class="papyrus-card">
       <h3>${icon('camera', 20)} إزاي التحقق بيشتغل؟</h3>
       <ol class="timeline">
-        <li><b>بطاقة الرقم القومي</b><span>تُقرأ آليًا وتُقارن بالبيانات المُدخلة</span></li>
+        <li><b>بطاقتك المسجّلة في قاعدة البيانات</b><span>تكتب بياناتك ونطابقها ببطاقتك المحفوظة عندنا</span></li>
         <li><b>سيلفي حيّ</b><span>تحدي حركة عشوائي يمنع استخدام صورة أو فيديو</span></li>
         <li><b>مطابقة الوجه</b><span>نسبة تشابه وقرار فوري حسب حد الفصل</span></li>
         <li><b>لجنة بشرية</b><span>الحالات المشكوك فيها تُراجَع يدويًا قبل أي تصويت</span></li>
