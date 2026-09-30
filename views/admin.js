@@ -1,5 +1,5 @@
 'use strict';
-/** مركز القيادة والإشراف القضائي — لوحة الإدارة السرية (/admin) */
+/** مركز القيادة والإشراف القضائي — لوحة الإدارة (/admin) مع استوديو التوليد الحي للبطاقات */
 const { esc, icon } = require('./layout');
 const { fmtDate, stateChip } = require('./pages');
 
@@ -9,9 +9,9 @@ function adminLogin({ error, email = '' }) {
   <div class="admin-vault-card">
     <div class="admin-vault-top">
       <div class="vault-seal lg">${icon('lock', 26)}</div>
-      <span class="sec-eyebrow" style="margin-top:10px">بوابة مقيدة الصلاحية · وصول مباشر فقط</span>
-      <h1>مركز القيادة والإشراف القضائي</h1>
-      <p class="muted small">هذه البوابة مخفية عن الجمهور ومخصّصة لمسؤول المنصة المعتمد فقط. تُسجّل جميع محاولات الدخول في سجل التدقيق التشفيري.</p>
+      <span class="sec-eyebrow" style="margin-top:12px">بوابة مقيدة الصلاحية · وصول مباشر</span>
+      <h1>لوحة الإشراف وإدارة الانتخابات</h1>
+      <p class="muted small">هذه البوابة مخفية عن الجمهور ومخصّصة لمسؤول المنصة المعتمد فقط.</p>
     </div>
 
     <form class="admin-login-form" method="post" action="/api/admin/login" autocomplete="on">
@@ -20,11 +20,11 @@ function adminLogin({ error, email = '' }) {
         <input id="email" name="email" type="email" dir="ltr" class="mono" required value="${esc(email)}" placeholder="admin@domain.com">
       </div>
       <div class="field">
-        <label for="password">كلمة المرور السرية</label>
+        <label for="password">كلمة المرور</label>
         <input id="password" name="password" type="password" dir="ltr" class="mono" required placeholder="•••••••••••">
       </div>
       ${error ? `<p class="form-error">${esc(error)}</p>` : ''}
-      <button class="btn gold lg full" type="submit">${icon('lock', 18)} مصادقة الدخول إلى مركز القيادة ←</button>
+      <button class="btn primary lg full" type="submit">${icon('lock', 18)} تسجيل الدخول للوحة الإشراف ←</button>
     </form>
   </div>
 </div>`;
@@ -105,13 +105,13 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
       <span class="hero-live-badge"><span class="pulse-dot"></span> متصل بقاعدة بيانات Supabase الحية</span>
       <span class="hero-proto-tag mono">128-D NEURAL ENGINE ACTIVE</span>
     </div>
-    <h1>مركز القيادة والإشراف القضائي</h1>
-    <p>مرحبًا <b>${esc(adminName)}</b> — إدارة الاستحقاق الانتخابي، المرشحين، بطاقات الرقم القومي في السجل المدني، ومؤشرات الفرز اللحظية.</p>
+    <h1>لوحة القيادة والإشراف على الانتخابات</h1>
+    <p>مرحبًا <b>${esc(adminName)}</b> — تحكم كامل في بطاقات الرقم القومي بالسجل المدني، المرشحين، ومؤشرات الفرز اللحظية.</p>
   </div>
   <div class="admin-command-actions">
-    <a class="btn outline-light" href="/" target="_blank">${icon('eye', 16)} معاينة الموقع العام</a>
+    <a class="btn ghost" href="/" target="_blank">${icon('eye', 16)} معاينة الموقع العام</a>
     <form method="post" action="/api/admin/logout" style="margin:0">
-      <button class="btn danger" type="submit">${icon('lock', 16)} تسجيل الخروج الآمن</button>
+      <button class="btn danger" type="submit">${icon('lock', 16)} تسجيل الخروج</button>
     </form>
   </div>
 </section>
@@ -120,73 +120,97 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
   <div class="admin-kpi-card">
     <span class="kpi-icon">${icon('lotus', 22)}</span>
     <div>
-      <b class="mono" data-count="${totalBallots}">${totalBallots}</b>
-      <span>إجمالي الأصوات بالصندوق السري</span>
+      <b class="mono">${totalBallots}</b>
+      <span>إجمالي الأصوات بالصندوق</span>
     </div>
   </div>
   <div class="admin-kpi-card">
     <span class="kpi-icon">${icon('horus', 22)}</span>
     <div>
-      <b class="mono" data-count="${totalCandidates}">${totalCandidates}</b>
-      <span>مرشحين معتمدين بالرموز</span>
+      <b class="mono">${totalCandidates}</b>
+      <span>مرشحين معتمدين</span>
     </div>
   </div>
   <div class="admin-kpi-card">
     <span class="kpi-icon">${icon('scarab', 22)}</span>
     <div>
-      <b class="mono" data-count="${cards.length}">${cards.length}</b>
-      <span>بطاقات رقم قومي بالسجل المدني</span>
+      <b class="mono">${cards.length}</b>
+      <span>بطاقات رقم قومي بالسجل</span>
     </div>
   </div>
   <div class="admin-kpi-card">
     <span class="kpi-icon">${icon('check', 22)}</span>
     <div>
-      <b class="mono" data-count="${stats.voters}">${stats.voters}</b>
-      <span>ناخبين أتمّوا التحقق البيومتري</span>
+      <b class="mono">${stats.voters}</b>
+      <span>ناخبين تم التحقق منهم</span>
     </div>
   </div>
 </section>
 
 <nav class="tabs" id="admin-tabs">
-  <button class="tab active" type="button" data-tab="overview">${icon('eye', 16)} الفرز الحي والمرشحون</button>
-  <button class="tab" type="button" data-tab="roll">${icon('scarab', 16)} بطاقات الرقم القومي (${cards.length})</button>
+  <button class="tab active" type="button" data-tab="roll">${icon('scarab', 16)} إصدار وإدارة بطاقات الرقم القومي (${cards.length})</button>
+  <button class="tab" type="button" data-tab="overview">${icon('eye', 16)} الفرز الحي والمرشحون</button>
   <button class="tab" type="button" data-tab="elections">${icon('lotus', 16)} إدارة الانتخابات والمرشحين</button>
   <button class="tab" type="button" data-tab="reviews">${icon('warn', 16)} المراجعة البشرية (${reviews.length})</button>
   <button class="tab" type="button" data-tab="audit">${icon('lock', 16)} سجل التدقيق (${audit.length})</button>
 </nav>
 
-<!-- ١) نظرة عامة والمرشحون -->
-<section class="tab-panel active" data-panel="overview">
-  ${mainElection ? `
-    <div class="card" style="margin-bottom:22px">
-      <div class="sec-header-bar" style="margin-bottom:18px">
-        <div>
-          <span class="sec-eyebrow">الاستحقاق الانتخابي النشط الآن</span>
-          <h2 style="margin:0">${esc(mainElection.title)}</h2>
-          <p class="muted small" style="margin:4px 0 0">${esc(mainElection.description || '')}</p>
+<!-- ١) استوديو إصدار وإدارة بطاقات الرقم القومي بالسجل المدني -->
+<section class="tab-panel active" data-panel="roll">
+  <div class="grid-2" style="margin-bottom:24px;align-items:start">
+    <div class="card form-card">
+      <span class="sec-eyebrow">مولّد البطاقات الفوري · يعمل بالذكاء الاصطناعي</span>
+      <h3>${icon('camera', 20)} إصدار بطاقة رقم قومي مصرية جديدة</h3>
+      <p class="muted small">اكتب الاسم وبيانات المواطن وارفع صورة وجهه — ستظهر البطاقة فورًا في المعاينة الحية وتُحفظ في قاعدة البيانات ليتمكن من التسجيل والتصويت بها فورًا.</p>
+      <form id="form-new-card">
+        <div class="field"><label>الاسم الكامل (كما سيظهر في البطاقة)</label>
+          <input name="full_name" id="nc-name" required placeholder="مثال: محمد طارق عبد الله حسن">
         </div>
-        <div class="row">
-          ${stateChip(mainElection.state)}
-          <a class="btn primary small" href="/results?e=${esc(mainElection.id)}">${icon('eye', 15)} فتح شاشة الفرز</a>
+        <div class="grid-2">
+          <div class="field"><label>تاريخ الميلاد</label>
+            <input name="birth_date" id="nc-dob" type="date" required value="2002-08-15">
+          </div>
+          <div class="field"><label>المحافظة</label>
+            <select name="governorate" id="nc-gov">
+              ${['أسيوط', 'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'المنيا', 'سوهاج', 'قنا', 'أسوان', 'الأقصر', 'الغربية', 'المنوفية', 'البحيرة'].map((g) => `<option value="${g}">${g}</option>`).join('')}
+            </select>
+          </div>
         </div>
-      </div>
-      <div class="admin-cand-grid">
-        ${overviewCandidates}
-      </div>
+        <div class="grid-2">
+          <div class="field"><label>الرقم القومي (١٤ رقم — أو اتركه يتولّد تلقائيًا)</label>
+            <input name="national_id" id="nc-nid" class="mono" maxlength="14" placeholder="يتولّد تلقائيًا من الميلاد والمحافظة">
+          </div>
+          <div class="field"><label>النوع</label>
+            <select name="gender" id="nc-gender"><option value="ذكر">ذكر</option><option value="أنثى">أنثى</option></select>
+          </div>
+        </div>
+        <div class="field"><label>صورة الوجه الشخصية لصاحب البطاقة</label>
+          <input type="file" id="new-card-photo" accept="image/*" required>
+        </div>
+        <button class="btn primary lg full" type="submit" id="btn-submit-new-card">${icon('check', 18)} إصدار البطاقة وحفظها في قاعدة البيانات الآن</button>
+        <div id="new-card-msg" class="notice" style="margin-top:12px" hidden></div>
+      </form>
     </div>
-  ` : '<p class="muted">لا توجد انتخابات نشطة حاليًا.</p>'}
-</section>
 
-<!-- ٢) بطاقات الرقم القومي بالسجل المدني -->
-<section class="tab-panel" data-panel="roll">
-  <div class="card" style="margin-bottom:22px">
+    <div class="card">
+      <span class="sec-eyebrow">معاينة حية قبل الحفظ</span>
+      <h3>معاينة بطاقة الرقم القومي المولّدة</h3>
+      <p class="muted small">تتحدّث هذه البطاقة لحظيًا بمجرد كتابة الاسم واختيار الصورة:</p>
+      <div class="live-idcard-preview-wrap">
+        <canvas id="live-idcard-canvas" width="1012" height="638" style="width:100%;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm);display:block"></canvas>
+      </div>
+      <p class="muted small" style="margin-top:10px">بعد الضغط على «إصدار البطاقة وحفظها»، تُحفظ البطاقة وبصمة الوجه في جدول <code>voter_roll</code> على Supabase ويمكن لصاحبها الدخول من صفحة التسجيل فورًا.</p>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="sec-header-bar">
       <div>
-        <span class="sec-eyebrow">قاعدة بيانات السجل المدني المعتمد</span>
-        <h3 style="margin:0">بطاقات الرقم القومي المسجّلة للمطابقة البيومترية (${cards.length})</h3>
+        <span class="sec-eyebrow">السجل المدني المعتمد</span>
+        <h3 style="margin:0">البطاقات المحفوظة حاليًا في قاعدة البيانات (${cards.length})</h3>
       </div>
     </div>
-    <div class="admin-idcards-grid">
+    <div class="admin-idcards-grid" id="admin-cards-list">
       ${cards.map((c) => `
         <article class="admin-idcard-item">
           <div class="admin-idcard-visual">
@@ -202,60 +226,37 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
               <div><span>تاريخ الميلاد:</span> <b class="mono">${esc(c.birth_date || '—')}</b></div>
               <div><span>المحافظة:</span> <b>${esc(c.governorate || '—')}</b></div>
             </div>
+            ${c.national_id_plain !== '31005292501518' && c.id ? `
+              <div style="margin-top:10px">
+                <button class="btn small danger" type="button" data-delete-card="${esc(c.id)}">حذف البطاقة</button>
+              </div>` : ''}
           </div>
         </article>
       `).join('') || '<p class="muted">لا توجد بطاقات مسجّلة.</p>'}
     </div>
   </div>
+</section>
 
-  <div class="grid-2">
-    <div class="card form-card">
-      <h3>${icon('camera', 20)} إصدار وإضافة بطاقة رقم قومي جديدة للسجل</h3>
-      <p class="muted small">أدخل بيانات المواطن وارفع صورة وجه واضحة؛ سيقوم النظام بتوليد البطاقة واستخراج بصمة الوجه تلقائيًا.</p>
-      <form id="form-new-card">
-        <div class="field"><label>الاسم الرباعي بالكامل</label>
-          <input name="full_name" required placeholder="مثال: علي أحمد علي محمد">
-        </div>
-        <div class="grid-2">
-          <div class="field"><label>تاريخ الميلاد</label>
-            <input name="birth_date" type="date" required value="2010-05-29">
-          </div>
-          <div class="field"><label>المحافظة</label>
-            <input name="governorate" required value="أسيوط" placeholder="أسيوط">
-          </div>
-        </div>
-        <div class="grid-2">
-          <div class="field"><label>الرقم القومي (١٤ رقمًا — أو اتركه للتوليد الآلي)</label>
-            <input name="national_id" class="mono" maxlength="14" placeholder="31005292501518">
-          </div>
-          <div class="field"><label>النوع</label>
-            <select name="gender"><option value="ذكر">ذكر</option><option value="أنثى">أنثى</option></select>
-          </div>
-        </div>
-        <div class="field"><label>صورة الوجه الشخصية</label>
-          <input type="file" id="new-card-photo" accept="image/*" required>
-        </div>
-        <button class="btn primary full" type="submit">${icon('ankh', 18)} إصدار البطاقة وحفظها في قاعدة البيانات</button>
-        <p class="muted small" id="new-card-msg" hidden></p>
-      </form>
-    </div>
-
-    <div class="card form-card">
-      <h3>${icon('scarab', 20)} استيراد كشف ناخبين دفعة واحدة (CSV)</h3>
-      <p class="muted small">إجمالي السجلات المعتمدة في الكشف الحالي: <b class="mono">${roll && roll.count ? roll.count : cards.length}</b> مواطن</p>
-      <form id="form-roll">
-        <div class="field"><label>بيانات الكشف بصيغة (الرقم القومي,الاسم)</label>
-          <textarea name="csv" rows="6" class="mono" placeholder="31005292501518,علي أحمد علي محمد"></textarea>
+<!-- ٢) الفرز الحي والمرشحون -->
+<section class="tab-panel" data-panel="overview">
+  ${mainElection ? `
+    <div class="card" style="margin-bottom:22px">
+      <div class="sec-header-bar" style="margin-bottom:18px">
+        <div>
+          <span class="sec-eyebrow">الاستحقاق الانتخابي النشط الآن</span>
+          <h2 style="margin:0">${esc(mainElection.title)}</h2>
+          <p class="muted small" style="margin:4px 0 0">${esc(mainElection.description || '')}</p>
         </div>
         <div class="row">
-          <input type="file" id="roll-file" accept=".csv,.txt" hidden>
-          <button class="btn ghost" type="button" id="btn-roll-file">رفع ملف CSV</button>
-          <button class="btn primary" type="submit">${icon('lotus', 18)} استيراد الكشف</button>
+          ${stateChip(mainElection.state)}
+          <a class="btn primary small" href="/results?e=${esc(mainElection.id)}">${icon('eye', 15)} شاشة الفرز العام</a>
         </div>
-        <p class="muted small" id="roll-msg" hidden></p>
-      </form>
+      </div>
+      <div class="admin-cand-grid">
+        ${overviewCandidates}
+      </div>
     </div>
-  </div>
+  ` : '<p class="muted">لا توجد انتخابات نشطة حاليًا.</p>'}
 </section>
 
 <!-- ٣) إدارة الانتخابات والمرشحين -->
@@ -270,7 +271,7 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
 
   <div class="grid-2">
     <form class="card form-card" id="form-candidate">
-      <h3>${icon('horus', 20)} إضافة مرشح جديد للاستحقاق</h3>
+      <h3>${icon('horus', 20)} إضافة مرشح جديد</h3>
       <div class="field">
         <label>الاستحقاق الانتخابي</label>
         <select name="election_id">${elections.map((e) => `<option value="${esc(e.id)}">#${esc(e.id)} — ${esc(e.title)}</option>`).join('')}</select>
@@ -308,10 +309,10 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
 <!-- ٤) المراجعة البشرية -->
 <section class="tab-panel" data-panel="reviews">
   <div class="card">
-    <h3>طلبات المراجعة البشرية للحالات الرمادية (${reviews.length})</h3>
+    <h3>طلبات المراجعة البشرية (${reviews.length})</h3>
     <table class="table">
       <thead><tr><th>#</th><th>التوقيت</th><th>سبب الإحالة</th><th>نسبة التطابق</th><th>القرار</th></tr></thead>
-      <tbody>${reviewRows || '<tr><td colspan="5" class="muted">لا توجد طلبات معلّقة — جميع عمليات التحقق البيومتري حُسمت آليًا</td></tr>'}</tbody>
+      <tbody>${reviewRows || '<tr><td colspan="5" class="muted">لا توجد طلبات معلّقة — جميع عمليات التحقق حُسمت آليًا</td></tr>'}</tbody>
     </table>
   </div>
 </section>
@@ -319,7 +320,7 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
 <!-- ٥) سجل التدقيق -->
 <section class="tab-panel" data-panel="audit">
   <div class="card">
-    <h3>سجل التدقيق الأمني والتشفيري (Immutable Audit Log)</h3>
+    <h3>سجل التدقيق الأمني والتشفيري</h3>
     <table class="table">
       <thead><tr><th>التوقيت</th><th>نوع العملية</th><th>المنفّذ</th><th>البيانات الوصفية</th></tr></thead>
       <tbody>${auditRows || '<tr><td colspan="4" class="muted">السجل فارغ</td></tr>'}</tbody>

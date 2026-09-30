@@ -481,6 +481,11 @@ async function handle(req, res) {
         return sendJson(res, { ok: false, error: `تعذّر إنشاء البطاقة: ${err.message}` }, 500);
       }
     }
+    if (/^\/api\/admin\/cards\/\d+\/delete$/.test(pathname)) {
+      const id = pathname.split('/')[4];
+      await db.deleteIdCard(id);
+      return sendJson(res, { ok: true });
+    }
     if (/^\/api\/admin\/reviews\/\d+\/decide$/.test(pathname)) {
       const id = pathname.split('/')[4];
       return sendJson(res, await api.decideReview({ id, approve: !!body.approve, admin: 'committee' }));

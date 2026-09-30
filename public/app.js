@@ -962,33 +962,36 @@
 })();
 
 
-/* ------------------------------------------------- كشوف الناخبين (المرحلة ٢) */
+/* ------------------------------------------------- كشوف الناخبين واستوديو توليد البطاقات */
 (function () {
   const form = document.getElementById('form-roll');
-  if (!form) return;
-  const msg = document.getElementById('roll-msg');
-  const fileInput = document.getElementById('roll-file');
-  const area = form.querySelector('textarea[name=csv]');
-  document.getElementById('btn-roll-file')?.addEventListener('click', () => fileInput.click());
-  fileInput?.addEventListener('change', async () => {
-    const f = fileInput.files[0];
-    if (!f) return;
-    area.value = await f.text();
-    msg.hidden = false; msg.textContent = `تم تحميل الملف: ${f.name}`;
-  });
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    msg.hidden = false; msg.textContent = 'جاري الاستيراد…';
-    const { data } = await postJson('/api/admin/roll', { csv: area.value });
-    msg.hidden = false;
-    if (!data.ok) { msg.textContent = `✗ ${data.error}`; return; }
-    msg.textContent = `✓ تم استيراد ${data.inserted} ناخب${data.skipped ? ` — تجاهل ${data.skipped} سطر` : ''}`;
-    area.value = '';
-  });
-})();
+  if (form) {
+    const msg = document.getElementById('roll-msg');
+    const fileInput = document.getElementById('roll-file');
+    const area = form.querySelector('textarea[name=csv]');
+    document.getElementById('btn-roll-file')?.addEventListener('click', () => fileInput.click());
+    fileInput?.addEventListener('change', async () => {
+      const f = fileInput.files[0];
+      if (!f) return;
+      area.value = await f.text();
+      msg.hidden = false; msg.textContent = `تم تحميل الملف: ${f.name}`;
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.hidden = false; msg.textContent = 'جاري الاستيراد…';
+      const r = await fetch('/api/admin/roll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: area.value }),
+      });
+      const data = await r.json().catch(() => ({ ok: false, error: 'تعذّر الاتصال' }));
+      msg.hidden = false;
+      if (!data.ok) { msg.textContent = `✗ ${data.error}`; return; }
+      msg.textContent = `✓ تم استيراد ${data.inserted} ناخب${data.skipped ? ` — تجاهل ${data.skipped} سطر` : ''}`;
+      area.value = '';
+    });
+  }
 
-/* ====== تعبئة البطاقة النموذجية + إصدار بطاقة جديدة من الإدارة ====== */
-(function () {
   const fillBtn = document.querySelector('#btn-fill-sample-card');
   if (fillBtn) {
     fillBtn.addEventListener('click', () => {
@@ -1005,56 +1008,292 @@
     });
   }
 
+  // حذف بطاقة من لوحة الإدارة
+  document.addEventListener('click', async (e) => {
+    const delCardBtn = e.target.closest('[data-delete-card]');
+    if (!delCardBtn) return;
+    if (!confirm('هل تريد حذف هذه البطاقة من السجل؟')) return;
+    delCardBtn.disabled = true;
+    await fetch(`/api/admin/cards/${delCardBtn.dataset.deleteCard}/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    location.reload();
+  });
+
+  // دالة حساب البصمة الإدراكية مستقلة تمامًا لضمان عدم حدوث ReferenceError
+  function calcCardAHash(data, w, h, size = 16) {
+    const cells = new Float32Array(size * size);
+    const bw = w / size, bh = h / size;
+    for (let cy = 0; cy < size; cy++) {
+      for (let cx = 0; cx < size; cx++) {
+        let sum = 0, n = 0;
+        for (let y = Math.floor(cy * bh); y < Math.floor((cy + 1) * bh); y += 2) {
+          for (let x = Math.floor(cx * bw); x < Math.floor((cx + 1) * bw); x += 2) {
+            const i = (y * w + x) * 4;
+            sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            n++;
+          }
+        }
+        cells[cy * size + cx] = n ? sum / n : 0;
+      }
+    }
+    const mean = cells.reduce((a, b) => a + b, 0) / cells.length;
+    let bits = '';
+    for (let i = 0; i < cells.length; i++) bits += cells[i] > mean ? '1' : '0';
+    return bits;
+  }
+
+  const AR_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  function toAr(s) { return String(s || '').replace(/[0-9]/g, (d) => AR_DIGITS[Number(d)] || d); }
+
+  const GOV_CODES = {
+    'القاهرة': '01', 'الإسكندرية': '02', 'بورسعيد': '03', 'السويس': '04',
+    'دمياط': '11', 'الدقهلية': '12', 'الشرقية': '13', 'القليوبية': '14',
+    'كفر الشيخ': '15', 'الغربية': '16', 'المنوفية': '17', 'البحيرة': '18',
+    'الإسماعيلية': '19', 'الجيزة': '21', 'بني سويف': '22', 'الفيوم': '23',
+    'المنيا': '24', 'أسيوط': '25', 'سوهاج': '26', 'قنا': '27', 'أسوان': '28', 'الأقصر': '29',
+  };
+
+  function previewDummyNid(dob, gov, gender) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || '2002-08-15');
+    const yr = m ? Number(m[1]) : 2002;
+    const century = yr >= 2000 ? '3' : '2';
+    const yy = m ? m[1].slice(2) : '02';
+    const mm = m ? m[2] : '08';
+    const dd = m ? m[3] : '15';
+    const gc = GOV_CODES[gov] || '25';
+    const gDigit = gender === 'أنثى' ? '2' : '1';
+    return `${century}${yy}${mm}${dd}${gc}015${gDigit}8`;
+  }
+
   const cardForm = document.querySelector('#form-new-card');
   const photoInput = document.querySelector('#new-card-photo');
   const cardMsg = document.querySelector('#new-card-msg');
+  const liveCanvas = document.querySelector('#live-idcard-canvas');
+  let loadedPortraitImg = null;
+
+  function renderEgyptianIdCanvas() {
+    if (!liveCanvas) return;
+    const ctx = liveCanvas.getContext('2d');
+    const W = 1012, H = 638;
+    const fullName = (cardForm?.full_name?.value || 'محمد طارق عبد الله حسن').trim();
+    const parts = fullName.split(/\s+/);
+    const firstName = parts[0] || '';
+    const restName = parts.slice(1).join(' ');
+    const dob = cardForm?.birth_date?.value || '2002-08-15';
+    const gov = cardForm?.governorate?.value || 'أسيوط';
+    const gender = cardForm?.gender?.value || 'ذكر';
+    const rawNid = (cardForm?.national_id?.value || '').trim();
+    const nid = /^\d{14}$/.test(rawNid) ? rawNid : previewDummyNid(dob, gov, gender);
+
+    // خلفية البطاقة الرسمية
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, '#f3efe4');
+    bgGrad.addColorStop(0.55, '#e8dfd1');
+    bgGrad.addColorStop(1, '#dfe6e3');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // الهيدر العلوي
+    const hdrGrad = ctx.createLinearGradient(0, 0, 0, 108);
+    hdrGrad.addColorStop(0, '#be9f89');
+    hdrGrad.addColorStop(1, '#a0826c');
+    ctx.fillStyle = hdrGrad;
+    ctx.fillRect(0, 0, W, 108);
+    ctx.strokeStyle = '#7d5c46';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, 108); ctx.lineTo(W, 108); ctx.stroke();
+
+    // زخرفة وسط البطاقة
+    ctx.strokeStyle = 'rgba(160, 130, 105, 0.16)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(535, 315, 95, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(535, 315, 65, 0, Math.PI * 2); ctx.stroke();
+
+    // نصوص الهيدر
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#20140f';
+    ctx.font = 'bold 34px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('جمهورية مصر العربية', 968, 48);
+    ctx.fillStyle = '#372319';
+    ctx.font = 'bold 25px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('بطاقة تحقيق الشخصية', 968, 88);
+    ctx.fillStyle = '#412d20';
+    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('وزارة الداخلية — قطاع الأحوال المدنية', 430, 62);
+
+    // إطار الصورة الشخصية
+    ctx.fillStyle = '#f8f5f0';
+    ctx.strokeStyle = '#a5917d';
+    ctx.lineWidth = 2;
+    ctx.fillRect(33, 125, 320, 400);
+    ctx.strokeRect(33, 125, 320, 400);
+
+    if (loadedPortraitImg) {
+      const iw = loadedPortraitImg.width, ih = loadedPortraitImg.height;
+      const targetRatio = 310 / 390;
+      let sx = 0, sy = 0, sw = iw, sh = ih;
+      if (iw / ih > targetRatio) {
+        sw = ih * targetRatio;
+        sx = (iw - sw) / 2;
+      } else {
+        sh = iw / targetRatio;
+        sy = 0;
+      }
+      ctx.drawImage(loadedPortraitImg, sx, sy, sw, sh, 38, 130, 310, 390);
+    } else {
+      ctx.fillStyle = '#e2dcd3';
+      ctx.fillRect(38, 130, 310, 390);
+      ctx.fillStyle = '#786b5e';
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 20px "IBM Plex Sans Arabic", sans-serif';
+      ctx.fillText('اختر صورة الوجه', 193, 325);
+    }
+
+    // ختم الهولوجرام
+    ctx.fillStyle = 'rgba(180, 210, 205, 0.35)';
+    ctx.strokeStyle = '#8cafaa';
+    ctx.beginPath(); ctx.arc(331, 493, 40, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // بيانات المواطن
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#5f4637';
+    ctx.font = 'bold 21px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('الاسم /', 968, 158);
+    ctx.fillStyle = '#121216';
+    ctx.font = 'bold 31px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText(firstName, 885, 158);
+    ctx.fillText(restName, 968, 202);
+
+    ctx.strokeStyle = '#c3b4a2';
+    ctx.beginPath(); ctx.moveTo(385, 226); ctx.lineTo(968, 226); ctx.stroke();
+
+    ctx.fillStyle = '#5f4637';
+    ctx.font = 'bold 21px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('العنوان :', 968, 264);
+    ctx.fillStyle = '#19191e';
+    ctx.font = 'bold 25px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText(`ش الجمهورية — قسم أول ${gov}`, 875, 264);
+    ctx.fillText(`محافظة ${gov}`, 968, 306);
+
+    ctx.beginPath(); ctx.moveTo(385, 330); ctx.lineTo(968, 330); ctx.stroke();
+
+    ctx.fillStyle = '#1c1c22';
+    ctx.font = 'bold 25px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText(`النوع : ${gender}`, 968, 372);
+    ctx.fillText(`محل الميلاد : ${gov}`, 755, 372);
+
+    // مستطيل الرقم القومي
+    ctx.fillStyle = '#e9e1d2';
+    ctx.strokeStyle = '#aa947a';
+    ctx.fillRect(382, 418, 594, 117);
+    ctx.strokeRect(382, 418, 594, 117);
+
+    ctx.fillStyle = '#5a3e2c';
+    ctx.font = 'bold 20px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('الرقم القومي', 960, 446);
+
+    const nidAr = toAr(nid.slice(0, 7)).split('').join(' ') + '   ' + toAr(nid.slice(7)).split('').join(' ');
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#0f0f12';
+    ctx.font = 'bold 38px "IBM Plex Sans Arabic", monospace';
+    ctx.fillText(nidAr, 679, 504);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#554132';
+    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('تاريخ الميلاد', 343, 554);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#141418';
+    ctx.font = 'bold 26px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText(toAr(dob.replace(/-/g, '/')), 190, 592);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#4b3c30';
+    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
+    ctx.fillText('إصدار : ٢٠٢٦/٠٩ — سارية', 968, 584);
+  }
+
   if (cardForm && photoInput) {
+    renderEgyptianIdCanvas();
+    ['input', 'change'].forEach((ev) => {
+      cardForm.addEventListener(ev, () => renderEgyptianIdCanvas());
+    });
+
+    photoInput.addEventListener('change', () => {
+      const f = photoInput.files && photoInput.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          loadedPortraitImg = im;
+          renderEgyptianIdCanvas();
+        };
+        im.src = String(r.result || '');
+      };
+      r.readAsDataURL(f);
+    });
+
     cardForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const file = photoInput.files && photoInput.files[0];
-      if (!file) return;
+      if (!file || !loadedPortraitImg) {
+        cardMsg.hidden = false;
+        cardMsg.className = 'notice err';
+        cardMsg.textContent = '✗ يرجى اختيار صورة واضحة لوجه صاحب البطاقة أولًا';
+        return;
+      }
+      const btn = document.querySelector('#btn-submit-new-card');
+      if (btn) btn.disabled = true;
       cardMsg.hidden = false;
-      cardMsg.textContent = 'جاري تصميم البطاقة المصرية واستخراج بصمة الوجه وحفظها في قاعدة البيانات…';
-      const dataUrl = await new Promise((resolve) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result || ''));
-        r.readAsDataURL(file);
-      });
-      const clientHash = await new Promise((resolve) => {
-        const im = new Image();
-        im.onload = () => {
-          const c = document.createElement('canvas');
-          c.width = Math.min(800, im.width);
-          c.height = Math.round(im.height * c.width / im.width);
-          const cx = c.getContext('2d', { willReadFrequently: true });
-          cx.drawImage(im, 0, 0, c.width, c.height);
-          const fullPh = perceptualHash(cx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
-          resolve(fullPh.hash);
-        };
-        im.onerror = () => resolve('');
-        im.src = dataUrl;
-      });
+      cardMsg.className = 'notice';
+      cardMsg.textContent = 'جاري توليد البطاقة المصرية واستخراج بصمة الوجه وحفظها في قاعدة البيانات…';
+
+      renderEgyptianIdCanvas();
+      // ١) صورة البطاقة الكاملة بصيغة JPEG مضغوطة
+      const cardDataUrl = liveCanvas ? liveCanvas.toDataURL('image/jpeg', 0.82) : '';
+
+      // ٢) قص وضغط صورة الوجه المرجعية (320x320) واستخراج البصمة
+      const faceCanvas = document.createElement('canvas');
+      faceCanvas.width = 320; faceCanvas.height = 320;
+      const fctx = faceCanvas.getContext('2d', { willReadFrequently: true });
+      const s = Math.min(loadedPortraitImg.width, loadedPortraitImg.height);
+      const sx = (loadedPortraitImg.width - s) / 2;
+      fctx.drawImage(loadedPortraitImg, sx, 0, s, s, 0, 0, 320, 320);
+      const faceDataUrl = faceCanvas.toDataURL('image/jpeg', 0.85);
+      const clientHash = calcCardAHash(fctx.getImageData(0, 0, 320, 320).data, 320, 320);
+
       const payload = {
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
         governorate: cardForm.governorate.value.trim(),
         national_id: cardForm.national_id.value.trim(),
         gender: cardForm.gender.value,
-        photo: dataUrl,
+        photo: faceDataUrl,
+        card_image: cardDataUrl,
+        face_image: faceDataUrl,
         client_hash: clientHash,
       };
-      const res = await fetch('/api/admin/cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({ ok: false, error: 'استجابة غير صالحة' }));
-      if (!data.ok) {
-        cardMsg.textContent = `✗ ${data.error || 'تعذّر إنشاء البطاقة'}`;
-        return;
+      try {
+        const res = await fetch('/api/admin/cards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({ ok: false, error: 'استجابة غير صالحة' }));
+        if (!data.ok) {
+          cardMsg.className = 'notice err';
+          cardMsg.textContent = `✗ ${data.error || 'تعذّر إنشاء البطاقة'}`;
+          if (btn) btn.disabled = false;
+          return;
+        }
+        cardMsg.className = 'notice ok';
+        cardMsg.innerHTML = `<b>✓ تم إصدار وحفظ البطاقة في قاعدة البيانات بنجاح!</b><br>الاسم: <b>${payload.full_name}</b> · الرقم القومي: <code class="mono">${data.national_id}</code> · الميلاد: <code>${data.birth_date || payload.birth_date}</code> · المحافظة: <b>${data.governorate || payload.governorate}</b>`;
+        setTimeout(() => location.reload(), 1200);
+      } catch (err) {
+        cardMsg.className = 'notice err';
+        cardMsg.textContent = '✗ تعذّر الاتصال بالخادم';
+        if (btn) btn.disabled = false;
       }
-      cardMsg.textContent = `✓ تم إصدار وحفظ البطاقة بنجاح — الرقم القومي: ${data.national_id} (سيتم تحديث الصفحة…)`;
-      setTimeout(() => location.reload(), 1100);
     });
   }
 })();

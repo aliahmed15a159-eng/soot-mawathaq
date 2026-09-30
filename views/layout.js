@@ -1,8 +1,8 @@
 'use strict';
 /**
- * القالب المعماري الموحّد لمنصة «صوت موثّق»
- * تصميم سيادي تحريري رصين (Sovereign Editorial Civic Tech) — خطوط Readex Pro + IBM Plex Sans Arabic
- * بدون أي رابط ظاهر للوحة الإدارة في الواجهة العامة.
+ * القالب الموحّد لمنصة «صوت موثّق»
+ * تصميم عالمي نظيف على غرار منصات الاقتراع الإلكتروني الأوروبية (Estonia i-Voting / Swiss E-Voting / Stripe Identity)
+ * بدون أي إشارات فرعونية، وبدون إظهار أي رابط للوحة الإدارة للجمهور.
  */
 
 function esc(s) {
@@ -69,9 +69,9 @@ function stepper(active = 1) {
     ['01', 'مطابقة السجل المدني', 'scarab'],
     ['02', 'البصمة الحيوية للوجه', 'horus'],
     ['03', 'ورقة الاقتراع السرية', 'lotus'],
-    ['04', 'الإيصال المشفّر', 'check'],
+    ['04', 'إيصال التصويت المشفّر', 'check'],
   ];
-  return `<ol class="stepper" aria-label="مراحل التصويت">${steps.map(([num, label, ic], i) => {
+  return `<ol class="stepper" aria-label="مراحل التصويت">${steps.map(([num, label], i) => {
     const state = i + 1 < active ? 'done' : i + 1 === active ? 'active' : 'todo';
     return `<li class="step ${state}">
       <span class="step-dot">${i + 1 < active ? icon('check', 16) : `<b class="mono">${num}</b>`}</span>
@@ -86,20 +86,20 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, dem
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B1512">
-<title>${esc(title)} — صوت موثّق | المنصة الوطنية للاقتراع الموثّق</title>
+<meta name="theme-color" content="#0F172A">
+<title>${esc(title)} — صوت موثّق | المنصة الوطنية للاقتراع الإلكتروني</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=7">
+<link rel="stylesheet" href="/styles.css?v=8">
 </head>
 <body class="${bodyClass}">
 ${ICON_DEFS}
 <div class="gov-Ribbon">
   <div class="gov-ribbon-inner">
-    <span class="gov-ribbon-tag"><span class="pulse-dot"></span> بوابة الاقتراع الإلكتروني الموثّق — جمهورية مصر العربية</span>
-    <span class="gov-ribbon-meta mono">SHA-256 · 128-D FACE BIOMETRICS · ZERO-LINK BALLOT</span>
+    <span class="gov-ribbon-tag"><span class="pulse-dot"></span> بوابة الاقتراع الإلكتروني الرسمية الموثّقة — نظام التحقق البيومتري المباشر</span>
+    <span class="gov-ribbon-meta mono">E2E VERIFIABLE · 128-D FACE ID · SHA-256</span>
   </div>
 </div>
 <header class="site-head">
@@ -108,14 +108,14 @@ ${ICON_DEFS}
       <span class="brand-badge">${icon('ankh', 22)}</span>
       <span class="brand-text">
         <b>صوت موثّق</b>
-        <small>المنصة الوطنية للاقتراع والتحقق البيومتري</small>
+        <small>منصة الاقتراع الرقمي والتحقق البيومتري</small>
       </span>
     </a>
     <nav class="site-nav">
       <a href="/">الرئيسية والمرشحون</a>
-      <a href="/results">المؤشرات والنتائج الحية</a>
+      <a href="/results">النتائج المباشرة</a>
       <a href="/verify-receipt">فحص إيصال التصويت</a>
-      <a href="/register" class="nav-cta">${icon('lotus', 16)} ادخل للتصويت الآن</a>
+      <a href="/register" class="nav-cta">${icon('lotus', 16)} ابدأ التصويت الآن</a>
     </nav>
   </div>
 </header>
@@ -128,31 +128,31 @@ ${ICON_DEFS}
     <div>
       <div class="foot-brand">
         <span class="brand-badge sm">${icon('ankh', 18)}</span>
-        <b>صوت موثّق — نظام الاقتراع الرقمي</b>
+        <b>صوت موثّق — منظومة الاقتراع الرقمي</b>
       </div>
-      <p>منصة اقتراع إلكتروني تعتمد على مطابقة بيانات الرقم القومي بالسجل المدني المعتمد، والتحقق البيومتري من الوجه الحي بتقنية البصمة العصبية (128-D)، مع الفصل التام بين هوية الناخب وصندوق الاقتراع.</p>
+      <p>منصة اقتراع إلكتروني حديثة تعمل بمعايير التصويت الرقمي العالمية: مطابقة فورية مع بطاقات السجل المدني، تحقق بيومتري ثلاثي المراحل من الوجه الحي (128-D)، وعزل تشفيري تام بين هوية الناخب وورقة الاقتراع.</p>
     </div>
     <div>
       <h4>بوابات الناخبين</h4>
       <ul class="foot-links">
-        <li><a href="/">قائمة المرشحين والبرامج الانتخابية</a></li>
-        <li><a href="/register">التحقق من الهوية وبدء التصويت</a></li>
-        <li><a href="/results">لوحة الفرز والمؤشرات المباشرة</a></li>
-        <li><a href="/verify-receipt">التحقق التشفيري من إيصال الصوت</a></li>
+        <li><a href="/">المرشحون والبرامج الانتخابية</a></li>
+        <li><a href="/register">التحقق من الهوية والتصويت</a></li>
+        <li><a href="/results">الفرز اللحظي والمؤشرات</a></li>
+        <li><a href="/verify-receipt">التحقق من إيصال الصوت</a></li>
       </ul>
     </div>
     <div>
-      <h4>الضمانات الدستورية والتقنية</h4>
-      <p>يُشترط تطابق البصمة الحيوية للوجه مع صورة بطاقة الرقم القومي المسجّلة لإصدار تذكرة اقتراع وحيدة الاستخدام. لا تُخزّن أي صلة بين الناخب والمرشح المختار.</p>
+      <h4>معايير النزاهة والسرية</h4>
+      <p>تُمنح تذكرة اقتراع وحيدة الاستخدام لكل رقم قومي بعد اجتياز مطابقة الوجه العصبية، ولا يُحفظ أي ارتباط بين الناخب والمرشح المختار.</p>
     </div>
   </div>
   <div class="copyright">
-    <span>صوت موثّق © ٢٠٢٦ — جميع الحقوق محفوظة لمنظومة الاقتراع الرقمي الموثّق</span>
-    <span class="mono">PROTOCOL v4.2 · BIOMETRIC-128D</span>
+    <span>صوت موثّق © ٢٠٢٦ — جميع الحقوق محفوظة لمنظومة الاقتراع الإلكتروني الموثّق</span>
+    <span class="mono">STANDARD E-VOTING v5.0 · 128-D BIOMETRICS</span>
   </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
-<script src="/app.js?v=7" defer></script>
+<script src="/app.js?v=8" defer></script>
 </body>
 </html>`;
 }
