@@ -33,6 +33,9 @@
       if (label) label.textContent = theme === 'dark' ? 'داكن' : 'فاتح';
       b.setAttribute('aria-pressed', String(theme === 'dark'));
     });
+    // لون شريط المتصفح يتبع الثيم
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B1512' : '#0F8F6B');
   }
   themeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
