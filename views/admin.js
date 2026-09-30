@@ -18,7 +18,7 @@ function adminLogin({ error }) {
 </form>`;
 }
 
-function adminDashboard({ stats, elections, reviews, audit, adminName, providers = {}, roll = {} }) {
+function adminDashboard({ stats, elections, reviews, audit, adminName, providers = {}, roll = {}, cards = [] }) {
   const electionRows = elections.map((e) => `
     <tr>
       <td>#${esc(e.id)}</td>
@@ -140,22 +140,70 @@ function adminDashboard({ stats, elections, reviews, audit, adminName, providers
 </section>
 
 <section class="tab-panel" data-panel="roll">
-  <div class="card form-card">
-    <h3>${icon('scarab', 20)} كشف الناخبين المعتمد</h3>
-    <p class="muted">الصق الكشف (سطر لكل ناخب: الرقم القومي ثم الاسم، مفصولين بفاصلة) أو ارفع ملف CSV مُصدَّر من Excel.</p>
-    <p class="muted small">العدد الحالي في الكشف: <b>${roll && roll.count ? roll.count : 0}</b> ناخب ${roll && roll.table === false ? '— ⚠️ جدول الكشوف غير منشأ: نفّذ supabase/migrations/002_phase2.sql' : ''}</p>
-    <form id="form-roll">
-      <div class="field"><label>محتوى الكشف (CSV)</label>
-        <textarea name="csv" rows="6" class="mono" placeholder="29807152101234,مينا عبد المسيح حنا&#10;29507122501846,سلمى هاني عبد الله"></textarea>
-      </div>
-      <div class="row">
-        <input type="file" id="roll-file" accept=".csv,.txt" hidden>
-        <button class="btn ghost" type="button" id="btn-roll-file">اختيار ملف CSV</button>
-        <button class="btn primary" type="submit">${icon('lotus', 18)} استيراد الكشف</button>
-      </div>
-      <p class="muted small" id="roll-msg" hidden></p>
-    </form>
-    <p class="muted small">لتشغيل التحقق الصارم (لا يصوّت إلا من في الكشف): اضبط <code>REGISTER_MODE=strict</code> في ملف .env وأعد التشغيل.</p>
+  <div class="card" style="margin-bottom:20px">
+    <h3>${icon('scarab', 20)} بطاقات الرقم القومي المسجّلة في قاعدة البيانات (${cards.length})</h3>
+    <p class="muted">الناخب مبيرفعش بطاقته — المنصة بتطابق بياناته اللي بيكتبها مع البطاقة المسجّلة هنا، وبعدين تطابق وشه الحقيقي بوشه اللي في البطاقة.</p>
+    <div class="cards two" style="margin-top:14px">
+      ${cards.map((c) => `
+        <article class="card" style="border:1px solid rgba(212,168,75,0.3)">
+          ${c.card_image ? `<img src="${esc(c.card_image)}" alt="${esc(c.full_name)}" style="width:100%;border-radius:10px;margin-bottom:10px">` : ''}
+          <h4 style="margin:0 0 6px">${esc(c.full_name)}</h4>
+          <p class="muted small" style="margin:0">
+            الرقم القومي: <code class="mono">${esc(c.national_id_plain || c.national_id_masked || '—')}</code><br>
+            تاريخ الميلاد: <code>${esc(c.birth_date || '—')}</code> · المحافظة: <b>${esc(c.governorate || '—')}</b>
+          </p>
+        </article>
+      `).join('') || '<p class="muted">مفيش بطاقات مسجّلة بعد.</p>'}
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card form-card">
+      <h3>${icon('camera', 20)} إصدار وإضافة بطاقة مصرية جديدة</h3>
+      <p class="muted small">اكتب بيانات الشخص وارفع صورة وشه — المنصة هتصمّم بطاقة مصرية مطابقة وتحفظها في قاعدة البيانات وتستخرج بصمة الوجه أوتوماتيك.</p>
+      <form id="form-new-card">
+        <div class="field"><label>الاسم الرباعي (كما في البطاقة)</label>
+          <input name="full_name" required placeholder="مثال: علي أحمد علي محمد">
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>تاريخ الميلاد</label>
+            <input name="birth_date" type="date" required value="2010-05-29">
+          </div>
+          <div class="field"><label>المحافظة</label>
+            <input name="governorate" required value="أسيوط" placeholder="أسيوط">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>الرقم القومي (١٤ رقم — أو سيبه فاضي يتولّد تلقائيًا)</label>
+            <input name="national_id" class="mono" maxlength="14" placeholder="يتولّد أوتوماتيك لو فاضي">
+          </div>
+          <div class="field"><label>النوع</label>
+            <select name="gender"><option value="ذكر">ذكر</option><option value="أنثى">أنثى</option></select>
+          </div>
+        </div>
+        <div class="field"><label>صورة الوجه لصاحب البطاقة</label>
+          <input type="file" id="new-card-photo" accept="image/*" required>
+        </div>
+        <button class="btn primary" type="submit">${icon('ankh', 18)} تصميم البطاقة وحفظها في القاعدة</button>
+        <p class="muted small" id="new-card-msg" hidden></p>
+      </form>
+    </div>
+
+    <div class="card form-card">
+      <h3>${icon('scarab', 20)} استيراد سريع لكشف ناخبين (CSV)</h3>
+      <p class="muted small">إجمالي المسجّلين في الكشف: <b>${roll && roll.count ? roll.count : 0}</b> ناخب</p>
+      <form id="form-roll">
+        <div class="field"><label>محتوى الكشف (الرقم القومي,الاسم)</label>
+          <textarea name="csv" rows="5" class="mono" placeholder="31005292501518,علي أحمد علي محمد"></textarea>
+        </div>
+        <div class="row">
+          <input type="file" id="roll-file" accept=".csv,.txt" hidden>
+          <button class="btn ghost" type="button" id="btn-roll-file">اختيار ملف CSV</button>
+          <button class="btn primary" type="submit">${icon('lotus', 18)} استيراد الكشف</button>
+        </div>
+        <p class="muted small" id="roll-msg" hidden></p>
+      </form>
+    </div>
   </div>
 </section>
 

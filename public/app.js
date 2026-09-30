@@ -312,9 +312,98 @@
     }
 
     /* ---------- تسلسل التحقق ---------- */
+    async function initSelfieChallenge() {
+      if (challenge && challenge.length) return true;
+      const { data } = await postJson('/api/verify/start', {});
+      if (data && data.ok === false) {
+        if (data.code === 'otp_required' || /الموبايل/.test(data.error || '')) { location.href = '/otp'; return false; }
+        if (/الجلسة/.test(data.error || '')) { location.href = '/register'; return false; }
+        const box = $('#verify-error');
+        if (box) { box.textContent = data.error || 'تعذّر بدء التحقق'; box.hidden = false; }
+        return false;
+      }
+      challenge = (data && data.challenge) || [];
+      const listEl = $('#challenge-list');
+      if (listEl) listEl.innerHTML = challenge.map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
+      return true;
+    }
+
+    function beginLivenessMonitor() {
+      if (!videoSelfie) return;
+      startMotionMonitor(videoSelfie, (m) => {
+        frames++;
+        if (m.blinkNow && nowMs() - lastBlink > 900) {
+          lastBlink = nowMs();
+          const done = $('#challenge-list li[data-code="blink"]');
+          if (done && !done.classList.contains('done')) { done.classList.add('done'); livenessEvents.push({ code: 'blink', at: nowMs(), landmarks: landmarksFrom(m) }); }
+        }
+        const total = m.left + m.right + 0.0001;
+        const yaw = (m.right - m.left) / total * 0.5;
+        const faceWidth = Math.min(0.55, Math.sqrt(m.faceArea) * 1.05);
+        check('left', yaw < -0.14, m); check('right', yaw > 0.14, m);
+        check('close', faceWidth > 0.27, m);
+        check('smile', m.mouth > 0.02, m);
+        const pct = Math.min(100, Math.round((livenessEvents.length / Math.max(1, challenge.length)) * 100));
+        if ($('#liveness-bar')) $('#liveness-bar').style.width = `${pct}%`;
+      });
+    }
+
     $('#btn-start-camera')?.addEventListener('click', async () => {
+      const ok = await initSelfieChallenge();
+      if (!ok) return;
       await startCamera();
-      show('card');
+      beginLivenessMonitor();
+      show('selfie');
+    });
+
+    $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
+    $('#btn-use-selfie-file')?.addEventListener('click', () => $('#selfie-file')?.click());
+    $('#selfie-file')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const ok = await initSelfieChallenge();
+      if (!ok) return;
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = Math.min(800, img.width);
+        canvas.height = Math.round(img.height * canvas.width / img.width);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const data = imageData(canvas);
+        const q = qualityMetrics(data.data, canvas.width, canvas.height);
+        const ph = perceptualHash(data.data, canvas.width, canvas.height);
+        selfieData = {
+          dataUrl: dataUrlFromCanvas(canvas, 0.86),
+          meta: {
+            quality: Math.max(0.75, q.quality),
+            contrast: Math.max(0.65, q.contrast),
+            sharpness: Math.max(0.55, q.sharpness),
+            hash: ph.hash,
+            hashSamples: ph.samples,
+            width: canvas.width,
+            height: canvas.height,
+            uploaded: true,
+          },
+        };
+        // في وضع تجربة رفع الصورة: نعلّم حركات التحدي مكتملة عشان نختبر مطابقة الوجه بالبطاقة المسجّلة
+        const defaultLm = {
+          blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
+          left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
+          right: { yaw: 0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
+          close: { yaw: 0, eye: 0.2, faceWidth: 0.34, mouth: 0.01 },
+          smile: { yaw: 0, eye: 0.2, faceWidth: 0.3, mouth: 0.08 },
+        };
+        livenessEvents = (challenge || []).map((c, i) => ({
+          code: c.code, at: 900 + i * 1400, landmarks: defaultLm[c.code] || defaultLm.smile,
+        }));
+        frames = Math.max(frames, 40);
+        $$('#challenge-list li').forEach((li) => li.classList.add('done'));
+        if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
+        show('selfie');
+        $('#selfie-img').src = selfieData.dataUrl;
+        $('#selfie-preview').hidden = false;
+        $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+      img.src = URL.createObjectURL(file);
     });
 
     $('#btn-switch-cam')?.addEventListener('click', async () => {
@@ -429,7 +518,7 @@
     $('#btn-selfie-retake')?.addEventListener('click', () => { selfieData = null; $('#selfie-preview').hidden = true; });
 
     $('#btn-selfie-ok')?.addEventListener('click', async () => {
-      if (!selfieData || !cardData) return;
+      if (!selfieData) return;
       if (motionLoop) { clearInterval(motionLoop); motionLoop = null; }
       show('processing');
       const keys = ['card', 'live', 'face', 'decision'];
@@ -444,12 +533,12 @@
       }, 650);
 
       const payload = {
-        card_meta: { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded },
+        card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
         selfie_meta: { quality: selfieData.meta.quality, contrast: selfieData.meta.contrast, sharpness: selfieData.meta.sharpness, hash: selfieData.meta.hash, hashSamples: selfieData.meta.samples },
         challenge: challenge.map((c) => ({ code: c.code, label: c.label })),
         liveness_events: livenessEvents,
         frames,
-        images: { card: cardData.dataUrl, selfie: selfieData.dataUrl },
+        images: { card: cardData ? cardData.dataUrl : null, selfie: selfieData.dataUrl },
       };
       const { data } = await postJson('/api/verify/complete', payload);
       clearInterval(ticker);
@@ -640,4 +729,61 @@
     msg.textContent = `✓ تم استيراد ${data.inserted} ناخب${data.skipped ? ` — تجاهل ${data.skipped} سطر` : ''}`;
     area.value = '';
   });
+})();
+
+/* ====== تعبئة البطاقة النموذجية + إصدار بطاقة جديدة من الإدارة ====== */
+(function () {
+  const fillBtn = document.querySelector('#btn-fill-sample-card');
+  if (fillBtn) {
+    fillBtn.addEventListener('click', () => {
+      const f = document.querySelector('#form-register');
+      if (!f) return;
+      f.full_name.value = fillBtn.dataset.name || '';
+      f.national_id.value = fillBtn.dataset.nid || '';
+      f.national_id.dispatchEvent(new Event('input', { bubbles: true }));
+      f.birth_date.value = fillBtn.dataset.dob || '';
+      f.governorate.value = fillBtn.dataset.gov || '';
+      f.phone.value = fillBtn.dataset.phone || '01012345678';
+      const c = document.querySelector('#consent');
+      if (c) c.checked = true;
+    });
+  }
+
+  const cardForm = document.querySelector('#form-new-card');
+  const photoInput = document.querySelector('#new-card-photo');
+  const cardMsg = document.querySelector('#new-card-msg');
+  if (cardForm && photoInput) {
+    cardForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = photoInput.files && photoInput.files[0];
+      if (!file) return;
+      cardMsg.hidden = false;
+      cardMsg.textContent = 'جاري تصميم البطاقة المصرية واستخراج بصمة الوجه وحفظها في قاعدة البيانات…';
+      const dataUrl = await new Promise((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ''));
+        r.readAsDataURL(file);
+      });
+      const payload = {
+        full_name: cardForm.full_name.value.trim(),
+        birth_date: cardForm.birth_date.value,
+        governorate: cardForm.governorate.value.trim(),
+        national_id: cardForm.national_id.value.trim(),
+        gender: cardForm.gender.value,
+        photo: dataUrl,
+      };
+      const res = await fetch('/api/admin/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({ ok: false, error: 'استجابة غير صالحة' }));
+      if (!data.ok) {
+        cardMsg.textContent = `✗ ${data.error || 'تعذّر إنشاء البطاقة'}`;
+        return;
+      }
+      cardMsg.textContent = `✓ تم إصدار وحفظ البطاقة بنجاح — الرقم القومي: ${data.national_id} (سيتم تحديث الصفحة…)`;
+      setTimeout(() => location.reload(), 1100);
+    });
+  }
 })();

@@ -148,7 +148,16 @@ function registerPage({ election, demo, sample }) {
     <a class="btn ghost" href="/">رجوع</a>
   </div>
   <p class="form-error" id="form-error" role="alert" hidden></p>
-  ${demo && sample ? `<div class="notice small">بيانات تجريبية للاختبار السريع: الرقم القومي <code>${esc(sample.national_id)}</code> — الاسم <code>${esc(sample.full_name)}</code> — تاريخ الميلاد <code>${esc(sample.birth_date)}</code> — محافظة <code>${esc(sample.governorate)}</code>. (أي رقم قومي صحيح آخر مقبول كذلك في وضع التجربة)</div>` : ''}
+  <div class="notice small" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">
+    <div>
+      <b>بطاقة نموذجية مسجّلة في قاعدة البيانات للتجربة:</b><br>
+      الاسم: <code>علي أحمد علي محمد</code> · الرقم القومي: <code>31005292501518</code> · الميلاد: <code>2010-05-29</code> · المحافظة: <code>أسيوط</code>
+    </div>
+    <button type="button" class="btn ghost small" id="btn-fill-sample-card"
+      data-name="علي أحمد علي محمد" data-nid="31005292501518" data-dob="2010-05-29" data-gov="أسيوط" data-phone="01012345678">
+      ملء بيانات البطاقة النموذجية
+    </button>
+  </div>
 </form>
 
 <section class="section small-print">
@@ -197,53 +206,49 @@ ${devHint}
 }
 
 /* ------------------------------------------------------------------ التحقق */
-function verifyPage({ voter, election, demo }) {
+function verifyPage({ voter, election, demo, rollCard }) {
+  const cardImg = (rollCard && rollCard.card_image) || '/cards/31005292501518.jpg';
+  const hasStoredCard = !!(rollCard && rollCard.card_image);
   return `
 <section class="page-head">
-  <h1>التحقق من الهوية</h1>
+  <h1>مطابقة الوجه بالبطاقة المسجّلة</h1>
   <p class="muted">مرحبًا <b>${esc(voter.full_name)}</b> — الرقم القومي <span class="mono">${esc(voter.national_id_masked)}</span>${election ? ` · ${esc(election.title)}` : ''}</p>
 </section>
 
-<div id="verify-app" class="verify-app card" data-demo="${demo ? '1' : '0'}">
-  <div class="v-step" data-step="intro">
-    <h2>${icon('camera', 22)} قبل ما نبدأ</h2>
-    <ul class="ticks">
-      <li>صوّر البطاقة في <b>إضاءة جيدة</b> وبدون انعكاس أو اهتزاز.</li>
-      <li>شيل الكاب والكمامة والنظارة الشمسية وقت السيلفي.</li>
-      <li>تنفيذ الحركات المطلوبة أمام الكاميرا إلزامي (منع الصور والفيديوهات).</li>
-    </ul>
-    <button class="btn primary lg" id="btn-start-camera">${icon('camera', 20)} تشغيل الكاميرا</button>
-    <p class="form-error" id="verify-error" role="alert" hidden></p>
-    <p class="muted small">لو الكاميرا مش متاحة، هتقدر ترفع صورة للسيلفي كبديل — بس التحقق اليدوي بيقلل الثقة.</p>
-  </div>
+<div id="verify-app" class="verify-app card" data-demo="${demo ? '1' : '0'}" data-has-db-card="1">
+  <canvas id="canvas" hidden></canvas>
 
-  <div class="v-step" data-step="card" hidden>
-    <h2>١. تصوير بطاقة الرقم القومي</h2>
-    <p class="muted">ضع البطاقة داخل الإطار — هنقرأ الاسم والرقم القومي وتاريخ الميلاد آليًا.</p>
-    <div class="camera-frame">
-      <video id="video" playsinline muted></video>
-      <canvas id="canvas" hidden></canvas>
-      <div class="frame-guide card-guide"><span>ضع البطاقة هنا</span></div>
-      <div class="frame-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-    </div>
-    <div class="row">
-      <button class="btn primary" id="btn-capture-card">${icon('camera', 18)} التقط صورة البطاقة</button>
-      <button class="btn ghost" id="btn-use-card-file">${icon('ankh', 18)} رفع صورة</button>
-      <input type="file" id="card-file" accept="image/*" hidden>
-      <button class="btn ghost" id="btn-switch-cam">تبديل الكاميرا</button>
-    </div>
-    <div class="captured" id="card-preview" hidden>
-      <img id="card-img" alt="صورة البطاقة">
-      <div class="captured-actions">
-        <button class="btn primary" id="btn-card-ok">الصورة واضحة — تابع</button>
-        <button class="btn ghost" id="btn-card-retake">إعادة التصوير</button>
+  <div class="v-step" data-step="intro">
+    <div class="result-head ok" style="margin-bottom:16px">
+      ${icon('check', 24)}
+      <div>
+        <h2 style="margin:0">تمت مطابقة بياناتك مع البطاقة المسجّلة في قاعدة البيانات ✓</h2>
+        <p class="muted" style="margin:4px 0 0">مش محتاج تصوّر أو ترفع بطاقتك — البطاقة المعتمدة مسجّلة عندنا، والخطوة الجاية هي مطابقة وجهك الحي بصورة البطاقة.</p>
       </div>
     </div>
+
+    ${hasStoredCard ? `
+    <div class="card" style="background:rgba(212,168,75,0.06);border:1px solid rgba(212,168,75,0.28);margin-bottom:18px;text-align:center">
+      <p class="muted small" style="margin-bottom:10px">${icon('scarab', 16)} <b>بطاقة الرقم القومي المعتمدة في قاعدة البيانات:</b></p>
+      <img src="${esc(cardImg)}" alt="بطاقة الرقم القومي المسجّلة" style="max-width:520px;width:100%;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,0.25)">
+    </div>` : ''}
+
+    <ul class="ticks">
+      <li>تم التحقق من الاسم والرقم القومي وتاريخ الميلاد والمحافظة مقابل سجل البطاقات.</li>
+      <li>دلوقتي هنفتح الكاميرا الأمامية عشان نطابق وجهك الحقيقي بالوجه المسجّل في البطاقة.</li>
+      <li>شيل الكاب والكمامة والنظارة الشمسية ونفّذ حركات التحقق أمام الكاميرا.</li>
+    </ul>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary lg" id="btn-start-camera">${icon('camera', 20)} تشغيل الكاميرا ومطابقة الوجه الحي</button>
+      <button class="btn ghost lg" type="button" id="btn-intro-upload">${icon('ankh', 18)} رفع صورة للوجه (للتجربة بدون كاميرا)</button>
+      <input type="file" id="selfie-file" accept="image/*" hidden>
+    </div>
+    <p class="form-error" id="verify-error" role="alert" hidden></p>
   </div>
 
   <div class="v-step" data-step="selfie" hidden>
-    <h2>٢. سيلفي حيّ + تحدي الحركة</h2>
-    <p class="muted">حُطّ وشك وسط الإطار، ونفّذ الحركات دي بالترتيب:</p>
+    <h2>التحقق من الوجه الحي ومطابقته ببطاقتك المسجّلة</h2>
+    <p class="muted">حُطّ وشك وسط الإطار، ونفّذ الحركات دي بالترتيب (أو ارفع صورة للوجه للتجربة):</p>
     <ol class="challenge-list" id="challenge-list"></ol>
     <div class="camera-frame selfie">
       <video id="video-selfie" playsinline muted></video>
@@ -252,13 +257,14 @@ function verifyPage({ voter, election, demo }) {
       <div class="liveness-meter"><span id="liveness-bar"></span></div>
     </div>
     <div class="row">
-      <button class="btn primary" id="btn-capture-selfie">${icon('check', 18)} تمّت الحركات — التقط السيلفي</button>
+      <button class="btn primary" id="btn-capture-selfie">${icon('check', 18)} التقط السيلفي وطابق بالبطاقة</button>
+      <button class="btn ghost" type="button" id="btn-use-selfie-file">${icon('ankh', 18)} رفع صورة للوجه</button>
       <button class="btn ghost" id="btn-selfie-restart">إعادة التحدي</button>
     </div>
     <div class="captured" id="selfie-preview" hidden>
       <img id="selfie-img" alt="صورة السيلفي">
       <div class="captured-actions">
-        <button class="btn primary" id="btn-selfie-ok">الصورة واضحة — إرسال للتحقق</button>
+        <button class="btn primary lg" id="btn-selfie-ok">الصورة واضحة — مطابقة الوجه بالبطاقة المسجّلة</button>
         <button class="btn ghost" id="btn-selfie-retake">إعادة</button>
       </div>
     </div>
@@ -267,12 +273,12 @@ function verifyPage({ voter, election, demo }) {
   <div class="v-step" data-step="processing" hidden>
     <div class="processing">
       <div class="spinner"></div>
-      <h2>جاري التحقق…</h2>
+      <h2>جاري مطابقة الوجه مع البطاقة المسجّلة…</h2>
       <ul class="progress-list" id="progress-list">
-        <li data-k="card">قراءة بيانات البطاقة</li>
+        <li data-k="card">استرجاع البطاقة المعتمدة من قاعدة البيانات</li>
         <li data-k="live">كشف الحياة (مقاومة الصور والفيديوهات)</li>
-        <li data-k="face">مطابقة الوجه مع صورة البطاقة</li>
-        <li data-k="decision">القرار النهائي</li>
+        <li data-k="face">مطابقة ملامح الوجه مع صورة البطاقة</li>
+        <li data-k="decision">القرار النهائي وإصدار رمز الاقتراع</li>
       </ul>
     </div>
   </div>

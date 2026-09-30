@@ -215,10 +215,13 @@ async function handle(req, res) {
     if (api.otpStatus().enabled && !sess.otp) return redirect(res, '/otp');
     const voter = await db.findVoterById(sess.vid);
     if (!voter) return redirect(res, '/register');
-    const election = sess.eid ? await db.getElection(sess.eid) : null;
+    const [election, rollCard] = await Promise.all([
+      sess.eid ? db.getElection(sess.eid) : null,
+      db.findInVoterRoll(voter.identity_hash),
+    ]);
     return sendHtml(res, shell({
       title: 'التحقق من الهوية',
-      body: pages.verifyPage({ voter, election, demo }),
+      body: pages.verifyPage({ voter, election, demo, rollCard }),
       showStepper: true, active: 2,
     }));
   }
@@ -367,9 +370,9 @@ async function handle(req, res) {
 
   if (pathname === '/admin' && req.method === 'GET') {
     if (!isAdmin) return sendHtml(res, shell({ title: 'دخول الإدارة', body: adminViews.adminLogin({}) }));
-    const [stats, elections, reviews, audit, providersHealth, roll] = await Promise.all([
+    const [stats, elections, reviews, audit, providersHealth, roll, cards] = await Promise.all([
       api.stats(), db.listElections(), db.listReviews('pending'), db.listAudit(60),
-      api.providersHealth(), db.voterRollStats(),
+      api.providersHealth(), db.voterRollStats(), db.listIdCards(),
     ]);
     return sendHtml(res, shell({
       title: 'لوحة الإدارة', wide: true,
@@ -377,7 +380,7 @@ async function handle(req, res) {
         stats,
         elections: elections.map((e) => ({ ...e, state: api.electionState(e) })),
         reviews, audit, adminName: 'لجنة الإشراف',
-        providers: providersHealth, roll,
+        providers: providersHealth, roll, cards,
       }),
     }));
   }
@@ -424,6 +427,13 @@ async function handle(req, res) {
         return sendJson(res, await api.importVoterRoll({ body, admin: 'committee' }));
       } catch (err) {
         return sendJson(res, { ok: false, error: `تعذّر استيراد الكشف: ${err.message}` }, 500);
+      }
+    }
+    if (pathname === '/api/admin/cards') {
+      try {
+        return sendJson(res, await api.createIdCard({ body, admin: 'committee' }));
+      } catch (err) {
+        return sendJson(res, { ok: false, error: `تعذّر إنشاء البطاقة: ${err.message}` }, 500);
       }
     }
     if (/^\/api\/admin\/reviews\/\d+\/decide$/.test(pathname)) {
