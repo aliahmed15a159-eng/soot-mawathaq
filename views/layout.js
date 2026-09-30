@@ -143,7 +143,7 @@ ${ICON_DEFS}
   </div>
   <p class="copyright">صوت موثّق © 2026 — نظام التحقق البيومتري والاقتراع الرقمي</p>
 </footer>
-<script src="/vendor/face-api.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>`;

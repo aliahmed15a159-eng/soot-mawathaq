@@ -210,10 +210,11 @@
       if (modelsLoaded) return true;
       if (!window.faceapi) return false;
       try {
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
         await Promise.all([
-          window.faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          window.faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
-          window.faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+          window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
         modelsLoaded = true;
         return true;
