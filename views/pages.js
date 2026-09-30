@@ -188,8 +188,14 @@ function landing({ elections, demo, counts }) {
 }
 
 /* ------------------------------------------------------------------ التسجيل */
-function registerPage({ election, demo, sample }) {
+function registerPage({ election, demo, cards = [] }) {
   const govOptions = ['القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'أسوان', 'الأقصر', 'الغربية', 'المنوفية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'السويس', 'الإسماعيلية', 'شمال سيناء', 'جنوب سيناء', 'مطروح', 'البحر الأحمر', 'الوادي الجديد', 'خارج الجمهورية'];
+  const storedCards = cards.length ? cards : [{
+    full_name: 'علي أحمد علي محمد',
+    national_id_plain: '31005292501518',
+    birth_date: '2010-05-29',
+    governorate: 'أسيوط',
+  }];
   return `
 <section class="page-head">
   <span class="sec-eyebrow">الخطوة الأولى · استدعاء البطاقة من السجل المدني</span>
@@ -202,16 +208,24 @@ function registerPage({ election, demo, sample }) {
   <form id="register-form" class="card form-card" autocomplete="off" novalidate>
     <input type="hidden" name="election_id" value="${election ? esc(election.id) : '1'}">
 
-    <div class="sample-autofill-bar">
+    <div class="sample-autofill-bar" style="flex-direction:column;align-items:stretch">
       <div class="sample-autofill-info">
-        <span class="sample-tag">بطاقة مسجّلة للتجربة الفورية</span>
-        <b>علي أحمد علي محمد</b>
-        <span class="mono">31005292501518 · ٢٠١٠/٠٥/٢٩ · أسيوط</span>
+        <span class="sample-tag">البطاقات المسجّلة في قاعدة البيانات للتجربة الفورية (${storedCards.length})</span>
+        <span class="small muted">اضغط على أي بطاقة لملء بياناتها تلقائيًا وتجربة التحقق من الوجه:</span>
       </div>
-      <button type="button" class="btn gold small" id="btn-fill-sample-card"
-        data-name="علي أحمد علي محمد" data-nid="31005292501518" data-dob="2010-05-29" data-gov="أسيوط" data-phone="01012345678">
-        ${icon('check', 16)} ملء تلقائي للبيانات
-      </button>
+      <div class="row" style="margin-top:6px">
+        ${storedCards.map((c, idx) => `
+          <button type="button" class="btn ${idx === 0 ? 'primary' : 'ghost'} small btn-fill-card"
+             ${idx === 0 ? 'id="btn-fill-sample-card"' : ''}
+            data-name="${esc(c.full_name)}"
+            data-nid="${esc(c.national_id_plain)}"
+            data-dob="${esc(String(c.birth_date || '2010-05-29').slice(0, 10))}"
+            data-gov="${esc(c.governorate || 'أسيوط')}"
+            data-phone="01012345678">
+            ${icon('check', 15)} ${esc(c.full_name)} (<span class="mono">${esc(c.national_id_plain)}</span>)
+          </button>
+        `).join('')}
+      </div>
     </div>
 
     <div class="field">

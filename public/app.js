@@ -992,21 +992,20 @@
     });
   }
 
-  const fillBtn = document.querySelector('#btn-fill-sample-card');
-  if (fillBtn) {
-    fillBtn.addEventListener('click', () => {
+  document.querySelectorAll('.btn-fill-card, #btn-fill-sample-card').forEach((btn) => {
+    btn.addEventListener('click', () => {
       const f = document.querySelector('#register-form') || document.querySelector('#form-register');
       if (!f) return;
-      f.full_name.value = fillBtn.dataset.name || '';
-      f.national_id.value = fillBtn.dataset.nid || '';
+      f.full_name.value = btn.dataset.name || '';
+      f.national_id.value = btn.dataset.nid || '';
       f.national_id.dispatchEvent(new Event('input', { bubbles: true }));
-      f.birth_date.value = fillBtn.dataset.dob || '';
-      f.governorate.value = fillBtn.dataset.gov || '';
-      f.phone.value = fillBtn.dataset.phone || '01012345678';
+      f.birth_date.value = btn.dataset.dob || '';
+      f.governorate.value = btn.dataset.gov || '';
+      f.phone.value = btn.dataset.phone || '01012345678';
       const c = document.querySelector('#consent');
       if (c) c.checked = true;
     });
-  }
+  });
 
   // حذف بطاقة من لوحة الإدارة
   document.addEventListener('click', async (e) => {
@@ -1052,7 +1051,7 @@
     'المنيا': '24', 'أسيوط': '25', 'سوهاج': '26', 'قنا': '27', 'أسوان': '28', 'الأقصر': '29',
   };
 
-  function previewDummyNid(dob, gov, gender) {
+  function previewDummyNid(dob, gov, gender, fullName = '') {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || '2002-08-15');
     const yr = m ? Number(m[1]) : 2002;
     const century = yr >= 2000 ? '3' : '2';
@@ -1060,8 +1059,12 @@
     const mm = m ? m[2] : '08';
     const dd = m ? m[3] : '15';
     const gc = GOV_CODES[gov] || '25';
+    let h = 0;
+    const str = String(fullName || 'مواطن');
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 900;
+    const serial = String(100 + (h % 899)).padStart(3, '0');
     const gDigit = gender === 'أنثى' ? '2' : '1';
-    return `${century}${yy}${mm}${dd}${gc}015${gDigit}8`;
+    return `${century}${yy}${mm}${dd}${gc}${serial}${gDigit}8`;
   }
 
   const cardForm = document.querySelector('#form-new-card');
@@ -1076,13 +1079,14 @@
     const W = 1012, H = 638;
     const fullName = (cardForm?.full_name?.value || 'محمد طارق عبد الله حسن').trim();
     const parts = fullName.split(/\s+/);
-    const firstName = parts[0] || '';
-    const restName = parts.slice(1).join(' ');
+    const isCompound = ['عبد', 'أبو', 'ابو', 'ام', 'أم', 'بن'].includes(parts[0]) && parts.length > 2;
+    const firstName = isCompound ? parts.slice(0, 2).join(' ') : (parts[0] || '');
+    const restName = isCompound ? parts.slice(2).join(' ') : parts.slice(1).join(' ');
     const dob = cardForm?.birth_date?.value || '2002-08-15';
     const gov = cardForm?.governorate?.value || 'أسيوط';
     const gender = cardForm?.gender?.value || 'ذكر';
     const rawNid = (cardForm?.national_id?.value || '').trim();
-    const nid = /^\d{14}$/.test(rawNid) ? rawNid : previewDummyNid(dob, gov, gender);
+    const nid = /^\d{14}$/.test(rawNid) ? rawNid : previewDummyNid(dob, gov, gender, fullName);
 
     // خلفية البطاقة الرسمية
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
@@ -1192,19 +1196,25 @@
     ctx.fillText('الرقم القومي', 960, 446);
 
     const nidAr = toAr(nid.slice(0, 7)).split('').join(' ') + '   ' + toAr(nid.slice(7)).split('').join(' ');
+    ctx.save();
+    ctx.direction = 'ltr';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#0f0f12';
     ctx.font = 'bold 38px "IBM Plex Sans Arabic", monospace';
     ctx.fillText(nidAr, 679, 504);
+    ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#554132';
     ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('تاريخ الميلاد', 343, 554);
+    ctx.save();
+    ctx.direction = 'ltr';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#141418';
     ctx.font = 'bold 26px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText(toAr(dob.replace(/-/g, '/')), 190, 592);
+    ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#4b3c30';
@@ -1266,7 +1276,7 @@
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
         governorate: cardForm.governorate.value.trim(),
-        national_id: cardForm.national_id.value.trim(),
+        national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, cardForm.governorate.value.trim(), cardForm.gender.value, cardForm.full_name.value.trim()),
         gender: cardForm.gender.value,
         photo: faceDataUrl,
         card_image: cardDataUrl,

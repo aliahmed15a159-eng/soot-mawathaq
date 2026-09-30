@@ -152,13 +152,16 @@ async function handle(req, res) {
   /* ---------- التسجيل ---------- */
   if (pathname === '/register' && req.method === 'GET') {
     const electionId = q.get('e');
-    const election = electionId ? await db.getElection(electionId) : null;
+    const [election, allCards] = await Promise.all([
+      electionId ? db.getElection(electionId) : null,
+      db.listIdCards(),
+    ]);
     return sendHtml(res, shell({
       title: 'التسجيل',
       body: pages.registerPage({
         election: election ? { ...election, state: api.electionState(election) } : null,
         demo,
-        sample: demo ? { national_id: '29807152101234', full_name: 'مينا عبد المسيح حنا', birth_date: '1998-07-15', governorate: 'الجيزة' } : null,
+        cards: (allCards || []).filter((c) => c.national_id_plain && c.card_image),
       }),
       showStepper: true, active: 1,
     }));
