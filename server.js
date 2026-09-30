@@ -354,12 +354,27 @@ async function handle(req, res) {
     const rl = sec.rateLimit(`adminlogin:${ip}`, 10, 300_000);
     if (!rl.ok) return tooMany(res, rl);
     const form = await readForm(req);
-    if (!sec.safeEqual(form.key || '', config.adminKey)) {
-      await db.audit({ action: 'admin_login_failed', actor: `ip:${ip}` });
-      return sendHtml(res, shell({ title: 'دخول الإدارة', body: adminViews.adminLogin({ error: 'المفتاح غير صحيح' }) }), 401);
+    const emailIn = String(form.email || '').trim().toLowerCase();
+    const passIn = String(form.password || '').trim();
+    const keyIn = String(form.key || '').trim();
+
+    const byEmailPass = emailIn && passIn
+      && sec.safeEqual(emailIn, String(config.adminEmail || '').toLowerCase())
+      && sec.safeEqual(passIn, String(config.adminPassword || ''));
+    const byKey = keyIn && (
+      sec.safeEqual(keyIn, config.adminKey)
+      || sec.safeEqual(keyIn, String(config.adminPassword || ''))
+    );
+
+    if (!byEmailPass && !byKey) {
+      await db.audit({ action: 'admin_login_failed', actor: `ip:${ip}`, meta: { email: emailIn || undefined } });
+      return sendHtml(res, shell({
+        title: 'دخول الإدارة',
+        body: adminViews.adminLogin({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', email: form.email || '' }),
+      }), 401);
     }
     session.startAdmin(res);
-    await db.audit({ action: 'admin_login', actor: `ip:${ip}` });
+    await db.audit({ action: 'admin_login', actor: emailIn || `ip:${ip}` });
     return redirect(res, '/admin');
   }
 

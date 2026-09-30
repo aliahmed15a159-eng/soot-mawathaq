@@ -3,18 +3,23 @@
 const { shell, esc, icon } = require('./layout');
 const { fmtDate, stateChip, STATE_LABEL } = require('./pages');
 
-function adminLogin({ error }) {
+function adminLogin({ error, email = '' }) {
   return `
 <section class="page-head center"><h1>لوحة إشراف الانتخابات</h1>
-<p class="muted">دخول لجنة الإشراف بمفتاح الإدارة. كل عملية هنا تُسجَّل في سجل التدقيق باسم الفاعل ووقت التنفيذ.</p></section>
-<form class="card form-card center-col" method="post" action="/api/admin/login">
+<p class="muted">تسجيل دخول مسؤول المنصة بالبريد الإلكتروني وكلمة المرور. كل عملية هنا تُسجَّل في سجل التدقيق.</p></section>
+<form class="card form-card center-col" method="post" action="/api/admin/login" autocomplete="on">
   <div class="field">
-    <label for="key">مفتاح الإدارة</label>
-    <input id="key" name="key" type="password" required placeholder="••••••••">
-    <small class="hint">القيمة الافتراضية في وضع التجربة: per-aa-admin — غيّرها من متغير ADMIN_KEY</small>
+    <label for="email">البريد الإلكتروني للمسؤول</label>
+    <input id="email" name="email" type="email" dir="ltr" required value="${esc(email)}" placeholder="aliahmed055586@gmail.com">
+  </div>
+  <div class="field">
+    <label for="password">كلمة المرور</label>
+    <input id="password" name="password" type="password" dir="ltr" required placeholder="•••••••••••">
   </div>
   ${error ? `<p class="form-error">${esc(error)}</p>` : ''}
-  <div class="form-actions"><button class="btn primary" type="submit">${icon('lock', 18)} دخول</button></div>
+  <div class="form-actions">
+    <button class="btn primary lg" type="submit" style="width:100%">${icon('lock', 18)} تسجيل الدخول للوحة الإدارة</button>
+  </div>
 </form>`;
 }
 
