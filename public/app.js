@@ -204,7 +204,8 @@
 
     /* ---------- الذكاء الاصطناعي لمطابقة الوجه (128-D Neural Face Recognition) ---------- */
     let modelsLoaded = false;
-    let cachedRefDescriptor = null;
+    let cachedRefDescriptors = [];
+    let liveReticleTimer = null;
 
     function loadDecodedImage(src) {
       return new Promise((resolve, reject) => {
@@ -216,9 +217,29 @@
       });
     }
 
+    async function extractDescriptorMultiScale(imgEl) {
+      if (!window.faceapi) return null;
+      for (const size of [416, 320]) {
+        const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: size, scoreThreshold: 0.25 });
+        const det = await window.faceapi.detectSingleFace(imgEl, opts).withFaceLandmarks(true).withFaceDescriptor();
+        if (det && det.descriptor) return Array.from(det.descriptor);
+      }
+      // محاولة بإطار هامشي للصور المقصوصة عن قرب
+      const padC = document.createElement('canvas');
+      padC.width = 480; padC.height = 480;
+      const pctx = padC.getContext('2d');
+      pctx.fillStyle = '#e5e0d5';
+      pctx.fillRect(0, 0, 480, 480);
+      pctx.drawImage(imgEl, 84, 84, 312, 312);
+      const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.24 });
+      const detPad = await window.faceapi.detectSingleFace(padC, opts).withFaceLandmarks(true).withFaceDescriptor();
+      return detPad && detPad.descriptor ? Array.from(detPad.descriptor) : null;
+    }
+
     async function ensureFaceModels() {
+      const badgeTxt = $('#ai-engine-text');
       if (modelsLoaded) return true;
-      for (let i = 0; i < 25 && !window.faceapi; i++) {
+      for (let i = 0; i < 30 && !window.faceapi; i++) {
         await new Promise((r) => setTimeout(r, 200));
       }
       if (!window.faceapi) return false;
@@ -230,6 +251,22 @@
           window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
         modelsLoaded = true;
+        // استخراج البصمة المرجعية فورًا في الخلفية
+        const sources = [$('#db-card-img'), $('#db-face-ref')].filter(Boolean);
+        for (const el of sources) {
+          if (!el.src) continue;
+          try {
+            const decoded = await loadDecodedImage(el.src);
+            const desc = await extractDescriptorMultiScale(decoded);
+            if (desc && desc.length === 128) cachedRefDescriptors.push(desc);
+          } catch (e) {}
+        }
+        if (badgeTxt) {
+          badgeTxt.textContent = cachedRefDescriptors.length
+            ? '✓ محرك البصمة العصبية 128-D جاهز — تم تحميل بصمة صاحب البطاقة'
+            : '✓ محرك البصمة العصبية 128-D جاهز للفحص';
+        }
+        startLiveFaceReticle();
         return true;
       } catch (e) {
         console.warn('[face-ai] تعذّر تحميل موديلات الوجه:', e);
@@ -237,58 +274,66 @@
       }
     }
 
+    function startLiveFaceReticle() {
+      if (liveReticleTimer) clearInterval(liveReticleTimer);
+      const guideBox = $('#face-guide-box');
+      const guideLabel = $('#face-guide-label');
+      liveReticleTimer = setInterval(async () => {
+        if (!modelsLoaded || !videoSelfie || !videoSelfie.videoWidth || videoSelfie.paused) return;
+        try {
+          const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 });
+          const det = await window.faceapi.detectSingleFace(videoSelfie, opts);
+          if (det && guideBox) {
+            guideBox.classList.add('face-locked');
+            if (guideLabel) guideLabel.textContent = '✓ الوجه مرصود بوضوح — اضغط التقاط الآن';
+          } else if (guideBox) {
+            guideBox.classList.remove('face-locked');
+            if (guideLabel) guideLabel.textContent = 'ضع وجهك في منتصف الإطار';
+          }
+        } catch {}
+      }, 650);
+    }
+
     async function computeNeuralComparison() {
       const ready = await ensureFaceModels();
       if (!ready) return { aiReady: false };
-      const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.28 });
 
-      // ١) استخراج بصمة الوجه المرجعية من بطاقة قاعدة البيانات (مع إطار هامشي لضمان دقة كشف الوجه)
-      if (!cachedRefDescriptor) {
+      if (!cachedRefDescriptors.length) {
         const candidates = [$('#db-card-img'), $('#db-face-ref')].filter(Boolean);
         for (const el of candidates) {
           if (!el.src) continue;
           try {
             const decodedRef = await loadDecodedImage(el.src);
-            let refDet = await window.faceapi.detectSingleFace(decodedRef, opts).withFaceLandmarks(true).withFaceDescriptor();
-            if (!refDet) {
-              const padC = document.createElement('canvas');
-              padC.width = 480; padC.height = 480;
-              const pctx = padC.getContext('2d');
-              pctx.fillStyle = '#e5e0d5';
-              pctx.fillRect(0, 0, 480, 480);
-              pctx.drawImage(decodedRef, 96, 96, 288, 288);
-              refDet = await window.faceapi.detectSingleFace(padC, opts).withFaceLandmarks(true).withFaceDescriptor();
-            }
-            if (refDet && refDet.descriptor) {
-              cachedRefDescriptor = Array.from(refDet.descriptor);
-              break;
-            }
-          } catch (e) {
-            console.warn('[face-ai] تعذّر قراءة صورة المرجع:', e);
-          }
+            const desc = await extractDescriptorMultiScale(decodedRef);
+            if (desc && desc.length === 128) cachedRefDescriptors.push(desc);
+          } catch (e) {}
         }
       }
 
-      // ٢) فحص صورة السيلفي الملتقطة واستخراج البصمة العصبية 128-D
-      let selfieDet = null;
+      let selfieDesc = null;
       if (selfieData && selfieData.dataUrl) {
         const decodedSelfie = await loadDecodedImage(selfieData.dataUrl);
-        selfieDet = await window.faceapi.detectSingleFace(decodedSelfie, opts).withFaceLandmarks(true).withFaceDescriptor();
+        selfieDesc = await extractDescriptorMultiScale(decodedSelfie);
       }
-      if (!selfieDet || !selfieDet.descriptor) {
+      if (!selfieDesc || selfieDesc.length !== 128) {
         return { aiReady: true, faceDetected: false, neuralDistance: 1.5 };
       }
-      const selfieDesc = Array.from(selfieDet.descriptor);
-      let dist = null;
-      if (cachedRefDescriptor && cachedRefDescriptor.length === 128) {
-        dist = window.faceapi.euclideanDistance(cachedRefDescriptor, selfieDesc);
+
+      let bestDist = null;
+      let bestRef = cachedRefDescriptors[0] || null;
+      for (const refD of cachedRefDescriptors) {
+        const d = window.faceapi.euclideanDistance(refD, selfieDesc);
+        if (bestDist === null || d < bestDist) {
+          bestDist = d;
+          bestRef = refD;
+        }
       }
       return {
         aiReady: true,
         faceDetected: true,
-        refDescriptor: cachedRefDescriptor,
+        refDescriptor: bestRef,
         selfieDescriptor: selfieDesc,
-        neuralDistance: typeof dist === 'number' ? dist : null,
+        neuralDistance: typeof bestDist === 'number' ? bestDist : null,
       };
     }
 
@@ -804,7 +849,8 @@
       errorBox.hidden = true;
       const picked = $('input[name="candidate_id"]:checked', voteForm);
       if (!picked) { errorBox.textContent = 'اختر مرشحًا واحدًا الأول'; errorBox.hidden = false; return; }
-      const label = picked.closest('.candidate').querySelector('.cand-info b').textContent;
+      const cardEl = picked.closest('.ballot-cand-card, .candidate');
+      const label = (cardEl && cardEl.querySelector('.ballot-name, .cand-info b') ? cardEl.querySelector('.ballot-name, .cand-info b').textContent : 'المرشح المختار');
       $('#confirm-name').textContent = label;
       pending = picked.value;
       if (dialog && dialog.showModal) dialog.showModal(); else confirmSubmit();

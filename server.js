@@ -130,8 +130,17 @@ async function handle(req, res) {
     const elections = (await db.listElections()).map((e) => ({ ...e, state: api.electionState(e) }));
     let candidates = 0; let ballots = 0;
     for (const e of elections) {
-      candidates += (await db.listCandidates(e.id)).length;
-      ballots += await db.countBallots(e.id);
+      const cList = await db.listCandidates(e.id);
+      const tally = await db.tally(e.id);
+      const totalB = tally.total || 0;
+      e.total_ballots = totalB;
+      e.candidates = cList.map((c, idx) => {
+        const v = (tally.counts && tally.counts[c.id]) || 0;
+        const pct = totalB ? Math.round((v / totalB) * 100) : 0;
+        return { ...c, number: idx + 1, votes: v, percent: pct };
+      });
+      candidates += cList.length;
+      ballots += totalB;
     }
     return sendHtml(res, shell({
       title: 'الرئيسية',
