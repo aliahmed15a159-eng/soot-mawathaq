@@ -397,12 +397,28 @@ async function handle(req, res) {
       api.stats(), db.listElections(), db.listReviews('pending'), db.listAudit(60),
       api.providersHealth(), db.voterRollStats(), db.listIdCards(),
     ]);
+    const enrichedElections = [];
+    for (const e of elections) {
+      const cList = await db.listCandidates(e.id);
+      const tally = await db.tally(e.id);
+      const totalB = tally.total || 0;
+      enrichedElections.push({
+        ...e,
+        state: api.electionState(e),
+        total_ballots: totalB,
+        candidates: cList.map((c, idx) => {
+          const v = (tally.counts && tally.counts[c.id]) || 0;
+          const pct = totalB ? Math.round((v / totalB) * 100) : 0;
+          return { ...c, number: idx + 1, votes: v, percent: pct };
+        }),
+      });
+    }
     return sendHtml(res, shell({
-      title: 'لوحة الإدارة', wide: true,
+      title: 'مركز القيادة والإشراف', wide: true,
       body: adminViews.adminDashboard({
         stats,
-        elections: elections.map((e) => ({ ...e, state: api.electionState(e) })),
-        reviews, audit, adminName: 'لجنة الإشراف',
+        elections: enrichedElections,
+        reviews, audit, adminName: 'علي أحمد (المشرف العام)',
         providers: providersHealth, roll, cards,
       }),
     }));
@@ -444,6 +460,12 @@ async function handle(req, res) {
     if (/^\/api\/admin\/elections\/\d+\/state$/.test(pathname)) {
       const id = pathname.split('/')[4];
       return sendJson(res, await api.updateElectionState({ id, state: body.state, admin: 'committee' }));
+    }
+    if (/^\/api\/admin\/elections\/\d+\/delete$/.test(pathname)) {
+      const id = pathname.split('/')[4];
+      await db.deleteElection(id);
+      await db.audit({ action: 'election_deleted', actor: 'committee', meta: { id } });
+      return sendJson(res, { ok: true });
     }
     if (pathname === '/api/admin/roll') {
       try {

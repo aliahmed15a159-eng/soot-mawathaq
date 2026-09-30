@@ -1890,3 +1890,371 @@ dialog.confirm::backdrop {
 
 .ok-text { color: var(--emerald); font-weight: 700; }
 .no-text { color: var(--danger); font-weight: 700; }
+
+/* ==========================================================================
+   لوحة القيادة والإشراف القضائي (/admin) + منظومة الأنيميشن التفاعلية
+   ========================================================================== */
+
+/* بوابة تسجيل دخول الأدمن */
+.admin-login-wrap {
+  max-width: 480px;
+  margin: 36px auto;
+}
+
+.admin-vault-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.admin-vault-top {
+  margin-bottom: 24px;
+}
+
+.vault-seal.lg {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  margin: 0 auto;
+  background: var(--obsidian);
+  color: #E5C158;
+  border: 1px solid rgba(229, 193, 88, 0.45);
+  display: grid;
+  place-items: center;
+}
+
+.admin-login-form {
+  text-align: right;
+}
+
+/* هيدر لوحة القيادة */
+.admin-command-hero {
+  background: linear-gradient(140deg, var(--obsidian) 0%, var(--obsidian-2) 100%);
+  color: #FFFFFF;
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  border: 1px solid rgba(229, 193, 88, 0.32);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-command-hero h1 {
+  color: #FFFFFF;
+  margin-bottom: 6px;
+}
+
+.admin-command-hero p {
+  color: rgba(244, 243, 238, 0.78);
+  margin: 0;
+  font-size: 0.94rem;
+}
+
+.admin-command-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* مؤشرات الأداء في لوحة الإدارة */
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.admin-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--obsidian);
+  color: #E5C158;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.admin-kpi-card b {
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--obsidian);
+  line-height: 1.15;
+}
+
+.admin-kpi-card span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* التبويبات (Tabs) */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tab:hover {
+  background: var(--bg);
+  color: var(--obsidian);
+}
+
+.tab.active {
+  background: var(--obsidian);
+  color: #E5C158;
+  box-shadow: var(--shadow-xs);
+}
+
+.tab-panel {
+  display: none;
+  animation: fadeSlideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* بطاقات المرشحين داخل لوحة الإدارة */
+.admin-cand-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.admin-cand-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-cand-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--obsidian);
+}
+
+.admin-cand-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.admin-cand-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid var(--border-strong);
+  flex-shrink: 0;
+}
+
+.admin-cand-meta {
+  flex: 1;
+}
+
+.admin-cand-num {
+  display: inline-block;
+  font-size: 0.74rem;
+  color: var(--emerald);
+  font-weight: 700;
+}
+
+.admin-cand-meta b {
+  display: block;
+  font-size: 1rem;
+  color: var(--obsidian);
+}
+
+.admin-cand-score {
+  text-align: left;
+}
+
+.admin-cand-score b {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--obsidian);
+}
+
+.admin-cand-score span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* بطاقات الرقم القومي في لوحة الإدارة */
+.admin-idcards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.admin-idcard-item {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.admin-idcard-visual img {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.admin-id-kv {
+  display: grid;
+  gap: 4px;
+  font-size: 0.86rem;
+  margin-top: 8px;
+  color: var(--ink-2);
+}
+
+.audit-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--obsidian);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   منظومة الأنيميشن والحركة الحية (Animations & Biometric Scanlines)
+   ========================================================================== */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  70% { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes biometricScan {
+  0% { top: 8%; opacity: 0.2; }
+  50% { top: 88%; opacity: 0.95; }
+  100% { top: 8%; opacity: 0.2; }
+}
+
+@keyframes barGrow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.pulse-dot {
+  animation: pulseRing 2s infinite;
+}
+
+/* دخول متدرج ناعم للعناصر */
+.hero-sovereign,
+.cand-showcase-card,
+.sec-banner-item,
+.card,
+.ballot-cand-card,
+.result-cand-row,
+.stat,
+.admin-kpi-card {
+  animation: fadeSlideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cand-showcase-card:nth-child(1), .ballot-cand-card:nth-child(1), .admin-kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.cand-showcase-card:nth-child(2), .ballot-cand-card:nth-child(2), .admin-kpi-card:nth-child(2) { animation-delay: 0.12s; }
+.cand-showcase-card:nth-child(3), .ballot-cand-card:nth-child(3), .admin-kpi-card:nth-child(3) { animation-delay: 0.19s; }
+.cand-showcase-card:nth-child(4), .ballot-cand-card:nth-child(4), .admin-kpi-card:nth-child(4) { animation-delay: 0.26s; }
+
+/* أنيميشن نمو أشرطة الفرز */
+.cand-meter-track span,
+.bar span {
+  transform-origin: right center;
+  animation: barGrow 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* خط الليزر البيومتري المتحرك فوق الكاميرا أثناء التحقق */
+.camera-frame.selfie::after {
+  content: '';
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10B981, #6EE7B7, #10B981, transparent);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.85);
+  pointer-events: none;
+  animation: biometricScan 3.2s ease-in-out infinite;
+}
+
+/* تأثير رفع تفاعلي للأزرار والبطاقات */
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 900px) {
+  .admin-kpi-grid, .admin-cand-grid {
+    grid-template-columns: 1fr;
+  }
+}

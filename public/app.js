@@ -932,6 +932,15 @@
     });
 
     document.addEventListener('click', async (e) => {
+      const delBtn = e.target.closest('[data-delete-election]');
+      if (delBtn) {
+        if (!confirm('هل أنت متأكد من حذف هذا الاستحقاق الانتخابي نهائيًا؟')) return;
+        delBtn.disabled = true;
+        const { data } = await postJson(`/api/admin/elections/${delBtn.dataset.deleteElection}/delete`, {});
+        if (!data.ok) { alert(data.error || 'تعذّر الحذف'); delBtn.disabled = false; return; }
+        location.reload();
+        return;
+      }
       const stateBtn = e.target.closest('[data-election-state]');
       if (stateBtn) {
         stateBtn.disabled = true;
@@ -983,7 +992,7 @@
   const fillBtn = document.querySelector('#btn-fill-sample-card');
   if (fillBtn) {
     fillBtn.addEventListener('click', () => {
-      const f = document.querySelector('#form-register');
+      const f = document.querySelector('#register-form') || document.querySelector('#form-register');
       if (!f) return;
       f.full_name.value = fillBtn.dataset.name || '';
       f.national_id.value = fillBtn.dataset.nid || '';
