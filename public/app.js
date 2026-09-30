@@ -1259,6 +1259,13 @@
       }
       ctx.restore();
     }
+    // الرقم التسلسلي أسفل البطاقة (كالبطاقات الحقيقية)
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#46413c';
+    ctx.font = 'bold 20px "IBM Plex Mono", monospace';
+    ctx.fillText(`ID-EG-${String(nid).slice(-7)}`, 470, 584);
+    ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#4b3c30';
