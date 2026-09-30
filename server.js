@@ -145,7 +145,7 @@ async function handle(req, res) {
     return sendHtml(res, shell({
       title: 'الرئيسية',
       body: pages.landing({ elections, demo, counts: { elections: elections.length, candidates, ballots } }),
-      bodyClass: 'page-landing',
+      bodyClass: 'page-landing', nav: 'home',
     }));
   }
 
@@ -163,7 +163,7 @@ async function handle(req, res) {
         demo,
         cards: (allCards || []).filter((c) => c.national_id_plain && c.card_image),
       }),
-      showStepper: true, active: 1,
+      showStepper: true, active: 1, nav: 'candidates',
     }));
   }
 
@@ -234,7 +234,7 @@ async function handle(req, res) {
     return sendHtml(res, shell({
       title: 'التحقق من الهوية',
       body: pages.verifyPage({ voter, election, demo, rollCard }),
-      showStepper: true, active: 2,
+      showStepper: true, active: 2, nav: 'candidates',
     }));
   }
 
@@ -294,7 +294,7 @@ async function handle(req, res) {
     return sendHtml(res, shell({
       title: 'الاقتراع',
       body: pages.votePage({ election: payload.election, candidates: payload.candidates, voter, kiosk: !!sess.kiosk }),
-      showStepper: true, active: 3,
+      showStepper: true, active: 3, nav: 'candidates',
     }));
   }
 
@@ -336,18 +336,18 @@ async function handle(req, res) {
       const r = await api.receiptStatus({ code });
       result = r.ok ? { kind: 'found', ...r } : { kind: /صيغة/.test(r.error) ? 'bad' : 'notfound' };
     }
-    return sendHtml(res, shell({ title: 'التحقق من إيصال', body: pages.receiptLookupPage({ code, result }) }));
+    return sendHtml(res, shell({ title: 'التحقق من إيصال', body: pages.receiptLookupPage({ code, result }), nav: 'verify-receipt' }));
   }
 
   /* ---------- النتائج ---------- */
   if (pathname === '/results' && req.method === 'GET') {
     const elections = await db.listElections();
     let electionId = q.get('e') || (elections[0] && elections[0].id);
-    if (!electionId) return sendHtml(res, shell({ title: 'النتائج', body: pages.resultsPage({ data: null, elections: [], electionId: null }) }));
+    if (!electionId) return sendHtml(res, shell({ title: 'النتائج', body: pages.resultsPage({ data: null, elections: [], electionId: null }), nav: 'results' }));
     const r = await api.results({ electionId, session: sess });
     return sendHtml(res, shell({
       title: 'النتائج',
-      body: pages.resultsPage({ data: r.ok ? r : null, elections, electionId }),
+      body: pages.resultsPage({ data: r.ok ? r : null, elections, electionId }), nav: 'results',
     }));
   }
 
@@ -540,7 +540,7 @@ if (require.main === module && !process.env.VERCEL) {
     setInterval(api.cleanupReviewFiles, 3600_000).unref?.();
     server.listen(config.port, config.host, () => {
       console.log('');
-      console.log('  𓂀  صوت موثّق — منصة انتخابات بالتحقق من الهوية');
+      console.log('  صوت — من هويتك .. إلى صوتك | منصة تصويت إلكتروني');
       console.log(`  ▸ الخادم شغّال على المنفذ ${config.port} (وضع قاعدة البيانات: ${db.mode})`);
       console.log(`  ▸ الصفحة الرئيسية: http://localhost:${config.port}/`);
       console.log(`  ▸ لوحة الإدارة:    http://localhost:${config.port}/admin  (المفتاح: ${config.adminKey === 'per-aa-admin' ? 'per-aa-admin — غيّره من ADMIN_KEY' : 'مضبوط من البيئة'})`);

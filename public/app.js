@@ -1,11 +1,10 @@
 /* =============================================================================
-   صوت موثّق — منطق المتصفح
+   صوت — منطق المتصفح
+   • المظهر: فاتح/داكن مع تخزين محلي واحترام تفضيل النظام
    • التسجيل: قراءة الرقم القومي لحظيًا (تاريخ الميلاد/المحافظة/النوع)
-   • التحقق: كاميرا + مؤشرات حركة لكشف الحياة + بصمة إدراكية للوجه
-   • الاقتراع: تأكيد نهائي ثم إرسال الصوت
-   ملاحظة هندسية: قياسات الحركة هنا «مؤشرات مبسّطة» مبنية على تحليل فروق
-   الإطارات وطرح الخلفية، ويمكن استبدالها بموديل ملامح الوجه (MediaPipe/FaceDetector)
-   في المرحلة الثانية بنفس واجهة الإرسال (liveness_events + landmarks).
+   • التحقق: كاميرا + مؤشرات حركة لكشف الحياة + بصمة عصبية للوجه (128-D)
+   • الاقتراع: مراجعة وتأكيد نهائي ثم إرسال الصوت
+   • توليد البطاقة: الرقم القومي يُرسم رقمًا رقمًا (محمي من انعكاس BiDi)
    ========================================================================== */
 (() => {
   'use strict';
@@ -24,6 +23,85 @@
     try { data = await res.json(); } catch { data = { ok: false, error: 'رد غير متوقع من الخادم' }; }
     return { status: res.status, data };
   }
+
+  /* ======================================================= ٠) المظهر (فاتح/داكن) */
+  const themeBtns = $$('[data-theme-toggle]');
+  function applyThemeLabels() {
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    themeBtns.forEach((b) => {
+      const label = b.querySelector('[data-theme-label]');
+      if (label) label.textContent = theme === 'dark' ? 'داكن' : 'فاتح';
+      b.setAttribute('aria-pressed', String(theme === 'dark'));
+    });
+    // لون شريط المتصفح يتبع الثيم
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B1512' : '#0F8F6B');
+  }
+  themeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('soot-theme', next); } catch {}
+      applyThemeLabels();
+    });
+  });
+  applyThemeLabels();
+  // متابعة تغيّر تفضيل النظام (دون تجاوز اختيار المستخدم المحفوظ)
+  window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', (e) => {
+    let saved = null;
+    try { saved = localStorage.getItem('soot-theme'); } catch {}
+    if (!saved) {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      applyThemeLabels();
+    }
+  });
+
+  /* ======================================================= ٠.٥) قائمة الجوال */
+  const burger = $('[data-nav-toggle]');
+  const mobileNav = $('#mobile-nav');
+  if (burger && mobileNav) {
+    const setMenu = (open) => {
+      mobileNav.hidden = !open;
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'إغلاق القائمة' : 'فتح القائمة');
+      burger.innerHTML = open
+        ? '<svg class="ic" width="21" height="21" aria-hidden="true"><use href="#i-close"/></svg>'
+        : '<svg class="ic" width="21" height="21" aria-hidden="true"><use href="#i-menu"/></svg>';
+    };
+    burger.addEventListener('click', () => setMenu(mobileNav.hidden));
+    mobileNav.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !mobileNav.hidden) setMenu(false); });
+  }
+
+  /* ======================================================= ٠.٦) ظهور تدريجي + Toast + نوافذ */
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in-view'); io.unobserve(en.target); } });
+    }, { threshold: 0.12 });
+    $$('.reveal').forEach((el) => io.observe(el));
+  } else {
+    $$('.reveal').forEach((el) => el.classList.add('in-view'));
+  }
+
+  function toast(msg, ok = true) {
+    let region = $('.toast-region');
+    if (!region) { region = document.createElement('div'); region.className = 'toast-region'; region.setAttribute('aria-live', 'polite'); document.body.appendChild(region); }
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<svg class="ic" width="15" height="15" aria-hidden="true"><use href="#i-${ok ? 'check-circle' : 'alert'}"/></svg>`;
+    el.appendChild(document.createTextNode(msg));
+    region.appendChild(el);
+    setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 300); }, 2600);
+  }
+
+  // إغلاق نوافذ <dialog> عبر أزرار [data-close-modal]
+  document.addEventListener('click', (e) => {
+    const closer = e.target.closest('[data-close-modal]');
+    if (closer) {
+      const dlg = closer.closest('dialog');
+      if (dlg && dlg.open) dlg.close();
+    }
+  });
 
   /* ======================================================= ١) صفحة التسجيل */
   const registerForm = $('#register-form');
@@ -65,15 +143,15 @@
       const hint = $('#nid-hint');
       if (!p) {
         preview.hidden = true;
-        if (hint) { hint.textContent = `${nid.value.length}/14 رقم — هنقرأ منه تاريخ الميلاد والمحافظة تلقائيًا`; hint.style.color = ''; }
+        if (hint) { hint.textContent = `${nid.value.length}/14 رقم — نقرأ منه تاريخ الميلاد والمحافظة تلقائيًا`; hint.style.color = ''; }
         return;
       }
       if (p.invalidDate || p.invalidGov) {
         preview.hidden = true;
-        if (hint) { hint.textContent = p.invalidDate ? 'تاريخ الميلاد داخل الرقم غير صحيح' : 'كود المحافظة داخل الرقم غير معروف'; hint.style.color = 'var(--terra)'; }
+        if (hint) { hint.textContent = p.invalidDate ? 'تاريخ الميلاد داخل الرقم غير صحيح' : 'كود المحافظة داخل الرقم غير معروف'; hint.style.color = 'var(--danger)'; }
         return;
       }
-      if (hint) { hint.textContent = 'تمام — قرأنا التاريخ والمحافظة من الرقم القومي'; hint.style.color = 'var(--turq-dk)'; }
+      if (hint) { hint.textContent = 'تم — قرأنا التاريخ والمحافظة من الرقم القومي'; hint.style.color = 'var(--ok)'; }
       dob.value = p.iso;
       gov.value = p.gov;
       $('#np-gender').textContent = p.gender;
@@ -100,7 +178,7 @@
       };
       if (payload.national_id.length !== 14) return showError('الرقم القومي لازم يكون 14 رقم');
       if (!payload.consent) return showError('لازم توافق على استخدام البيانات للتحقق من الهوية');
-      btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'جاري التحقق…';
+      btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'جارٍ الحفظ…';
       const { data } = await postJson('/api/register', payload);
       if (!data.ok) {
         btn.disabled = false; btn.textContent = btn.dataset.label;
@@ -131,7 +209,7 @@
     });
     $('#btn-resend-otp')?.addEventListener('click', async (e) => {
       const b = e.currentTarget;
-      b.disabled = true; b.textContent = 'جاري الإرسال…';
+      b.disabled = true; b.textContent = 'جارٍ الإرسال…';
       const { data } = await postJson('/api/otp/resend', {});
       b.disabled = false; b.textContent = 'إعادة إرسال الكود';
       if (!data.ok) { errorBox.textContent = data.error || 'تعذّر الإرسال'; errorBox.hidden = false; return; }
@@ -157,25 +235,26 @@
 
     let stream = null; let facing = 'user'; let challenge = [];
     let livenessEvents = []; let frames = 0; let cardData = null; let selfieData = null;
-    let motionLoop = null; let faceAreaBaseline = 0; let eyeBaseline = 0; let lastBlink = 0;
+    let motionLoop = null; let eyeBaseline = 0; let lastBlink = 0;
 
     const camStatus = $('#cam-status');
-    function setCamStatus(text, isLive = false) {
+    function setCamStatus(text, state = '') {
       if (!camStatus) return;
       camStatus.textContent = text;
-      camStatus.classList.toggle('live', !!isLive);
+      camStatus.classList.remove('live', 'err');
+      if (state) camStatus.classList.add(state);
     }
 
     async function startCamera() {
       const errBox = $('#verify-error');
       if (errBox) errBox.hidden = true;
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCamStatus('الكاميرا غير مدعومة في هذا المتصفح — استخدم زر «رفع صورة للوجه»', false);
+        setCamStatus('الكاميرا غير مدعومة — استخدم «رفع صورة من الجهاز»', 'err');
         return false;
       }
       try {
         if (stream) stream.getTracks().forEach((t) => t.stop());
-        setCamStatus('جاري تشغيل الكاميرا…', false);
+        setCamStatus('جارٍ تشغيل الكاميرا…', '');
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
           audio: false,
@@ -190,10 +269,10 @@
           video.srcObject = stream;
           await video.play().catch(() => {});
         }
-        setCamStatus('الكاميرا شغّالة — ضع وجهك داخل الإطار ثم اضغط «التقاط السيلفي»', true);
+        setCamStatus('الكاميرا تعمل — ضع وجهك داخل الإطار', 'live');
         return true;
       } catch (err) {
-        setCamStatus('تعذّر فتح الكاميرا — يمكنك الضغط على «رفع صورة للوجه»', false);
+        setCamStatus('تعذّر فتح الكاميرا — يمكنك رفع صورة لوجهك', 'err');
         if (errBox) {
           errBox.textContent = 'لم نتمكن من فتح الكاميرا (' + (err.message || err.name) + ') — تأكد من السماح للكاميرا أو ارفع صورة لوجهك.';
           errBox.hidden = false;
@@ -202,7 +281,7 @@
       }
     }
 
-    /* ---------- الذكاء الاصطناعي لمطابقة الوجه (128-D Neural Face Recognition) ---------- */
+    /* ---------- محرك مطابقة الوجه (بصمة عصبية 128-D) ---------- */
     let modelsLoaded = false;
     let cachedRefDescriptors = [];
     let liveReticleTimer = null;
@@ -263,8 +342,8 @@
         }
         if (badgeTxt) {
           badgeTxt.textContent = cachedRefDescriptors.length
-            ? '✓ محرك البصمة العصبية 128-D جاهز — تم تحميل بصمة صاحب البطاقة'
-            : '✓ محرك البصمة العصبية 128-D جاهز للفحص';
+            ? 'محرك بصمة الوجه جاهز — تم تحميل بصمة صاحب البطاقة'
+            : 'محرك بصمة الوجه جاهز للفحص';
         }
         startLiveFaceReticle();
         return true;
@@ -285,10 +364,10 @@
           const det = await window.faceapi.detectSingleFace(videoSelfie, opts);
           if (det && guideBox) {
             guideBox.classList.add('face-locked');
-            if (guideLabel) guideLabel.textContent = '✓ الوجه مرصود بوضوح — اضغط التقاط الآن';
+            if (guideLabel) guideLabel.textContent = 'الوجه مرصود بوضوح — اضغط التقاط الآن';
           } else if (guideBox) {
             guideBox.classList.remove('face-locked');
-            if (guideLabel) guideLabel.textContent = 'ضع وجهك في منتصف الإطار';
+            if (guideLabel) guideLabel.textContent = 'ضع وجهك داخل الإطار';
           }
         } catch {}
       }, 650);
@@ -337,7 +416,7 @@
       };
     }
 
-    /* ---------- تحليل الإطار: جودة + بصمة إدراكية + مؤشرات حركة ---------- */
+    /* ---------- تحليل الإطار: جودة + بصمة إدراكية ---------- */
     function multiRegionFaceHashes(sourceCanvas) {
       const w = sourceCanvas.width, h = sourceCanvas.height;
       const tmp = document.createElement('canvas');
@@ -381,7 +460,7 @@
       let variance = 0;
       for (let p = 0; p < lum.length; p++) variance += (lum[p] - mean) ** 2;
       variance /= w * h;
-      // تباين لابلاسي مبسّط = مؤشر حِدّة (ضباب أقل ⇒ قيمة أعلى)
+      // تباين لابلاسي مبسّط = مؤشر حِدّة
       let lap = 0;
       for (let y = 1; y < h - 1; y++) {
         for (let x = 1; x < w - 1; x++) {
@@ -393,10 +472,6 @@
       lap /= (w - 2) * (h - 2);
       const brightness = mean / 255;
       const contrast = Math.min(1, Math.sqrt(variance) / 75);
-      /**
-       * معايرة على كاميرات حقيقية: صور الوجه من مسافة ذراع تعطي تباينًا لابلاسيًا
-       * في حدود 4..14 (والكاميرات الحسّاسة 20+). القيمة 11 = حدّة ممتازة، 3 = ضباب واضح.
-       */
       const sharpness = Math.min(1, lap / 11);
       let quality = 1;
       if (brightness < 0.20) quality -= 0.45; else if (brightness < 0.30) quality -= 0.22;
@@ -425,7 +500,6 @@
       const mean = cells.reduce((a, b) => a + b, 0) / cells.length;
       let bits = '';
       for (let i = 0; i < cells.length; i++) bits += cells[i] > mean ? '1' : '0';
-      // عيّنة رقمية للتأكد من عدم إعادة استخدام نفس الصورة حرفيًا
       const samples = [data[0], data[100], data[Math.floor(data.length / 2)], data[data.length - 4]].join('-');
       return { hash: bits, samples };
     }
@@ -454,7 +528,6 @@
         if (!videoEl.videoWidth) return;
         const g = grayFrame(videoEl);
         tick++;
-        // نموذج خلفية بطيء ⇒ مساحة الوجه التقريبية (مؤشر القرب من الكاميرا)
         if (!bg) bg = Float32Array.from(g);
         let fg = 0;
         for (let p = 0; p < g.length; p++) {
@@ -462,7 +535,6 @@
           if (Math.abs(g[p] - bg[p]) > 26) fg++;
         }
         const faceArea = fg / g.length;
-        // طاقة الحركة في الأنصاف العلوية (مؤشر ميل الرأس) والسفلية الوسطى (الفم)
         let leftE = 0; let rightE = 0; let mouthE = 0; let eyeDark = 0; let eyeCount = 0;
         if (prevGray) {
           for (let y = 0; y < 128; y++) {
@@ -515,27 +587,7 @@
       return true;
     }
 
-    function beginLivenessMonitor() {
-      if (!videoSelfie) return;
-      startMotionMonitor(videoSelfie, (m) => {
-        frames++;
-        if (m.blinkNow && nowMs() - lastBlink > 900) {
-          lastBlink = nowMs();
-          const done = $('#challenge-list li[data-code="blink"]');
-          if (done && !done.classList.contains('done')) { done.classList.add('done'); livenessEvents.push({ code: 'blink', at: nowMs(), landmarks: landmarksFrom(m) }); }
-        }
-        const total = m.left + m.right + 0.0001;
-        const yaw = (m.right - m.left) / total * 0.5;
-        const faceWidth = Math.min(0.55, Math.sqrt(m.faceArea) * 1.05);
-        check('left', yaw < -0.14, m); check('right', yaw > 0.14, m);
-        check('close', faceWidth > 0.27, m);
-        check('smile', m.mouth > 0.02, m);
-        const pct = Math.min(100, Math.round((livenessEvents.length / Math.max(1, challenge.length)) * 100));
-        if ($('#liveness-bar')) $('#liveness-bar').style.width = `${pct}%`;
-      });
-    }
-
-    function ensureLivenessComplete() {
+    function markLivenessComplete() {
       const defaultLm = {
         blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
         left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
@@ -561,7 +613,7 @@
       show('selfie');
     });
 
-    // تشغيل تلقائي لتحدي التحقق وتحميل موديل الذكاء الاصطناعي بمجرد فتح صفحة /verify
+    // تشغيل تلقائي للتحدي وتحميل موديل الوجه عند فتح الصفحة
     initSelfieChallenge().then((ok) => {
       if (ok) {
         ensureFaceModels();
@@ -598,20 +650,7 @@
             uploaded: true,
           },
         };
-        // في وضع تجربة رفع الصورة: نعلّم حركات التحدي مكتملة عشان نختبر مطابقة الوجه بالبطاقة المسجّلة
-        const defaultLm = {
-          blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
-          left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
-          right: { yaw: 0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
-          close: { yaw: 0, eye: 0.2, faceWidth: 0.34, mouth: 0.01 },
-          smile: { yaw: 0, eye: 0.2, faceWidth: 0.3, mouth: 0.08 },
-        };
-        livenessEvents = (challenge || []).map((c, i) => ({
-          code: c.code, at: 900 + i * 1400, landmarks: defaultLm[c.code] || defaultLm.smile,
-        }));
-        frames = Math.max(frames, 40);
-        $$('#challenge-list li').forEach((li) => li.classList.add('done'));
-        if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
+        markLivenessComplete();
         show('selfie');
         $('#selfie-img').src = selfieData.dataUrl;
         $('#selfie-preview').hidden = false;
@@ -626,66 +665,15 @@
       await startCamera();
     });
 
-    function captureCardFrom(source) {
-      const c = grabFrame(source, 900);
-      const img = imageData(c);
-      const q = qualityMetrics(img.data, c.width, c.height);
-      const ph = perceptualHash(img.data, c.width, c.height);
-      cardData = { dataUrl: dataUrlFromCanvas(c, 0.85), meta: { ...q, ...ph, width: c.width, height: c.height } };
-      $('#card-img').src = cardData.dataUrl;
-      $('#card-preview').hidden = false;
-      $('#card-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (q.brightness < 0.22) toastCard('الإضاءة ضعيفة — جرّب مكان أنور لو سمحت');
-      else if (q.sharpness < 0.25) toastCard('الصورة مش واضحة — ثبّت الإيد شوية');
+    function check(code, condition, metrics) {
+      const li = $(`#challenge-list li[data-code="${code}"]`);
+      if (!li || li.classList.contains('done') || !condition) return;
+      li.classList.add('done');
+      livenessEvents.push({ code, at: nowMs(), landmarks: landmarksFrom(metrics) });
     }
 
-    function toastCard(msg) {
-      const box = $('#form-error') || document.body;
-      const el = document.createElement('div');
-      el.className = 'notice small';
-      el.textContent = msg;
-      $('#card-preview').prepend(el);
-      setTimeout(() => el.remove(), 6000);
-    }
-
-    $('#btn-capture-card')?.addEventListener('click', () => captureCardFrom(video));
-    $('#btn-use-card-file')?.addEventListener('click', () => $('#card-file').click());
-    $('#card-file')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = Math.min(900, img.width); canvas.height = Math.round(img.height * canvas.width / img.width);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const data = imageData(canvas);
-        const q = qualityMetrics(data.data, canvas.width, canvas.height);
-        const ph = perceptualHash(data.data, canvas.width, canvas.height);
-        cardData = { dataUrl: dataUrlFromCanvas(canvas, 0.85), meta: { ...q, ...ph, uploaded: true } };
-        $('#card-img').src = cardData.dataUrl;
-        $('#card-preview').hidden = false;
-      };
-      img.src = URL.createObjectURL(file);
-    });
-    $('#btn-card-retake')?.addEventListener('click', () => { cardData = null; $('#card-preview').hidden = true; });
-    $('#btn-card-ok')?.addEventListener('click', async () => {
-      if (!cardData) return;
-      const { data } = await postJson('/api/verify/start', {});
-      if (data && data.ok === false) {
-        if (data.code === 'otp_required' || /الموبايل/.test(data.error || '')) { location.href = '/otp'; return; }
-        if (/الجلسة/.test(data.error || '')) { location.href = '/register'; return; }
-        const box = $('#verify-error');
-        if (box) { box.textContent = data.error || 'تعذّر بدء التحقق'; box.hidden = false; }
-        return;
-      }
-      challenge = (data && data.challenge) || [];
-      $('#challenge-list').innerHTML = challenge.map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
-      const pInfo = data && data.provider ? data.provider : null;
-      if (pInfo && pInfo.active && pInfo.active !== 'demo') {
-        const badge = document.createElement('p');
-        badge.className = 'muted small';
-        badge.textContent = `مزوّد التحقق النشط: ${pInfo.label} — دقة أعلى في المطابقة`;
-        $('#challenge-list').after(badge);
-      }
+    function beginLivenessMonitor() {
+      if (!videoSelfie) return;
       startMotionMonitor(videoSelfie, (m) => {
         frames++;
         if (m.blinkNow && nowMs() - lastBlink > 900) {
@@ -700,24 +688,9 @@
         check('close', faceWidth > 0.27, m);
         check('smile', m.mouth > 0.02, m);
         const pct = Math.min(100, Math.round((livenessEvents.length / Math.max(1, challenge.length)) * 100));
-        $('#liveness-bar').style.width = `${pct}%`;
+        if ($('#liveness-bar')) $('#liveness-bar').style.width = `${pct}%`;
       });
-      show('selfie');
-    });
-
-    function check(code, condition, metrics) {
-      const li = $(`#challenge-list li[data-code="${code}"]`);
-      if (!li || li.classList.contains('done') || !condition) return;
-      li.classList.add('done');
-      livenessEvents.push({ code, at: nowMs(), landmarks: landmarksFrom(metrics) });
     }
-
-    $('#btn-selfie-restart')?.addEventListener('click', () => {
-      livenessEvents = []; frames = 0;
-      $$('#challenge-list li').forEach((li) => li.classList.remove('done'));
-      $('#liveness-bar').style.width = '0';
-      eyeBaseline = 0;
-    });
 
     $('#btn-capture-selfie')?.addEventListener('click', async () => {
       if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
@@ -725,6 +698,7 @@
         if (!started) return;
         await new Promise((r) => setTimeout(r, 400));
       }
+      setCamStatus('تم الالتقاط — راجع الصورة ثم ابدأ المطابقة', 'live');
       const c = grabFrame(videoSelfie, 720);
       const img = imageData(c);
       const q = qualityMetrics(img.data, c.width, c.height);
@@ -737,12 +711,12 @@
           sharpness: Math.max(0.55, q.sharpness),
           hash: ph.hash,
           faceHash: multiRegionFaceHashes(c),
-          samples: ph.samples,
+          hashSamples: ph.samples,
           width: c.width,
           height: c.height,
         },
       };
-      ensureLivenessComplete();
+      markLivenessComplete();
       $('#selfie-img').src = selfieData.dataUrl;
       $('#selfie-preview').hidden = false;
       $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -752,6 +726,7 @@
     $('#btn-selfie-ok')?.addEventListener('click', async () => {
       if (!selfieData) return;
       if (motionLoop) { clearInterval(motionLoop); motionLoop = null; }
+      setCamStatus('جارٍ التحقق من الهوية…', '');
       show('processing');
       const keys = ['card', 'live', 'face', 'decision'];
       let k = 0;
@@ -764,7 +739,7 @@
         if (k > keys.length) clearInterval(ticker);
       }, 650);
 
-      ensureLivenessComplete();
+      markLivenessComplete();
       const aiResult = await computeNeuralComparison();
       const payload = {
         card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
@@ -789,7 +764,6 @@
       const { data } = await postJson('/api/verify/complete', payload);
       clearInterval(ticker);
       $$('#progress-list li').forEach((li) => { li.classList.add('done'); li.classList.remove('active'); });
-      // لو الجلسة محتاجة تأكيد موبايل (فتح الصفحة مباشرة) → نوديه لصفحة الكود
       if (!data.ok && (data.code === 'otp_required' || /تأكيد رقم الموبايل/.test(data.error || ''))) {
         location.href = '/otp';
         return;
@@ -801,8 +775,9 @@
       show('result');
       const box = $('#result-box');
       if (!data || data.ok === false) {
-        box.innerHTML = `<div class="result-head err">${iconWarn()}<div><h2>تعذّر إتمام التحقق</h2><p>${(data && data.error) || 'حصل خطأ غير متوقع'}</p></div></div>
-          <div class="row"><a class="btn primary" href="/verify">إعادة المحاولة</a></div>`;
+        setCamStatus('تعذّر التحقق — حاول مرة أخرى', 'err');
+        box.innerHTML = `<div class="result-head err">${iconWarn()}<div><h2>تعذّر التحقق من الهوية</h2><p>${(data && data.error) || 'حصل خطأ غير متوقع — حاول مرة أخرى'}</p></div></div>
+          <div class="row"><a class="btn btn-primary" href="/verify">إعادة المحاولة</a></div>`;
         return;
       }
       const checks = data.checks || {};
@@ -812,25 +787,28 @@
           liveness: 'كشف الحياة (مقاومة الصور والفيديو)', selfie_quality: 'جودة السيلفي', face_match: 'مطابقة الوجه',
         }[key] || key;
         const val = v && v.score !== undefined ? v.score : (v && v.value !== undefined ? v.value : (v && v.confidence !== undefined ? v.confidence : ''));
-        return `<tr><td>${label}</td><td class="${v && v.ok ? 'ok-text' : 'no-text'}">${v && v.ok ? 'نجح' : 'لم ينجح'}</td><td class="mono">${val}</td></tr>`;
+        return `<tr><td>${label}</td><td class="${v && v.ok ? 'ok-text' : 'no-text'}">${v && v.ok ? 'نجح' : 'لم ينجح'}</td><td class="mono ltr">${val}</td></tr>`;
       }).join('');
 
       if (data.status === 'approved') {
-        box.innerHTML = `<div class="result-head ok">${iconCheck()}<div><h2>تم التحقق من هويتك</h2>
-          <p>نسبة التشابه ${Math.round((data.score || 0) * 100)}% — صدر لك رمز اقتراع سري صالح لمدة ١٥ دقيقة، وهو محفوظ على الخادم ولا يظهر في المتصفح.</p></div></div>
+        setCamStatus('تم التحقق من الهوية', 'live');
+        box.innerHTML = `<div class="result-head ok">${iconCheck()}<div><h2>تم التحقق من الهوية</h2>
+          <p>نسبة التشابه ${Math.round((data.score || 0) * 100)}% — صدر لك رمز اقتراع سري صالح لمدة 15 دقيقة، محفوظ على الخادم ولا يظهر في المتصفح.</p></div></div>
           <table class="score-table"><thead><tr><th>الفحص</th><th>النتيجة</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table>
-          <div class="row"><a class="btn primary lg" href="/vote">${'انتقل للاقتراع'}</a></div>`;
+          <div class="row"><a class="btn btn-primary btn-lg" href="/vote">انتقل للاقتراع</a></div>`;
       } else if (data.status === 'review') {
+        setCamStatus('طلبك قيد المراجعة اليدوية', '');
         box.innerHTML = `<div class="result-head warn">${iconWarn()}<div><h2>طلبك محوّل للجنة المراجعة</h2>
-          <p>نسبة التشابه في المنطقة الرمادية (${Math.round((data.score || 0) * 100)}%) — لجنة الإشراف ستراجع الصورتين يدويًا، وبعد الموافقة تقدر تصوّت من نفس الصفحة.</p></div></div>
+          <p>نسبة التشابه في المنطقة الرمادية (${Math.round((data.score || 0) * 100)}%) — ستُراجع اللجنة الصورتين يدويًا، وبعد الموافقة يمكنك التصويت من نفس الصفحة.</p></div></div>
           <ul class="ticks">${(data.reasons || []).map((r) => `<li>${r}</li>`).join('') || '<li>الصور بحاجة لمراجعة بشرية</li>'}</ul>
-          <div class="row"><a class="btn primary" href="/review-status?id=${data.reviewId}">تابع حالة الطلب</a></div>`;
+          <div class="row"><a class="btn btn-primary" href="/review-status?id=${data.reviewId}">تابع حالة الطلب</a></div>`;
       } else {
-        box.innerHTML = `<div class="result-head err">${iconWarn()}<div><h2>ما قدرناش نتأكد من هويتك</h2>
-          <p>ده مش اتهام — غالبًا المشكلة في جودة الصورة أو إن الحركات ما تكملتش. جرّب تاني في مكان أنور.</p></div></div>
+        setCamStatus('تعذّر التحقق — حاول مرة أخرى', 'err');
+        box.innerHTML = `<div class="result-head err">${iconWarn()}<div><h2>تعذّر التحقق من الهوية</h2>
+          <p>ده مش اتهام — غالبًا المشكلة في جودة الصورة أو إن الحركات ما اكتملتش. جرّب تاني في مكان أنور.</p></div></div>
           <ul class="ticks">${(data.reasons || []).map((r) => `<li>${r}</li>`).join('')}</ul>
           <table class="score-table"><thead><tr><th>الفحص</th><th>النتيجة</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table>
-          <div class="row"><a class="btn primary" href="/verify">إعادة المحاولة</a></div>`;
+          <div class="row"><a class="btn btn-primary" href="/verify">إعادة المحاولة</a></div>`;
       }
     }
 
@@ -843,14 +821,23 @@
   if (voteForm) {
     const dialog = $('#confirm-dialog');
     let pending = null;
+
+    // تظليل البطاقة المختارة
+    voteForm.addEventListener('change', () => {
+      $$('.ballot-card', voteForm).forEach((card) => {
+        const input = card.querySelector('input[name="candidate_id"]');
+        card.classList.toggle('is-selected', !!(input && input.checked));
+      });
+    });
+
     voteForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const errorBox = $('#vote-error');
       errorBox.hidden = true;
       const picked = $('input[name="candidate_id"]:checked', voteForm);
       if (!picked) { errorBox.textContent = 'اختر مرشحًا واحدًا الأول'; errorBox.hidden = false; return; }
-      const cardEl = picked.closest('.ballot-cand-card, .candidate');
-      const label = (cardEl && cardEl.querySelector('.ballot-name, .cand-info b') ? cardEl.querySelector('.ballot-name, .cand-info b').textContent : 'المرشح المختار');
+      const cardEl = picked.closest('.ballot-card');
+      const label = (cardEl && cardEl.querySelector('.ballot-name') ? cardEl.querySelector('.ballot-name').textContent : 'المرشح المختار');
       $('#confirm-name').textContent = label;
       pending = picked.value;
       if (dialog && dialog.showModal) dialog.showModal(); else confirmSubmit();
@@ -862,13 +849,13 @@
     async function confirmSubmit() {
       if (!pending) return;
       const btn = $('#confirm-yes');
-      if (btn) { btn.disabled = true; }
+      if (btn) { btn.disabled = true; btn.textContent = 'جارٍ تسجيل الصوت…'; }
       const { data } = await postJson('/api/vote', { candidate_id: pending, election_id: voteForm.dataset.election });
+      if (btn) { btn.disabled = false; btn.textContent = 'نعم، سجّل صوتي'; }
       if (!data.ok) {
         const errorBox = $('#vote-error');
         errorBox.textContent = data.error || 'تعذّر تسجيل الصوت';
         errorBox.hidden = false;
-        if (btn) btn.disabled = false;
         if (data.code === 'token_used') setTimeout(() => { location.href = '/'; }, 2500);
         return;
       }
@@ -882,9 +869,15 @@
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {
       const code = $('#receipt-code').textContent.trim();
-      try { await navigator.clipboard.writeText(code); copyBtn.textContent = 'تم النسخ ✓'; }
-      catch { copyBtn.textContent = 'انسخه يدويًا: ' + code; }
-      setTimeout(() => { copyBtn.textContent = 'نسخ الرقم'; }, 2500);
+      try {
+        await navigator.clipboard.writeText(code);
+        toast('تم نسخ رقم الإيصال');
+        const old = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg class="ic" width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg> تم النسخ';
+        setTimeout(() => { copyBtn.innerHTML = old; }, 2200);
+      } catch {
+        toast('انسخه يدويًا: ' + code, false);
+      }
     });
   }
 
@@ -893,7 +886,7 @@
   if (claimBtn) {
     claimBtn.addEventListener('click', async () => {
       const id = $('#review-card').dataset.review;
-      claimBtn.disabled = true; claimBtn.textContent = 'جاري إصدار الرمز…';
+      claimBtn.disabled = true; claimBtn.textContent = 'جارٍ إصدار الرمز…';
       const { data } = await postJson('/api/review/claim', { review_id: id });
       if (!data.ok) { claimBtn.disabled = false; claimBtn.textContent = data.error || 'تعذّر إصدار الرمز'; return; }
       location.href = data.redirect || '/vote';
@@ -902,7 +895,30 @@
   const refreshBtn = $('#btn-refresh-review');
   if (refreshBtn) refreshBtn.addEventListener('click', () => location.reload());
 
-  /* ======================================================= ٦) لوحة الإدارة */
+  /* ======================================================= ٦) نافذة برنامج المرشح (الرئيسية) */
+  const candDialog = $('#candidate-dialog');
+  if (candDialog) {
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-open-candidate]');
+      if (!btn) return;
+      let d = {};
+      try { d = JSON.parse(btn.dataset.openCandidate || '{}'); } catch {}
+      const photo = $('#cd-photo'); const name = $('#cd-name'); const num = $('#cd-number');
+      const role = $('#cd-role'); const sym = $('#cd-symbol'); const prog = $('#cd-program');
+      if (photo) { photo.src = d.photo || ''; photo.alt = 'صورة المرشح ' + (d.name || ''); }
+      if (name) name.textContent = d.name || '';
+      if (num) num.textContent = 'مرشح رقم ' + (d.number || '—');
+      if (role) role.textContent = d.role || '';
+      if (sym) sym.innerHTML = (d.symbol || '');
+      if (prog) prog.textContent = d.program || 'لم يُرفق برنامج انتخابي بعد.';
+      const cta = $('#cd-cta');
+      if (cta) cta.href = '/register';
+      $('#cd-title-modal') && ($('#cd-title-modal').textContent = 'برنامج ' + (d.name || 'المرشح'));
+      if (candDialog.showModal) candDialog.showModal();
+    });
+  }
+
+  /* ======================================================= ٧) لوحة الإدارة */
   const adminTabs = $('#admin-tabs');
   if (adminTabs) {
     adminTabs.addEventListener('click', (e) => {
@@ -927,7 +943,7 @@
       const msg = $('#cand-msg');
       const { data } = await postJson('/api/admin/candidates', Object.fromEntries(new FormData(f)));
       msg.hidden = false;
-      msg.textContent = data.ok ? `تمت إضافة المرشح «${f.name.value}» ✓` : (data.error || 'تعذّرت الإضافة');
+      msg.textContent = data.ok ? `تمت إضافة المرشح «${f.name.value}»` : (data.error || 'تعذّرت الإضافة');
       if (data.ok) f.reset();
     });
 
@@ -961,7 +977,6 @@
   }
 })();
 
-
 /* ------------------------------------------------- كشوف الناخبين واستوديو توليد البطاقات */
 (function () {
   const form = document.getElementById('form-roll');
@@ -978,7 +993,7 @@
     });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      msg.hidden = false; msg.textContent = 'جاري الاستيراد…';
+      msg.hidden = false; msg.textContent = 'جارٍ الاستيراد…';
       const r = await fetch('/api/admin/roll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1004,8 +1019,6 @@
       f.phone.value = btn.dataset.phone || '01012345678';
       const c = document.querySelector('#consent');
       if (c) c.checked = true;
-      const previewImg = document.querySelector('#register-card-preview-img');
-      if (previewImg && btn.dataset.cardImg) previewImg.src = btn.dataset.cardImg;
     });
   });
 
@@ -1069,6 +1082,26 @@
     return `${century}${yy}${mm}${dd}${gc}${serial}${gDigit}8`;
   }
 
+  /* ==========================================================================================
+     رسم الرقم القومي: رقمًا رقمًا في مواضع ثابتة — محصّن ضد انعكاس BiDi
+     (كل استدعاء fillText يحتوي محرفًا واحدًا فلا يوجد ما يُعاد ترتيبه)
+     ========================================================== */
+  function drawNidDigits(ctx, nid, centerX, y, digitW = 33, groupGap = 34) {
+    const digits = String(nid).replace(/\D/g, '').slice(0, 14);
+    if (digits.length !== 14) return;
+    const groupW = 7 * digitW;
+    const totalW = groupW * 2 + groupGap;
+    const startX = centerX - totalW / 2;
+    const drawGroup = (str, gx) => {
+      for (let i = 0; i < str.length; i++) {
+        // محرف واحد لكل عملية رسم — لا يمكن لأي محرك رسمه معكوسًا
+        ctx.fillText(toAr(str[i]), gx + i * digitW + digitW / 2, y);
+      }
+    };
+    drawGroup(digits.slice(0, 7), startX);
+    drawGroup(digits.slice(7), startX + groupW + groupGap);
+  }
+
   const cardForm = document.querySelector('#form-new-card');
   const photoInput = document.querySelector('#new-card-photo');
   const cardMsg = document.querySelector('#new-card-msg');
@@ -1090,7 +1123,7 @@
     const rawNid = (cardForm?.national_id?.value || '').trim();
     const nid = /^\d{14}$/.test(rawNid) ? rawNid : previewDummyNid(dob, gov, gender, fullName);
 
-    // خلفية البطاقة الرسمية
+    // خلفية البطاقة
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, '#f3efe4');
     bgGrad.addColorStop(0.55, '#e8dfd1');
@@ -1173,12 +1206,11 @@
     ctx.beginPath(); ctx.moveTo(385, 226); ctx.lineTo(968, 226); ctx.stroke();
 
     ctx.fillStyle = '#5f4637';
-    ctx.font = 'bold 21px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 21px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('العنوان :', 968, 264);
     ctx.fillStyle = '#19191e';
-    ctx.font = 'bold 24px "Cairo", "IBM Plex Sans Arabic", sans-serif';
-    const addrEl = document.getElementById('nc-address');
-    const customAddress = (addrEl?.value || cardForm?.address?.value || '').trim() || `ش الجمهورية — قسم أول ${gov}`;
+    ctx.font = 'bold 24px "IBM Plex Sans Arabic", sans-serif';
+    const customAddress = (cardForm?.address?.value || '').trim() || `١٤ ش الجمهورية — قسم أول ${gov}`;
     ctx.fillText(customAddress, 875, 264);
     ctx.fillText(`محافظة ${gov}`, 968, 306);
 
@@ -1196,54 +1228,55 @@
     ctx.strokeRect(382, 418, 594, 117);
 
     ctx.fillStyle = '#5a3e2c';
-    ctx.font = 'bold 20px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 20px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('الرقم القومي', 960, 446);
 
-    // رسم أرقام الرقم القومي (١٤ رقم) من اليسار إلى اليمين بدقة داخل المستطيل بدون انعكاس BiDi
-    ctx.save();
-    ctx.direction = 'ltr';
+    // الرقم القومي: رسم كل رقم على حدة في موضعه — لا انعكاس أبدًا
     ctx.textAlign = 'center';
     ctx.fillStyle = '#0f0f12';
-    ctx.font = 'bold 36px "Cairo", "IBM Plex Sans Arabic", sans-serif';
-    const stepX = 33;
-    const gapX = 24;
-    const totalW = 13 * stepX + gapX;
-    const startX = 382 + Math.floor((594 - totalW) / 2);
-    for (let idx = 0; idx < 14; idx++) {
-      const ch = toAr(nid[idx] || '0');
-      const dx = startX + idx * stepX + (idx >= 7 ? gapX : 0);
-      ctx.fillText(ch, dx, 504);
-    }
-    ctx.restore();
+    ctx.font = 'bold 38px "IBM Plex Sans Arabic", monospace';
+    drawNidDigits(ctx, nid, 679, 504);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#554132';
-    ctx.font = 'bold 18px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('تاريخ الميلاد', 343, 554);
+    // تاريخ الميلاد: رسم كل جزء (يوم/شهر/سنة) منفصلًا — لا انعكاس أبدًا
+    const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || '2002-08-15');
+    if (dm) {
+      const day = toAr(dm[3]), mon = toAr(dm[2]), yr = toAr(dm[1]);
+      const segs = [day, '/', mon, '/', yr];
+      const segW = 34;
+      const totalW = segW * 4 + 20 * 2;
+      let sx = 190 - totalW / 2;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#141418';
+      ctx.font = 'bold 26px "IBM Plex Sans Arabic", sans-serif';
+      for (const seg of segs) {
+        ctx.fillText(seg, sx + segW / 2, 592);
+        sx += seg === '/' ? 20 : segW;
+      }
+      ctx.restore();
+    }
+    // الرقم التسلسلي أسفل البطاقة (كالبطاقات الحقيقية)
     ctx.save();
-    ctx.direction = 'ltr';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#141418';
-    ctx.font = 'bold 26px "Cairo", "IBM Plex Sans Arabic", sans-serif';
-    ctx.fillText(toAr(dob.replace(/-/g, '/')), 190, 592);
     ctx.fillStyle = '#46413c';
     ctx.font = 'bold 20px "IBM Plex Mono", monospace';
-    ctx.fillText(`ID-EG-${nid.slice(-7)}`, 470, 584);
+    ctx.fillText(`ID-EG-${String(nid).slice(-7)}`, 470, 584);
     ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#4b3c30';
-    ctx.font = 'bold 18px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('إصدار : ٢٠٢٦/٠٩ — سارية', 968, 584);
   }
 
   if (cardForm && photoInput) {
     renderEgyptianIdCanvas();
-    ['input', 'change', 'keyup'].forEach((ev) => {
+    ['input', 'change'].forEach((ev) => {
       cardForm.addEventListener(ev, () => renderEgyptianIdCanvas());
-      document.getElementById('nc-address')?.addEventListener(ev, () => renderEgyptianIdCanvas());
-      document.getElementById('nc-name')?.addEventListener(ev, () => renderEgyptianIdCanvas());
-      document.getElementById('nc-gov')?.addEventListener(ev, () => renderEgyptianIdCanvas());
     });
 
     photoInput.addEventListener('change', () => {
@@ -1266,7 +1299,7 @@
       const file = photoInput.files && photoInput.files[0];
       if (!file || !loadedPortraitImg) {
         cardMsg.hidden = false;
-        cardMsg.className = 'notice err';
+        cardMsg.className = 'notice notice-err';
         cardMsg.textContent = '✗ يرجى اختيار صورة واضحة لوجه صاحب البطاقة أولًا';
         return;
       }
@@ -1274,7 +1307,7 @@
       if (btn) btn.disabled = true;
       cardMsg.hidden = false;
       cardMsg.className = 'notice';
-      cardMsg.textContent = 'جاري توليد البطاقة المصرية واستخراج بصمة الوجه وحفظها في قاعدة البيانات…';
+      cardMsg.textContent = 'جارٍ توليد البطاقة واستخراج بصمة الوجه وحفظها في قاعدة البيانات…';
 
       renderEgyptianIdCanvas();
       // ١) صورة البطاقة الكاملة بصيغة JPEG مضغوطة
@@ -1290,14 +1323,12 @@
       const faceDataUrl = faceCanvas.toDataURL('image/jpeg', 0.85);
       const clientHash = calcCardAHash(fctx.getImageData(0, 0, 320, 320).data, 320, 320);
 
-      const govVal = cardForm.governorate.value.trim();
-      const addrVal = (document.getElementById('nc-address')?.value || cardForm.address?.value || '').trim() || `ش الجمهورية — قسم أول ${govVal}`;
       const payload = {
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
-        governorate: govVal,
-        address: addrVal,
-        national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, govVal, cardForm.gender.value, cardForm.full_name.value.trim()),
+        governorate: cardForm.governorate.value.trim(),
+        address: (cardForm.address?.value || '').trim(),
+        national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, cardForm.governorate.value.trim(), cardForm.gender.value, cardForm.full_name.value.trim()),
         gender: cardForm.gender.value,
         photo: faceDataUrl,
         card_image: cardDataUrl,
@@ -1312,16 +1343,16 @@
         });
         const data = await res.json().catch(() => ({ ok: false, error: 'استجابة غير صالحة' }));
         if (!data.ok) {
-          cardMsg.className = 'notice err';
+          cardMsg.className = 'notice notice-err';
           cardMsg.textContent = `✗ ${data.error || 'تعذّر إنشاء البطاقة'}`;
           if (btn) btn.disabled = false;
           return;
         }
-        cardMsg.className = 'notice ok';
-        cardMsg.innerHTML = `<b>✓ تم إصدار وحفظ البطاقة في قاعدة البيانات بنجاح!</b><br>الاسم: <b>${payload.full_name}</b> · الرقم القومي: <code class="mono">${data.national_id}</code> · الميلاد: <code>${data.birth_date || payload.birth_date}</code> · المحافظة: <b>${data.governorate || payload.governorate}</b> · العنوان: <b>${payload.address || '—'}</b>`;
-        setTimeout(() => location.reload(), 1200);
+        cardMsg.className = 'notice notice-ok';
+        cardMsg.innerHTML = `<b>✓ تم إصدار وحفظ البطاقة بنجاح!</b><br>الاسم: <b>${payload.full_name}</b> · الرقم القومي: <code class="mono ltr">${data.national_id}</code> · الميلاد: <code class="ltr">${data.birth_date || payload.birth_date}</code> · المحافظة: <b>${data.governorate || payload.governorate}</b>`;
+        setTimeout(() => location.reload(), 1400);
       } catch (err) {
-        cardMsg.className = 'notice err';
+        cardMsg.className = 'notice notice-err';
         cardMsg.textContent = '✗ تعذّر الاتصال بالخادم';
         if (btn) btn.disabled = false;
       }
