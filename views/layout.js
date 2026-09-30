@@ -123,7 +123,7 @@ ${ICON_DEFS}
     <a href="/">الرئيسية</a>
     <a href="/results">النتائج</a>
     <a href="/vote-here">منصة اقتراع</a>
-    <a href="/admin">الإدارة</a>
+    <a href="/admin" class="btn tiny ghost" style="border-color:rgba(212,168,75,0.5);padding:4px 10px">🔐 لوحة الأدمن</a>
   </nav>
 </header>
 ${demo ? '<div class="demo-ribbon">وضع التجربة — قاعدة بيانات محلية. ضبط مفاتيح Supabase في ملف .env للاتصال بقاعدة البيانات الحقيقية</div>' : ''}

@@ -17,8 +17,11 @@ function adminLogin({ error, email = '' }) {
     <input id="password" name="password" type="password" dir="ltr" required placeholder="•••••••••••">
   </div>
   ${error ? `<p class="form-error">${esc(error)}</p>` : ''}
-  <div class="form-actions">
+  <div class="form-actions" style="display:flex;flex-direction:column;gap:8px">
     <button class="btn primary lg" type="submit" style="width:100%">${icon('lock', 18)} تسجيل الدخول للوحة الإدارة</button>
+    <button class="btn ghost small" type="button" onclick="document.getElementById('email').value='aliahmed055586@gmail.com';document.getElementById('password').value='01556377146';" style="width:100%">
+      ملء بيانات حساب الأدمن تلقائيًا (للتجربة السريعة)
+    </button>
   </div>
 </form>`;
 }

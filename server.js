@@ -358,9 +358,8 @@ async function handle(req, res) {
     const passIn = String(form.password || '').trim();
     const keyIn = String(form.key || '').trim();
 
-    const byEmailPass = emailIn && passIn
-      && sec.safeEqual(emailIn, String(config.adminEmail || '').toLowerCase())
-      && sec.safeEqual(passIn, String(config.adminPassword || ''));
+    const dbAuth = (emailIn && passIn) ? await db.verifyAdmin(emailIn, passIn) : { ok: false };
+    const byEmailPass = dbAuth.ok;
     const byKey = keyIn && (
       sec.safeEqual(keyIn, config.adminKey)
       || sec.safeEqual(keyIn, String(config.adminPassword || ''))
