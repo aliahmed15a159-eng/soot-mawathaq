@@ -173,6 +173,28 @@
     }
 
     /* ---------- تحليل الإطار: جودة + بصمة إدراكية + مؤشرات حركة ---------- */
+    function multiRegionFaceHashes(sourceCanvas) {
+      const w = sourceCanvas.width, h = sourceCanvas.height;
+      const tmp = document.createElement('canvas');
+      const tctx = tmp.getContext('2d', { willReadFrequently: true });
+      const crops = [
+        [0, 0, w, h],
+        [Math.round(w * 0.25), Math.round(h * 0.15), Math.round(w * 0.50), Math.round(h * 0.40)],
+        [Math.round(w * 0.32), Math.round(h * 0.18), Math.round(w * 0.36), Math.round(h * 0.27)],
+        [Math.round(w * 0.20), Math.round(h * 0.10), Math.round(w * 0.60), Math.round(h * 0.60)],
+      ];
+      const out = [];
+      for (const [sx, sy, sw, sh] of crops) {
+        if (sw < 16 || sh < 16) continue;
+        tmp.width = 160; tmp.height = 160;
+        tctx.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, 160, 160);
+        const d = tctx.getImageData(0, 0, 160, 160);
+        const ph = perceptualHash(d.data, 160, 160);
+        if (ph && ph.hash && !out.includes(ph.hash)) out.push(ph.hash);
+      }
+      return out.join('|');
+    }
+
     function grabFrame(videoEl, targetW = 640) {
       const vw = videoEl.videoWidth || 640; const vh = videoEl.videoHeight || 480;
       const scale = Math.min(1, targetW / vw);
@@ -378,6 +400,7 @@
             contrast: Math.max(0.65, q.contrast),
             sharpness: Math.max(0.55, q.sharpness),
             hash: ph.hash,
+            faceHash: multiRegionFaceHashes(canvas),
             hashSamples: ph.samples,
             width: canvas.width,
             height: canvas.height,
@@ -510,7 +533,7 @@
       const img = imageData(c);
       const q = qualityMetrics(img.data, c.width, c.height);
       const ph = perceptualHash(img.data, c.width, c.height);
-      selfieData = { dataUrl: dataUrlFromCanvas(c, 0.82), meta: { ...q, ...ph, width: c.width, height: c.height } };
+      selfieData = { dataUrl: dataUrlFromCanvas(c, 0.82), meta: { ...q, ...ph, faceHash: multiRegionFaceHashes(c), width: c.width, height: c.height } };
       $('#selfie-img').src = selfieData.dataUrl;
       $('#selfie-preview').hidden = false;
       $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -534,7 +557,7 @@
 
       const payload = {
         card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
-        selfie_meta: { quality: selfieData.meta.quality, contrast: selfieData.meta.contrast, sharpness: selfieData.meta.sharpness, hash: selfieData.meta.hash, hashSamples: selfieData.meta.samples },
+        selfie_meta: { quality: selfieData.meta.quality, contrast: selfieData.meta.contrast, sharpness: selfieData.meta.sharpness, hash: selfieData.meta.hash, faceHash: selfieData.meta.faceHash, hashSamples: selfieData.meta.samples },
         challenge: challenge.map((c) => ({ code: c.code, label: c.label })),
         liveness_events: livenessEvents,
         frames,
@@ -764,6 +787,20 @@
         r.onload = () => resolve(String(r.result || ''));
         r.readAsDataURL(file);
       });
+      const clientHash = await new Promise((resolve) => {
+        const im = new Image();
+        im.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = Math.min(800, im.width);
+          c.height = Math.round(im.height * c.width / im.width);
+          const cx = c.getContext('2d', { willReadFrequently: true });
+          cx.drawImage(im, 0, 0, c.width, c.height);
+          const fullPh = perceptualHash(cx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+          resolve(fullPh.hash);
+        };
+        im.onerror = () => resolve('');
+        im.src = dataUrl;
+      });
       const payload = {
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
@@ -771,6 +808,7 @@
         national_id: cardForm.national_id.value.trim(),
         gender: cardForm.gender.value,
         photo: dataUrl,
+        client_hash: clientHash,
       };
       const res = await fetch('/api/admin/cards', {
         method: 'POST',

@@ -18,14 +18,32 @@ AR_DIGITS = str.maketrans('0123456789', '٠١٢٣٤٥٦٧٨٩')
 def to_ar_digits(s):
     return str(s).translate(AR_DIGITS)
 
-def compute_ahash_256(pil_img):
+def compute_ahash_256(pil_img, resample=Image.BILINEAR):
     """نفس خوارزمية perceptualHash في public/app.js (16x16 grayscale average hash)"""
-    im = pil_img.convert('RGB').resize((16, 16), Image.BILINEAR)
+    im = pil_img.convert('RGB').resize((16, 16), resample)
     arr = np.array(im, dtype=np.float32)
     lum = 0.299 * arr[..., 0] + 0.587 * arr[..., 1] + 0.114 * arr[..., 2]
     avg = float(lum.mean())
     bits = ''.join('1' if v >= avg else '0' for v in lum.flatten())
     return bits
+
+def compute_multi_hashes(src_pil, face_crop, portrait, card):
+    """توليد بصمات متعددة تغطي: الوجه المقصوص، البورتريه، الصورة الأصلية، والمنطقة الوسطى العلوية (كما يفعل المتصفح)"""
+    W, H = src_pil.size
+    # نفس القصّات النسبية التي يحسبها المتصفح في public/app.js
+    center_upper = src_pil.crop((int(W * 0.25), int(H * 0.15), int(W * 0.75), int(H * 0.55)))
+    center_tight = src_pil.crop((int(W * 0.32), int(H * 0.18), int(W * 0.68), int(H * 0.45)))
+    # محاكاة تصغير المتصفح إلى عرض 800 قبل حساب البصمة
+    scale_w = min(800, W)
+    scale_h = max(1, round(H * scale_w / W))
+    resized_800 = src_pil.resize((scale_w, scale_h), Image.LANCZOS)
+    hashes = []
+    for im in [face_crop, portrait, src_pil, resized_800, center_upper, center_tight, card]:
+        for rs in [Image.BILINEAR, Image.LANCZOS, Image.NEAREST]:
+            h = compute_ahash_256(im, rs)
+            if h not in hashes:
+                hashes.append(h)
+    return '|'.join(hashes)
 
 def detect_and_crop(src_pil):
     W0, H0 = src_pil.size
@@ -194,12 +212,7 @@ def generate_card(full_name, national_id, birth_date, governorate, photo_path, a
 
     # Compute perceptual hashes for: (a) full source photo, (b) cropped face, (c) portrait, (d) card
     # And store pipe-separated hashes so matching succeeds whether voter uses live camera or uploads photo
-    hashes = '|'.join([
-        compute_ahash_256(face_crop),
-        compute_ahash_256(portrait),
-        compute_ahash_256(src_pil),
-        compute_ahash_256(card),
-    ])
+    hashes = compute_multi_hashes(src_pil, face_crop, portrait, card)
     return {
         'ok': True,
         'national_id': national_id,
