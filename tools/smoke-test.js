@@ -26,7 +26,7 @@ async function req(method, path, body) {
   saveCookies(res);
   let data = null;
   const text = await res.text();
-  try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 6000) }; }
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
   return { status: res.status, data, location: res.headers.get('location') };
 }
 
@@ -174,6 +174,8 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
 
   const closeIt = await req('POST', `/api/admin/elections/${newElection.data.election.id}/state`, { state: 'closed' });
   check('غلق الاقتراع', closeIt.data.ok && closeIt.data.election.state === 'closed');
+
+  await req('POST', `/api/admin/elections/${newElection.data.election.id}/delete`, {});
 
   const auditPage = await req('GET', '/admin');
   check('لوحة الإدارة تُعرض بالبيانات', auditPage.status === 200 && auditPage.data.raw.includes('سجل التدقيق'));

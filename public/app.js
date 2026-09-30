@@ -1174,8 +1174,9 @@
     ctx.font = 'bold 21px "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('العنوان :', 968, 264);
     ctx.fillStyle = '#19191e';
-    ctx.font = 'bold 25px "IBM Plex Sans Arabic", sans-serif';
-    ctx.fillText(`ش الجمهورية — قسم أول ${gov}`, 875, 264);
+    ctx.font = 'bold 24px "IBM Plex Sans Arabic", sans-serif';
+    const customAddress = (cardForm?.address?.value || '').trim() || `١٤ ش الجمهورية — قسم أول ${gov}`;
+    ctx.fillText(customAddress, 875, 264);
     ctx.fillText(`محافظة ${gov}`, 968, 306);
 
     ctx.beginPath(); ctx.moveTo(385, 330); ctx.lineTo(968, 330); ctx.stroke();
@@ -1276,6 +1277,7 @@
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
         governorate: cardForm.governorate.value.trim(),
+        address: (cardForm.address?.value || '').trim(),
         national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, cardForm.governorate.value.trim(), cardForm.gender.value, cardForm.full_name.value.trim()),
         gender: cardForm.gender.value,
         photo: faceDataUrl,
@@ -1297,7 +1299,7 @@
           return;
         }
         cardMsg.className = 'notice ok';
-        cardMsg.innerHTML = `<b>✓ تم إصدار وحفظ البطاقة في قاعدة البيانات بنجاح!</b><br>الاسم: <b>${payload.full_name}</b> · الرقم القومي: <code class="mono">${data.national_id}</code> · الميلاد: <code>${data.birth_date || payload.birth_date}</code> · المحافظة: <b>${data.governorate || payload.governorate}</b>`;
+        cardMsg.innerHTML = `<b>✓ تم إصدار وحفظ البطاقة في قاعدة البيانات بنجاح!</b><br>الاسم: <b>${payload.full_name}</b> · الرقم القومي: <code class="mono">${data.national_id}</code> · الميلاد: <code>${data.birth_date || payload.birth_date}</code> · المحافظة: <b>${data.governorate || payload.governorate}</b> · العنوان: <b>${payload.address || '—'}</b>`;
         setTimeout(() => location.reload(), 1200);
       } catch (err) {
         cardMsg.className = 'notice err';
