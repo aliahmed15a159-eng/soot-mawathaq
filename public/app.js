@@ -206,8 +206,21 @@
     let modelsLoaded = false;
     let cachedRefDescriptor = null;
 
+    function loadDecodedImage(src) {
+      return new Promise((resolve, reject) => {
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = src;
+      });
+    }
+
     async function ensureFaceModels() {
       if (modelsLoaded) return true;
+      for (let i = 0; i < 25 && !window.faceapi; i++) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
       if (!window.faceapi) return false;
       try {
         const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
@@ -224,27 +237,31 @@
       }
     }
 
-    async function computeNeuralComparison(selfieCanvas) {
+    async function computeNeuralComparison() {
       const ready = await ensureFaceModels();
       if (!ready) return { aiReady: false };
-      const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.32 });
+      const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.28 });
 
       // ١) استخراج بصمة الوجه المرجعية من بطاقة قاعدة البيانات
       if (!cachedRefDescriptor) {
-        const refImg = $('#db-face-ref') || $('#db-card-img');
-        if (refImg) {
-          if (!refImg.complete) {
-            await new Promise((res) => { refImg.onload = res; refImg.onerror = res; setTimeout(res, 2500); });
-          }
-          if (refImg.naturalWidth > 0) {
-            const refDet = await window.faceapi.detectSingleFace(refImg, opts).withFaceLandmarks(true).withFaceDescriptor();
+        const refEl = $('#db-face-ref') || $('#db-card-img');
+        if (refEl && refEl.src) {
+          try {
+            const decodedRef = await loadDecodedImage(refEl.src);
+            const refDet = await window.faceapi.detectSingleFace(decodedRef, opts).withFaceLandmarks(true).withFaceDescriptor();
             if (refDet && refDet.descriptor) cachedRefDescriptor = Array.from(refDet.descriptor);
+          } catch (e) {
+            console.warn('[face-ai] تعذّر قراءة صورة المرجع:', e);
           }
         }
       }
 
-      // ٢) فحص صورة السيلفي واستخراج البصمة العصبية 128-D
-      const selfieDet = await window.faceapi.detectSingleFace(selfieCanvas, opts).withFaceLandmarks(true).withFaceDescriptor();
+      // ٢) فحص صورة السيلفي الملتقطة واستخراج البصمة العصبية 128-D
+      let selfieDet = null;
+      if (selfieData && selfieData.dataUrl) {
+        const decodedSelfie = await loadDecodedImage(selfieData.dataUrl);
+        selfieDet = await window.faceapi.detectSingleFace(decodedSelfie, opts).withFaceLandmarks(true).withFaceDescriptor();
+      }
       if (!selfieDet || !selfieDet.descriptor) {
         return { aiReady: true, faceDetected: false, neuralDistance: 1.5 };
       }
@@ -690,7 +707,7 @@
       }, 650);
 
       ensureLivenessComplete();
-      const aiResult = await computeNeuralComparison(canvas);
+      const aiResult = await computeNeuralComparison();
       const payload = {
         card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
         selfie_meta: {
