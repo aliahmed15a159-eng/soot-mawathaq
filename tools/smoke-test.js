@@ -48,7 +48,7 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
   check('الخادم يعمل', health.status === 200 && health.data.ok, `وضع: ${health.data.mode}`);
 
   const home = await req('GET', '/');
-  check('الصفحة الرئيسية تُعرض', home.status === 200 && /صوت موثّق/.test(home.data.raw));
+  check('الصفحة الرئيسية تُعرض', home.status === 200 && /صوت/.test(home.data.raw) && /من هويتك/.test(home.data.raw));
 
   // ---------------------------------------------------------------- تسجيل
   const reg = await req('POST', '/api/register', {
@@ -143,10 +143,10 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
 
   // ---------------------------------------------------------------- الإيصال والنتائج
   const receipt = await req('GET', `/verify-receipt?code=${vote.data.receipt_code}`);
-  check('التحقق من الإيصال', receipt.status === 200 && receipt.data.raw.includes('الإيصال صحيح'));
+  check('التحقق من الإيصال', receipt.status === 200 && receipt.data.raw.includes('إيصال صالح'));
 
   const fakeReceipt = await req('GET', '/verify-receipt?code=ZZZZZ-99999');
-  check('رفض إيصال غير موجود', fakeReceipt.data.raw.includes('مفيش صوت مسجّل'));
+  check('رفض إيصال غير موجود', fakeReceipt.data.raw.includes('الإيصال غير موجود'));
 
   const resultsPage = await req('GET', '/results?e=1');
   check('صفحة النتائج تعرض بيانات', resultsPage.status === 200 && /صوت محسوب|النتائج/.test(resultsPage.data.raw));
