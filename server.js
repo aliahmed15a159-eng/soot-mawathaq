@@ -131,11 +131,11 @@ async function handle(req, res) {
     let candidates = 0; let ballots = 0;
     for (const e of elections) {
       const cList = await db.listCandidates(e.id);
-      const tally = await db.tally(e.id);
-      const totalB = tally.total || 0;
+      const counts = await db.tally(e.id);
+      const totalB = Object.values(counts || {}).reduce((a, b) => a + (Number(b) || 0), 0);
       e.total_ballots = totalB;
       e.candidates = cList.map((c, idx) => {
-        const v = (tally.counts && tally.counts[c.id]) || 0;
+        const v = (counts && counts[c.id]) || 0;
         const pct = totalB ? Math.round((v / totalB) * 100) : 0;
         return { ...c, number: idx + 1, votes: v, percent: pct };
       });
@@ -403,14 +403,14 @@ async function handle(req, res) {
     const enrichedElections = [];
     for (const e of elections) {
       const cList = await db.listCandidates(e.id);
-      const tally = await db.tally(e.id);
-      const totalB = tally.total || 0;
+      const counts = await db.tally(e.id);
+      const totalB = Object.values(counts || {}).reduce((a, b) => a + (Number(b) || 0), 0);
       enrichedElections.push({
         ...e,
         state: api.electionState(e),
         total_ballots: totalB,
         candidates: cList.map((c, idx) => {
-          const v = (tally.counts && tally.counts[c.id]) || 0;
+          const v = (counts && counts[c.id]) || 0;
           const pct = totalB ? Math.round((v / totalB) * 100) : 0;
           return { ...c, number: idx + 1, votes: v, percent: pct };
         }),

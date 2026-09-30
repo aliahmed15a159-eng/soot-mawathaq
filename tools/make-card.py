@@ -161,8 +161,9 @@ def generate_card(full_name, national_id, birth_date, governorate, photo_path, a
 
     right_edge = CW - 44
     parts = full_name.strip().split()
-    first_name = parts[0] if parts else full_name
-    rest_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
+    is_compound = len(parts) > 2 and parts[0] in ('عبد', 'أبو', 'ابو', 'ام', 'أم', 'بن')
+    first_name = ' '.join(parts[:2]) if is_compound else (parts[0] if parts else full_name)
+    rest_name = ' '.join(parts[2:] if is_compound else parts[1:]) if len(parts) > 1 else ''
 
     draw_rtl('الاسم /', right_edge, 132, f_label, fill=(95, 70, 55))
     draw_rtl(first_name, right_edge - 78, 124, f_name, fill=(18, 18, 22))

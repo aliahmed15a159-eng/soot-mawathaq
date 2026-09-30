@@ -1004,6 +1004,8 @@
       f.phone.value = btn.dataset.phone || '01012345678';
       const c = document.querySelector('#consent');
       if (c) c.checked = true;
+      const previewImg = document.querySelector('#register-card-preview-img');
+      if (previewImg && btn.dataset.cardImg) previewImg.src = btn.dataset.cardImg;
     });
   });
 
@@ -1171,11 +1173,12 @@
     ctx.beginPath(); ctx.moveTo(385, 226); ctx.lineTo(968, 226); ctx.stroke();
 
     ctx.fillStyle = '#5f4637';
-    ctx.font = 'bold 21px "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 21px "Cairo", "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('العنوان :', 968, 264);
     ctx.fillStyle = '#19191e';
-    ctx.font = 'bold 24px "IBM Plex Sans Arabic", sans-serif';
-    const customAddress = (cardForm?.address?.value || '').trim() || `١٤ ش الجمهورية — قسم أول ${gov}`;
+    ctx.font = 'bold 24px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    const addrEl = document.getElementById('nc-address');
+    const customAddress = (addrEl?.value || cardForm?.address?.value || '').trim() || `ش الجمهورية — قسم أول ${gov}`;
     ctx.fillText(customAddress, 875, 264);
     ctx.fillText(`محافظة ${gov}`, 968, 306);
 
@@ -1193,40 +1196,54 @@
     ctx.strokeRect(382, 418, 594, 117);
 
     ctx.fillStyle = '#5a3e2c';
-    ctx.font = 'bold 20px "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 20px "Cairo", "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('الرقم القومي', 960, 446);
 
-    const nidAr = toAr(nid.slice(0, 7)).split('').join(' ') + '   ' + toAr(nid.slice(7)).split('').join(' ');
+    // رسم أرقام الرقم القومي (١٤ رقم) من اليسار إلى اليمين بدقة داخل المستطيل بدون انعكاس BiDi
     ctx.save();
     ctx.direction = 'ltr';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#0f0f12';
-    ctx.font = 'bold 38px "IBM Plex Sans Arabic", monospace';
-    ctx.fillText(nidAr, 679, 504);
+    ctx.font = 'bold 36px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+    const stepX = 33;
+    const gapX = 24;
+    const totalW = 13 * stepX + gapX;
+    const startX = 382 + Math.floor((594 - totalW) / 2);
+    for (let idx = 0; idx < 14; idx++) {
+      const ch = toAr(nid[idx] || '0');
+      const dx = startX + idx * stepX + (idx >= 7 ? gapX : 0);
+      ctx.fillText(ch, dx, 504);
+    }
     ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#554132';
-    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 18px "Cairo", "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('تاريخ الميلاد', 343, 554);
     ctx.save();
     ctx.direction = 'ltr';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#141418';
-    ctx.font = 'bold 26px "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 26px "Cairo", "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText(toAr(dob.replace(/-/g, '/')), 190, 592);
+    ctx.fillStyle = '#46413c';
+    ctx.font = 'bold 20px "IBM Plex Mono", monospace';
+    ctx.fillText(`ID-EG-${nid.slice(-7)}`, 470, 584);
     ctx.restore();
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#4b3c30';
-    ctx.font = 'bold 18px "IBM Plex Sans Arabic", sans-serif';
+    ctx.font = 'bold 18px "Cairo", "IBM Plex Sans Arabic", sans-serif';
     ctx.fillText('إصدار : ٢٠٢٦/٠٩ — سارية', 968, 584);
   }
 
   if (cardForm && photoInput) {
     renderEgyptianIdCanvas();
-    ['input', 'change'].forEach((ev) => {
+    ['input', 'change', 'keyup'].forEach((ev) => {
       cardForm.addEventListener(ev, () => renderEgyptianIdCanvas());
+      document.getElementById('nc-address')?.addEventListener(ev, () => renderEgyptianIdCanvas());
+      document.getElementById('nc-name')?.addEventListener(ev, () => renderEgyptianIdCanvas());
+      document.getElementById('nc-gov')?.addEventListener(ev, () => renderEgyptianIdCanvas());
     });
 
     photoInput.addEventListener('change', () => {
@@ -1273,12 +1290,14 @@
       const faceDataUrl = faceCanvas.toDataURL('image/jpeg', 0.85);
       const clientHash = calcCardAHash(fctx.getImageData(0, 0, 320, 320).data, 320, 320);
 
+      const govVal = cardForm.governorate.value.trim();
+      const addrVal = (document.getElementById('nc-address')?.value || cardForm.address?.value || '').trim() || `ش الجمهورية — قسم أول ${govVal}`;
       const payload = {
         full_name: cardForm.full_name.value.trim(),
         birth_date: cardForm.birth_date.value,
-        governorate: cardForm.governorate.value.trim(),
-        address: (cardForm.address?.value || '').trim(),
-        national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, cardForm.governorate.value.trim(), cardForm.gender.value, cardForm.full_name.value.trim()),
+        governorate: govVal,
+        address: addrVal,
+        national_id: /^\d{14}$/.test(cardForm.national_id.value.trim()) ? cardForm.national_id.value.trim() : previewDummyNid(cardForm.birth_date.value, govVal, cardForm.gender.value, cardForm.full_name.value.trim()),
         gender: cardForm.gender.value,
         photo: faceDataUrl,
         card_image: cardDataUrl,
