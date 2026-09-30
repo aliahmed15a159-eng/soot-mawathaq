@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.vercel/
+data/demo-db.json*
+data/review/
+*.log
+.DS_Store

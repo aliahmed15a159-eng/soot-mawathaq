@@ -1,0 +1,490 @@
+'use strict';
+/**
+ * صوت موثّق — خادم المنصة
+ * Node.js قياسي بدون أي مكتبات خارجية • Supabase عبر REST • وضع تجربة محلي بدون إعداد
+ */
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { URL } = require('url');
+
+const { config } = require('./lib/config');
+const { db } = require('./lib/db');
+const api = require('./lib/api');
+const sec = require('./lib/security');
+const session = require('./lib/session');
+const { shell } = require('./views/layout');
+const pages = require('./views/pages');
+const adminViews = require('./views/admin');
+
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const MIME = {
+  '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png',
+  '.jpg': 'image/jpeg', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
+};
+
+const BOOT_AT = Date.now();
+
+/* ------------------------------------------------------------------ أدوات HTTP */
+
+function sendHtml(res, html, status = 200, extraHeaders = {}) {
+  const buf = Buffer.from(html, 'utf8');
+  res.writeHead(status, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Length': buf.length,
+    'Cache-Control': 'no-store',
+    ...extraHeaders,
+  });
+  res.end(buf);
+}
+
+function sendJson(res, obj, status = 200) {
+  const buf = Buffer.from(JSON.stringify(obj), 'utf8');
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': buf.length, 'Cache-Control': 'no-store' });
+  res.end(buf);
+}
+
+function redirect(res, location, extra = {}) {
+  res.writeHead(302, { Location: location, ...extra });
+  res.end();
+}
+
+function readBody(req, limitBytes = 8 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > limitBytes) { reject(new Error('body_too_large')); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+async function readJson(req) {
+  const raw = await readBody(req);
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch { return {}; }
+}
+
+async function readForm(req) {
+  const raw = await readBody(req, 256 * 1024);
+  const out = {};
+  for (const part of raw.split('&')) {
+    if (!part) continue;
+    const [k, v = ''] = part.split('=');
+    out[decodeURIComponent(k.replace(/\+/g, ' '))] = decodeURIComponent(v.replace(/\+/g, ' '));
+  }
+  return out;
+}
+
+function clientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return String(fwd).split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function tooMany(res, rl) {
+  sendJson(res, { ok: false, error: `محاولات كثيرة — جرّب بعد ${rl.retryAfter} ثانية` }, 429);
+}
+
+function serveStatic(req, res, pathname) {
+  const rel = pathname.replace(/^\/+/, '');
+  const full = path.join(PUBLIC_DIR, rel);
+  if (!full.startsWith(PUBLIC_DIR) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) return false;
+  const ext = path.extname(full).toLowerCase();
+  const buf = fs.readFileSync(full);
+  res.writeHead(200, {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Content-Length': buf.length,
+    'Cache-Control': ext === '.woff2' || ext === '.svg' ? 'public, max-age=604800' : 'no-cache',
+  });
+  res.end(buf);
+  return true;
+}
+
+/* ------------------------------------------------------------------ معالجة المسارات */
+
+async function handle(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = decodeURIComponent(url.pathname);
+  const q = url.searchParams;
+  const ip = clientIp(req);
+  const sess = session.readSession(req);
+  const isAdmin = session.isAdmin(req);
+  const demo = db.mode === 'demo';
+
+  /* ---------- ملفات ثابتة ---------- */
+  if (req.method === 'GET' && (pathname === '/' ? false : serveStatic(req, res, pathname))) return;
+
+  /* ---------- الصحة ---------- */
+  if (pathname === '/healthz') {
+    return sendJson(res, { ok: true, mode: db.mode, uptime: Math.round((Date.now() - BOOT_AT) / 1000) });
+  }
+
+  /* ---------- الرئيسية ---------- */
+  if (pathname === '/' && req.method === 'GET') {
+    const elections = (await db.listElections()).map((e) => ({ ...e, state: api.electionState(e) }));
+    let candidates = 0; let ballots = 0;
+    for (const e of elections) {
+      candidates += (await db.listCandidates(e.id)).length;
+      ballots += await db.countBallots(e.id);
+    }
+    return sendHtml(res, shell({
+      title: 'الرئيسية',
+      body: pages.landing({ elections, demo, counts: { elections: elections.length, candidates, ballots } }),
+      bodyClass: 'page-landing',
+    }));
+  }
+
+  /* ---------- التسجيل ---------- */
+  if (pathname === '/register' && req.method === 'GET') {
+    const electionId = q.get('e');
+    const election = electionId ? await db.getElection(electionId) : null;
+    return sendHtml(res, shell({
+      title: 'التسجيل',
+      body: pages.registerPage({
+        election: election ? { ...election, state: api.electionState(election) } : null,
+        demo,
+        sample: demo ? { national_id: '29807152101234', full_name: 'مينا عبد المسيح حنا', birth_date: '1998-07-15', governorate: 'الجيزة' } : null,
+      }),
+      showStepper: true, active: 1,
+    }));
+  }
+
+  if (pathname === '/api/register' && req.method === 'POST') {
+    const rl = sec.rateLimit(`register:${ip}`, 20, 60_000);
+    if (!rl.ok) return tooMany(res, rl);
+    const body = await readJson(req);
+    const result = await api.register({ body, session: sess });
+    if (!result.ok) return sendJson(res, result, 400);
+    session.startSession(res, { ...result.session, kiosk: !!body.kiosk });
+    const needOtp = result.otp && result.otp.required;
+    return sendJson(res, { ok: true, otp: result.otp || null, redirect: needOtp ? '/otp' : '/verify' });
+  }
+
+  /* ---------- كود الموبايل (OTP) ---------- */
+  if (pathname === '/otp' && req.method === 'GET') {
+    if (!sess) return redirect(res, '/register');
+    const voter = await db.findVoterById(sess.vid);
+    const otpStatus = api.otpStatus();
+    if (!otpStatus.enabled) return redirect(res, '/verify');
+    // نولّد كودًا جديدًا لو مفيش كود ساري (مثلًا المستخدم رجع للصفحة لاحقًا)
+    const sent = await api.otpForSession({ session: sess, phoneHint: voter.phone_masked });
+    if (sent && sent.hash && (!sess.otp_hash || sess.otp_hash !== sent.hash)) {
+      session.startSession(res, { ...sess, otp_hash: sent.hash, otp_exp: sent.expiresAt });
+    }
+    return sendHtml(res, shell({
+      title: 'تأكيد الموبايل',
+      body: pages.otpPage({
+        voter,
+        challenge: { masked: voter.phone_masked, dev_code: sent && sent.dev_code },
+        otpStatus,
+      }),
+      showStepper: true, active: 1,
+    }));
+  }
+
+  if (pathname === '/api/otp/verify' && req.method === 'POST') {
+    const rl = sec.rateLimit(`otp:${ip}`, 20, 300_000);
+    if (!rl.ok) return tooMany(res, rl);
+    const body = await readJson(req);
+    const result = await api.confirmOtp({ session: sess, body });
+    if (!result.ok) return sendJson(res, result, 400);
+    session.startSession(res, { ...sess, ...(result.session_patch || {}) });
+    return sendJson(res, { ok: true, redirect: result.redirect || '/verify' });
+  }
+
+  if (pathname === '/api/otp/resend' && req.method === 'POST') {
+    const rl = sec.rateLimit(`otpresend:${ip}`, 5, 300_000);
+    if (!rl.ok) return tooMany(res, rl);
+    const body = await readJson(req);
+    const result = await api.resendOtp({ session: sess, body });
+    if (result.ok && result.session_patch && sess) {
+      session.startSession(res, { ...sess, ...result.session_patch });
+    }
+    return sendJson(res, { ...result, session_patch: undefined });
+  }
+
+  /* ---------- التحقق ---------- */
+  if (pathname === '/verify' && req.method === 'GET') {
+    if (!sess) return redirect(res, '/register');
+    if (api.otpStatus().enabled && !sess.otp) return redirect(res, '/otp');
+    const voter = await db.findVoterById(sess.vid);
+    if (!voter) return redirect(res, '/register');
+    const election = sess.eid ? await db.getElection(sess.eid) : null;
+    return sendHtml(res, shell({
+      title: 'التحقق من الهوية',
+      body: pages.verifyPage({ voter, election, demo }),
+      showStepper: true, active: 2,
+    }));
+  }
+
+  if (pathname === '/api/verify/start' && req.method === 'POST') {
+    const rl = sec.rateLimit(`verify:${ip}`, 30, 60_000);
+    if (!rl.ok) return tooMany(res, rl);
+    return sendJson(res, await api.verifyStart({ session: sess }));
+  }
+
+  if (pathname === '/api/verify/complete' && req.method === 'POST') {
+    const rl = sec.rateLimit(`verifyc:${ip}`, 12, 60_000);
+    if (!rl.ok) return tooMany(res, rl);
+    const body = await readJson(req);
+    const result = await api.verifyComplete({ session: sess, body });
+    if (!result.ok) return sendJson(res, result, 400);
+
+    if (result.status === 'approved' && !result.repeat) {
+      // الرمز يُحفظ داخل جلسة موقّعة HttpOnly — المتصفح مايشوفوش كنص صريح
+      session.startSession(res, { vid: sess.vid, eid: sess.eid, name: sess.name, kiosk: !!sess.kiosk, token: result.token });
+    }
+    // لا نُعيد الرمز ولا أي بيانات حساسة للمتصفح
+    const { token, ...safe } = result;
+    return sendJson(res, safe);
+  }
+
+  if (pathname === '/api/review/status' && req.method === 'GET') {
+    return sendJson(res, await api.reviewStatus({ reviewId: q.get('id') }));
+  }
+
+  if (pathname === '/api/review/claim' && req.method === 'POST') {
+    const body = await readJson(req);
+    const result = await api.claimReviewToken({ reviewId: body.review_id, session: sess });
+    if (!result.ok) return sendJson(res, result, 400);
+    session.startSession(res, { vid: sess.vid, eid: result.election_id, name: sess.name, token: result.token, kiosk: !!sess.kiosk });
+    return sendJson(res, { ok: true, redirect: '/vote' });
+  }
+
+  if (pathname === '/review-status' && req.method === 'GET') {
+    const id = q.get('id');
+    const st = await api.reviewStatus({ reviewId: id });
+    if (!st.ok) return sendHtml(res, shell({ title: 'حالة المراجعة', body: pages.errorPage(st.error) }), 404);
+    return sendHtml(res, shell({ title: 'حالة المراجعة', body: pages.reviewStatusPage({ reviewId: id, review: st }), showStepper: true, active: 2 }));
+  }
+
+  /* ---------- الاقتراع ---------- */
+  if (pathname === '/vote' && req.method === 'GET') {
+    if (!sess) return redirect(res, '/register');
+    const voter = await db.findVoterById(sess.vid);
+    if (!voter) return redirect(res, '/register');
+    const electionId = sess.eid || q.get('e');
+    if (!electionId) return redirect(res, '/');
+    const payload = await api.electionPayload(electionId);
+    if (!payload.ok) return sendHtml(res, shell({ title: 'خطأ', body: pages.errorPage(payload.error) }), 404);
+    if (payload.state !== 'open') {
+      return sendHtml(res, shell({ title: 'الاقتراع مغلق', body: pages.errorPage('الاقتراع مش مفتوح حاليًا لهذه الانتخابة') }), 409);
+    }
+    return sendHtml(res, shell({
+      title: 'الاقتراع',
+      body: pages.votePage({ election: payload.election, candidates: payload.candidates, voter, kiosk: !!sess.kiosk }),
+      showStepper: true, active: 3,
+    }));
+  }
+
+  if (pathname === '/api/vote' && req.method === 'POST') {
+    const rl = sec.rateLimit(`vote:${ip}`, 10, 60_000);
+    if (!rl.ok) return tooMany(res, rl);
+    if (sess && sess.kiosk) {
+      const kioskRl = sec.rateLimit(`kiosk:${ip}`, 3, 3600_000);
+      if (!kioskRl.ok) return sendJson(res, { ok: false, error: 'تم بلوغ الحد الأقصى لعدد الأصوات من الجهاز ده مؤقتًا — كلّم مشرف اللجنة' }, 429);
+    }
+    const body = await readJson(req);
+    const result = await api.castVote({ session: sess, body });
+    if (!result.ok) return sendJson(res, result, 400);
+    if (sess && sess.kiosk) session.endSession(res); // منصة مشتركة: نفضّي الجلسة بعد التسجيل
+    return sendJson(res, result);
+  }
+
+  /* ---------- الإيصال ---------- */
+  if (pathname === '/receipt' && req.method === 'GET') {
+    const code = (q.get('code') || '').trim().toUpperCase();
+    const status = await api.receiptStatus({ code });
+    if (!status.ok) return sendHtml(res, shell({ title: 'الإيصال', body: pages.errorPage(status.error) }), 404);
+    return sendHtml(res, shell({
+      title: 'تم التصويت',
+      body: pages.receiptPage({
+        receipt: status.receipt_code,
+        electionTitle: status.election_title,
+        total: await db.countBallots((await db.findBallotByReceipt(status.receipt_code)).election_id),
+        castAt: status.cast_at,
+      }),
+      showStepper: true, active: 4,
+    }));
+  }
+
+  if (pathname === '/verify-receipt' && req.method === 'GET') {
+    const code = (q.get('code') || '').trim();
+    let result = null;
+    if (code) {
+      const r = await api.receiptStatus({ code });
+      result = r.ok ? { kind: 'found', ...r } : { kind: /صيغة/.test(r.error) ? 'bad' : 'notfound' };
+    }
+    return sendHtml(res, shell({ title: 'التحقق من إيصال', body: pages.receiptLookupPage({ code, result }) }));
+  }
+
+  /* ---------- النتائج ---------- */
+  if (pathname === '/results' && req.method === 'GET') {
+    const elections = await db.listElections();
+    let electionId = q.get('e') || (elections[0] && elections[0].id);
+    if (!electionId) return sendHtml(res, shell({ title: 'النتائج', body: pages.resultsPage({ data: null, elections: [], electionId: null }) }));
+    const r = await api.results({ electionId, session: sess });
+    return sendHtml(res, shell({
+      title: 'النتائج',
+      body: pages.resultsPage({ data: r.ok ? r : null, elections, electionId }),
+    }));
+  }
+
+  /* ---------- منصة الاقتراع المشتركة ---------- */
+  if (pathname === '/vote-here' && req.method === 'GET') {
+    const elections = (await db.listElections()).map((e) => ({ ...e, state: api.electionState(e) }));
+    const done = q.get('done');
+    return sendHtml(res, shell({
+      title: 'منصة اقتراع',
+      body: (done ? '<div class="notice ok">تم تسجيل الصوت وتفريغ الجلسة — الناخب اللي بعده يبدأ من الصفر.</div>' : '') + pages.kioskPage({ elections }),
+    }));
+  }
+
+  /* ---------- لوحة الإدارة ---------- */
+  if (pathname === '/api/admin/login' && req.method === 'POST') {
+    const rl = sec.rateLimit(`adminlogin:${ip}`, 10, 300_000);
+    if (!rl.ok) return tooMany(res, rl);
+    const form = await readForm(req);
+    if (!sec.safeEqual(form.key || '', config.adminKey)) {
+      await db.audit({ action: 'admin_login_failed', actor: `ip:${ip}` });
+      return sendHtml(res, shell({ title: 'دخول الإدارة', body: adminViews.adminLogin({ error: 'المفتاح غير صحيح' }) }), 401);
+    }
+    session.startAdmin(res);
+    await db.audit({ action: 'admin_login', actor: `ip:${ip}` });
+    return redirect(res, '/admin');
+  }
+
+  if (pathname === '/api/admin/logout' && req.method === 'POST') {
+    session.endAdmin(res);
+    return redirect(res, '/admin');
+  }
+
+  if (pathname === '/admin' && req.method === 'GET') {
+    if (!isAdmin) return sendHtml(res, shell({ title: 'دخول الإدارة', body: adminViews.adminLogin({}) }));
+    const [stats, elections, reviews, audit, providersHealth, roll] = await Promise.all([
+      api.stats(), db.listElections(), db.listReviews('pending'), db.listAudit(60),
+      api.providersHealth(), db.voterRollStats(),
+    ]);
+    return sendHtml(res, shell({
+      title: 'لوحة الإدارة', wide: true,
+      body: adminViews.adminDashboard({
+        stats,
+        elections: elections.map((e) => ({ ...e, state: api.electionState(e) })),
+        reviews, audit, adminName: 'لجنة الإشراف',
+        providers: providersHealth, roll,
+      }),
+    }));
+  }
+
+  if (pathname === '/api/admin/providers' && req.method === 'GET') {
+    if (!isAdmin) return sendJson(res, { ok: false, error: 'غير مصرح' }, 403);
+    return sendJson(res, await api.providersHealth());
+  }
+
+  if (pathname.startsWith('/admin/review/') && req.method === 'GET') {
+    if (!isAdmin) return redirect(res, '/admin');
+    const id = pathname.split('/').pop();
+    const review = await db.getReview(id);
+    if (!review) return sendHtml(res, shell({ title: 'مراجعة', body: pages.errorPage('طلب المراجعة غير موجود') }), 404);
+    const election = review.election_id ? await db.getElection(review.election_id) : null;
+    return sendHtml(res, shell({
+      title: 'مراجعة طلب', wide: true,
+      body: adminViews.adminReview({ review, electionTitle: election ? election.title : '' }),
+    }));
+  }
+
+  if (pathname.startsWith('/admin/review-image/') && req.method === 'GET') {
+    if (!isAdmin) return sendJson(res, { ok: false, error: 'غير مصرح' }, 403);
+    const file = path.basename(pathname.split('/').pop());
+    const full = path.join(api.REVIEW_DIR, file);
+    if (!full.startsWith(api.REVIEW_DIR) || !fs.existsSync(full)) return sendJson(res, { ok: false }, 404);
+    const buf = fs.readFileSync(full);
+    res.writeHead(200, { 'Content-Type': /\.png$/.test(file) ? 'image/png' : 'image/jpeg', 'Content-Length': buf.length, 'Cache-Control': 'no-store' });
+    return res.end(buf);
+  }
+
+  /* ---------- واجهات الإدارة (JSON) ---------- */
+  if (pathname.startsWith('/api/admin/') && req.method === 'POST') {
+    if (!isAdmin) return sendJson(res, { ok: false, error: 'غير مصرح' }, 403);
+    const body = await readJson(req);
+    if (pathname === '/api/admin/elections') return sendJson(res, await api.createElection({ body, admin: 'committee' }));
+    if (pathname === '/api/admin/candidates') return sendJson(res, await api.addCandidate({ body, admin: 'committee' }));
+    if (/^\/api\/admin\/elections\/\d+\/state$/.test(pathname)) {
+      const id = pathname.split('/')[4];
+      return sendJson(res, await api.updateElectionState({ id, state: body.state, admin: 'committee' }));
+    }
+    if (pathname === '/api/admin/roll') {
+      try {
+        return sendJson(res, await api.importVoterRoll({ body, admin: 'committee' }));
+      } catch (err) {
+        return sendJson(res, { ok: false, error: `تعذّر استيراد الكشف: ${err.message}` }, 500);
+      }
+    }
+    if (/^\/api\/admin\/reviews\/\d+\/decide$/.test(pathname)) {
+      const id = pathname.split('/')[4];
+      return sendJson(res, await api.decideReview({ id, approve: !!body.approve, admin: 'committee' }));
+    }
+    return sendJson(res, { ok: false, error: 'مسار غير معروف' }, 404);
+  }
+
+  /* ---------- 404 ---------- */
+  return sendHtml(res, shell({ title: 'غير موجود', body: pages.errorPage('الصفحة المطلوبة غير موجودة') }), 404);
+}
+
+/* ------------------------------------------------------------------ التشغيل */
+
+let initPromise = null;
+function ensureInit() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        const info = await db.init();
+        console.log(`[db] ${info.note}`);
+      } catch (err) {
+        console.error('[db] فشل الاتصال بـ Supabase — هنشتغل في وضع التجربة المحلي:', err.message);
+        db.mode = 'demo';
+        db.seedIfEmpty();
+      }
+      api.cleanupReviewFiles();
+    })();
+  }
+  return initPromise;
+}
+
+async function handler(req, res) {
+  await ensureInit();
+  try {
+    await handle(req, res);
+  } catch (err) {
+    console.error('[server]', err);
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: false, error: 'خطأ داخلي في الخادم' }));
+    }
+  }
+}
+
+const server = http.createServer(handler);
+
+if (require.main === module && !process.env.VERCEL) {
+  ensureInit().then(() => {
+    setInterval(api.cleanupReviewFiles, 3600_000).unref?.();
+    server.listen(config.port, config.host, () => {
+      console.log('');
+      console.log('  𓂀  صوت موثّق — منصة انتخابات بالتحقق من الهوية');
+      console.log(`  ▸ الخادم شغّال على المنفذ ${config.port} (وضع قاعدة البيانات: ${db.mode})`);
+      console.log(`  ▸ الصفحة الرئيسية: http://localhost:${config.port}/`);
+      console.log(`  ▸ لوحة الإدارة:    http://localhost:${config.port}/admin  (المفتاح: ${config.adminKey === 'per-aa-admin' ? 'per-aa-admin — غيّره من ADMIN_KEY' : 'مضبوط من البيئة'})`);
+      console.log(`  ▸ منصة الاقتراع:   http://localhost:${config.port}/vote-here`);
+      console.log('');
+    });
+  });
+}
+
+module.exports = { server, handler };

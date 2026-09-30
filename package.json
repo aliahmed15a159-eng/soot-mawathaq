@@ -1,0 +1,21 @@
+{
+  "name": "soot-mawathaq",
+  "version": "1.0.0",
+  "description": "صوت موثّق — منصة انتخابات إلكترونية بالتحقق من الهوية بالكاميرا (قاعدة بيانات Supabase)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tools/smoke-test.js",
+    "test:flow": "node tools/browser-flow.js",
+    "test:visual": "node tools/visual-check.js shots",
+    "seed": "node tools/seed-supabase.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

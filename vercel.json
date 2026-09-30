@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "includeFiles": "{public/**,views/**,lib/**,supabase/**,data/rolls/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.js" }
+  ]
+}
