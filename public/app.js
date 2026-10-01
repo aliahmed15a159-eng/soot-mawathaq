@@ -245,37 +245,106 @@
       if (state) camStatus.classList.add(state);
     }
 
+    function showCamOverlay(show) {
+      const overlay = $('#camera-start-overlay');
+      if (overlay) overlay.hidden = !show;
+    }
+
     async function startCamera() {
       const errBox = $('#verify-error');
       if (errBox) errBox.hidden = true;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCamStatus('الكاميرا غير مدعومة — استخدم «رفع صورة من الجهاز»', 'err');
+      // Check for mediaDevices - handle Safari/older browsers
+      if (!navigator.mediaDevices) {
+        // Some browsers expose getUserMedia differently or only in secure contexts
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          setCamStatus('الكاميرا تتطلب اتصال آمن (HTTPS) — استخدم رفع صورة', 'err');
+          if (errBox) { errBox.textContent = 'الكاميرا لا تعمل إلا عبر اتصال آمن (HTTPS) أو على localhost. يمكنك رفع صورة لوجهك بدلاً من ذلك.'; errBox.hidden = false; }
+          showCamOverlay(true);
+          return false;
+        }
+        setCamStatus('الكاميرا غير مدعومة في هذا المتصفح', 'err');
+        showCamOverlay(true);
         return false;
       }
       try {
-        if (stream) stream.getTracks().forEach((t) => t.stop());
-        setCamStatus('جارٍ تشغيل الكاميرا…', '');
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
+        if (stream) {
+          stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+          stream = null;
+        }
+        setCamStatus('جارٍ طلب الإذن وتشغيل الكاميرا…', '');
+        showCamOverlay(false);
+
+        // Build video constraints with fallbacks
+        const constraints = {
+          video: { facingMode: facing, width: { ideal: 1280, min: 320 }, height: { ideal: 720, min: 240 } },
           audio: false,
-        });
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+
         if (videoSelfie) {
           videoSelfie.srcObject = stream;
           videoSelfie.muted = true;
+          videoSelfie.playsInline = true;
           videoSelfie.setAttribute('playsinline', '');
-          await videoSelfie.play();
+          videoSelfie.setAttribute('webkit-playsinline', '');
+          // Properly handle play() promise
+          try {
+            await videoSelfie.play();
+          } catch (playErr) {
+            console.warn('[camera] play() failed, trying with muted/playsinline again:', playErr);
+            // Retry with stronger attributes
+            videoSelfie.muted = true;
+            videoSelfie.playsInline = true;
+            try { await videoSelfie.play(); } catch (e2) {
+              // Some browsers need user gesture interaction
+              setCamStatus('اضغط على الفيديو لبدء العرض', 'err');
+            }
+          }
         }
         if (video) {
           video.srcObject = stream;
-          await video.play().catch(() => {});
+          video.muted = true;
+          video.playsInline = true;
+          video.play().catch(() => {});
         }
         setCamStatus('الكاميرا تعمل — ضع وجهك داخل الإطار', 'live');
         return true;
       } catch (err) {
-        setCamStatus('تعذّر فتح الكاميرا — يمكنك رفع صورة لوجهك', 'err');
+        console.error('[camera] error:', err);
+        let msg = 'تعذّر فتح الكاميرا';
+        if (err && err.name === 'NotAllowedError') msg = 'تم رفض إذن الكاميرا — اسمح للكاميرا من إعدادات المتصفح';
+        else if (err && err.name === 'NotFoundError') msg = 'لا توجد كاميرا متصلة بالجهاز';
+        else if (err && err.name === 'NotReadableError') msg = 'الكاميرا مستخدمة من تطبيق آخر';
+        else if (err && err.name === 'OverconstrainedError') msg = 'إعدادات الكاميرا غير مدعومة — جارٍ المحاولة بإعدادات أبسط';
+        else if (err && err.name === 'SecurityError') msg = 'الكاميرا تتطلب اتصال آمن (HTTPS)';
+        else if (err && err.message) msg = err.message;
+
+        setCamStatus('تعذّر فتح الكاميرا', 'err');
         if (errBox) {
-          errBox.textContent = 'لم نتمكن من فتح الكاميرا (' + (err.message || err.name) + ') — تأكد من السماح للكاميرا أو ارفع صورة لوجهك.';
+          errBox.textContent = msg + ' — يمكنك رفع صورة لوجهك بالزر أدناه.';
           errBox.hidden = false;
+        }
+        showCamOverlay(true);
+
+        // Retry with simpler constraints on OverconstrainedError
+        if (err && err.name === 'OverconstrainedError') {
+          try {
+            if (stream) stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+            setCamStatus('محاولة بإعدادات أبسط…', '');
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            if (videoSelfie) {
+              videoSelfie.srcObject = stream;
+              videoSelfie.muted = true;
+              videoSelfie.playsInline = true;
+              await videoSelfie.play().catch(() => {});
+            }
+            setCamStatus('الكاميرا تعمل — ضع وجهك داخل الإطار', 'live');
+            showCamOverlay(false);
+            return true;
+          } catch (e2) {
+            console.error('[camera] retry failed:', e2);
+          }
         }
         return false;
       }
@@ -609,17 +678,50 @@
       const ok = await initSelfieChallenge();
       if (!ok) return;
       const started = await startCamera();
-      if (started) beginLivenessMonitor();
+      if (started) {
+        beginLivenessMonitor();
+        showCamOverlay(false);
+      }
       show('selfie');
     });
 
-    // تشغيل تلقائي للتحدي وتحميل موديل الوجه عند فتح الصفحة
+    // تحميل موديل الوجه في الخلفية؛ الكاميرا تُفتح بضغط المستخدم (تتطلب user-gesture في معظم المتصفحات)
     initSelfieChallenge().then((ok) => {
       if (ok) {
         ensureFaceModels();
-        startCamera().then((started) => { if (started) beginLivenessMonitor(); });
+        // إظهار طبقة تشغيل الكاميرا وعدم الفتح تلقائيًا
+        showCamOverlay(true);
       }
     });
+
+    // زر تشغيل الكاميرا من الطبقة
+    const camStartBtn = $('#btn-cam-start');
+    if (camStartBtn) {
+      camStartBtn.addEventListener('click', async () => {
+        camStartBtn.disabled = true;
+        camStartBtn.innerHTML = '<span class="pulse-dot"></span> جارٍ الفتح…';
+        const ok = await initSelfieChallenge();
+        if (ok) {
+          const started = await startCamera();
+          if (started) {
+            beginLivenessMonitor();
+          }
+        }
+        camStartBtn.disabled = false;
+        camStartBtn.innerHTML = '<svg class="ic" width="18" height="18" aria-hidden="true"><use href="#i-camera"/></svg> فتح الكاميرا';
+      });
+    }
+    // زر رفع الصورة من الطبقة
+    const camUploadBtn = $('#btn-cam-upload');
+    if (camUploadBtn) {
+      camUploadBtn.addEventListener('click', () => $('#selfie-file')?.click());
+    }
+    // الضغط على الفيديو نفسه يُحاول التشغيل (حل لمشاكل autoplay على بعض المتصفحات)
+    if (videoSelfie) {
+      videoSelfie.addEventListener('click', async () => {
+        try { await videoSelfie.play(); } catch (e) {}
+      });
+    }
 
     $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
     $('#btn-use-selfie-file')?.addEventListener('click', () => $('#selfie-file')?.click());
@@ -661,8 +763,9 @@
 
     $('#btn-switch-cam')?.addEventListener('click', async () => {
       facing = facing === 'user' ? 'environment' : 'user';
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      await startCamera();
+      if (stream) stream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+      const started = await startCamera();
+      if (started) showCamOverlay(false);
     });
 
     function check(code, condition, metrics) {
@@ -695,8 +798,11 @@
     $('#btn-capture-selfie')?.addEventListener('click', async () => {
       if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
         const started = await startCamera();
-        if (!started) return;
-        await new Promise((r) => setTimeout(r, 400));
+        if (!started) {
+          showCamOverlay(true);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 600));
       }
       setCamStatus('تم الالتقاط — راجع الصورة ثم ابدأ المطابقة', 'live');
       const c = grabFrame(videoSelfie, 720);

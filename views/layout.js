@@ -56,14 +56,17 @@ const ICON_DEFS = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none" 
   <symbol id="sym-palm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V9"/><path d="M12 9C9 5 4 6 3 9c3-1 6 0 9 0z"/><path d="M12 9c3-4 8-3 9 0-3-1-6 0-9 0z"/><path d="M12 9c-2-5-6-6-8-4 3 0 6 2 8 4z"/><path d="M12 9c2-5 6-6 8-4-3 0-6 2-8 4z"/><path d="M8 22h8"/></symbol>
 </svg>`;
 
-/* شعار «صوت» — ورقة اقتراع بعلامة تحقق داخل مربع زمردية */
+/* شعار «صوت» — ترمينال / أيقونة تحقق شرعية بنمط كاشف */
 function logoMark(size = 40) {
   return `<svg class="logo-mark" width="${size}" height="${size}" viewBox="0 0 48 48" role="img" aria-label="شعار صوت">
-  <defs><linearGradient id="slogo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#17A97D"/><stop offset="1" stop-color="#0B7A58"/></linearGradient></defs>
-  <rect x="1" y="1" width="46" height="46" rx="13" fill="url(#slogo-g)"/>
-  <path d="M16.4 11.5h9.4l8.7 8.7V36a2.5 2.5 0 0 1-2.5 2.5H16.4a2.5 2.5 0 0 1-2.5-2.5V14a2.5 2.5 0 0 1 2.5-2.5z" fill="#F7FAF8"/>
-  <path d="M25.8 11.5v6.2a2.5 2.5 0 0 0 2.5 2.5h6.2z" fill="#BFE9D9"/>
-  <path d="m18.7 27.3 4 4 7.1-8.2" fill="none" stroke="#0F8F6B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="1" y="1" width="46" height="46" rx="6" fill="var(--surface)" stroke="var(--primary)" stroke-width="1.5"/>
+  <rect x="1" y="1" width="46" height="10" rx="6" fill="var(--surface-2)"/>
+  <circle cx="9" cy="6" r="2" fill="#FF5C7A"/>
+  <circle cx="16" cy="6" r="2" fill="#FFB547"/>
+  <circle cx="23" cy="6" r="2" fill="var(--primary)"/>
+  <text x="39" y="9" font-family="monospace" font-size="6" font-weight="700" fill="var(--primary)" text-anchor="middle">></text>
+  <path d="m16 28 5 5 11-13" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 38h22" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
 </svg>`;
 }
 
@@ -118,7 +121,7 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, bod
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F8F6B">
+<meta name="theme-color" content="#0A0E14">
 <meta name="description" content="صوت — منصة تصويت إلكترونية تجمع بين التحقق من الهوية والتصويت الإلكتروني الآمن. من هويتك .. إلى صوتك.">
 <title>${esc(title)} — صوت | من هويتك .. إلى صوتك</title>
 <script>
@@ -127,16 +130,16 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, bod
   try {
     var saved = localStorage.getItem('soot-theme');
     var theme = (saved === 'light' || saved === 'dark') ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=11">
+<link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body class="${esc(bodyClass)}">
 ${ICON_DEFS}
@@ -148,7 +151,7 @@ ${ICON_DEFS}
       ${logoMark(40)}
       <span class="brand-text">
         <span class="brand-name">صوت</span>
-        <span class="brand-tag">من هويتك .. إلى صوتك</span>
+        <span class="brand-tag">IDENTITY VERIFIED VOTING</span>
       </span>
     </a>
 
@@ -186,9 +189,9 @@ ${ICON_DEFS}
     <div class="foot-brand">
       <a class="brand" href="/">
         ${logoMark(36)}
-        <span class="brand-text"><span class="brand-name">صوت</span><span class="brand-tag">من هويتك .. إلى صوتك</span></span>
+        <span class="brand-text"><span class="brand-name">صوت</span><span class="brand-tag">IDENTITY VERIFIED VOTING</span></span>
       </a>
-      <p class="foot-about">منصة تصويت إلكترونية تجمع بين التحقق من الهوية بالوجه والاقتراع السري، مع إيصال قابل للتحقق في كل خطوة.</p>
+      <p class="foot-about">منصة تصويت رقمية بتقنيات التحقق من الهوية بالوجه، الاقتراع السري المشفر، وإيصال قابل للتحقق في كل خطوة.</p>
     </div>
     <nav class="foot-col" aria-label="روابط المنصة">
       <b>المنصة</b>
@@ -213,7 +216,7 @@ ${ICON_DEFS}
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
-<script src="/app.js?v=11" defer></script>
+<script src="/app.js?v=12" defer></script>
 </body>
 </html>`;
 }

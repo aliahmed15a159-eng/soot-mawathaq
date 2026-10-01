@@ -85,76 +85,91 @@ function landing({ elections, demo, counts }) {
 
   return `
 <section class="hero">
+  <div class="hero-case-bar reveal">
+    <span><span class="case-id">CASE FILE #SOOT-001</span> · <span>_OPEN</span></span>
+    <span class="case-status"><span class="pulse-dot"></span>نظام التصويت الرقمي نشط</span>
+    <span class="creator-sig">صوت // منصة تصويت موثّقة</span>
+  </div>
+
   <div class="hero-grid">
     <div class="hero-copy reveal">
       ${mainElection ? `<div class="hero-meta">${stateChip(mainElection.state)}<span class="hero-meta-title">${esc(mainElection.title)}</span></div>` : ''}
-      <h1 class="hero-title">صوتك يبدأ <span class="text-accent">من هويتك</span></h1>
-      <p class="hero-lead">منصة انتخابية رقمية تجمع بين التحقق من الهوية والتصويت الإلكتروني الآمن — تحقّق بوجهك، اختر بسرّية، واحصل على إيصال يمكنك التحقق منه في أي وقت.</p>
+      <h1 class="hero-title"><span class="line">كل صوت <span class="text-accent">له بصمة</span>.</span><span class="line">من <span class="text-accent">هويتك</span> .. إلى صوتك.<span class="cursor"></span></span></h1>
+      <p class="hero-lead">منصة تصويت رقمية بتقنيات <span class="hl">التحقق من الهوية بالوجه</span>،<span class="hl">الاقتراع السري</span>، وإيصال قابل للتحقق.<br>ادخل بياناتك، تحقق بوجهك، وصوتك محمي بالتشفير.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="${registerHref}">${icon('vote-check', 19)} ابدأ التصويت</a>
-        <a class="btn btn-outline btn-lg" href="#process">استكشف المنصة ${icon('chevron-down', 17)}</a>
+        <a class="btn btn-primary btn-lg" href="${registerHref}">${icon('vote-check', 17)} ابدأ التحقيق في الصوت</a>
+        <a class="btn btn-outline btn-lg" href="#process">// كيف يعمل؟ ${icon('chevron-down', 15)}</a>
       </div>
       <div class="hero-trust">
-        <span>${icon('shield-check', 15)} تحقق بالوجه</span>
-        <span>${icon('lock', 15)} سرية الاقتراع</span>
-        <span>${icon('receipt', 15)} إيصال قابل للتحقق</span>
+        <span>${icon('shield-check', 13)} VERIFIED_IDENTITY</span>
+        <span>${icon('lock', 13)} SECRET_BALLOT</span>
+        <span>${icon('receipt', 13)} VERIFIABLE_RECEIPT</span>
       </div>
     </div>
 
-    <div class="hero-visual reveal" aria-label="توضيح رحلة التصويت: من الهوية إلى التحقق بالوجه فالاقتراع فالإيصال">
-      <div class="flow-panel">
-        <div class="flow-head">
-          <span class="flow-head-title">${icon('layers', 16)} رحلة الناخب</span>
-          <span class="flow-live"><span class="pulse-dot"></span> مباشر</span>
+        <div class="hero-visual reveal" aria-label="وحدة فحص الهوية - ترمينال">
+      <div class="terminal-panel">
+        <div class="terminal-head">
+          <div class="traffic-lights"><span></span><span></span><span></span></div>
+          <div class="terminal-title">SOOT // IDENTITY VERIFICATION TERMINAL v1.0</div>
+          <div class="terminal-badge">LIVE</div>
         </div>
-
-        <div class="flow-row">
-          <span class="flow-ic">${icon('id-card', 19)}</span>
-          <div class="flow-info"><b>الهوية</b><span>بيانات الرقم القومي</span></div>
-          <span class="flow-mini mini-code">•••• •••• 1518 ${icon('check-circle', 13)}</span>
-        </div>
-        <div class="flow-connector" aria-hidden="true"></div>
-
-        <div class="flow-row">
-          <span class="flow-ic flow-ic-cam">${icon('scan-face', 19)}<span class="cam-scanline" aria-hidden="true"></span></span>
-          <div class="flow-info"><b>التحقق من الوجه</b><span>مطابقة حيّة عبر الكاميرا</span></div>
-          <span class="flow-mini mini-ok">${icon('check-circle', 13)} تم</span>
-        </div>
-        <div class="flow-connector" aria-hidden="true"></div>
-
-        <div class="flow-row">
-          <span class="flow-ic">${icon('ballot', 19)}</span>
-          <div class="flow-info"><b>التصويت</b><span>اختيار سري لمرشح واحد</span></div>
-          <span class="flow-mini mini-radio" aria-hidden="true"><span></span></span>
-        </div>
-        <div class="flow-connector" aria-hidden="true"></div>
-
-        <div class="flow-row">
-          <span class="flow-ic">${icon('receipt', 19)}</span>
-          <div class="flow-info"><b>الإيصال</b><span>رقم قابل للتحقق</span></div>
-          <span class="flow-mini mini-code">SOOT-24081 ${icon('check-circle', 13)}</span>
+        <div class="terminal-body">
+          <div class="terminal-prompt">root@soot:~$ ./verify_voter --session</div>
+          <div class="terminal-line"><span class="key">[SYS]</span> غرفة الفحص جاهزة</div>
+          <div class="terminal-line"><span class="key">[OK]</span> المحرك العصبي للتحقق من الوجه محمّل <span class="ok">✓</span></div>
+          <div class="terminal-line"><span class="key">[OK]</span> قاعدة بيانات الناخبين متصلة <span class="ok">✓</span></div>
+          <hr class="terminal-divider">
+          <div class="flow-steps">
+            <div class="flow-step">
+              <span class="flow-step-num">01</span>
+              <span class="flow-step-ic">${icon('id-card', 15)}</span>
+              <div class="flow-step-info"><b>INPUT</b><span>التحقق من بيانات الهوية</span></div>
+              <span class="flow-step-status">${icon('check-circle', 12)}</span>
+            </div>
+            <div class="flow-step">
+              <span class="flow-step-num">02</span>
+              <span class="flow-step-ic">${icon('scan-face', 15)}</span>
+              <div class="flow-step-info"><b>SCAN</b><span>مطابقة حيّة بالكاميرا</span></div>
+              <span class="flow-step-status"><span class="pulse-dot"></span>SCAN</span>
+            </div>
+            <div class="flow-step">
+              <span class="flow-step-num">03</span>
+              <span class="flow-step-ic">${icon('ballot', 15)}</span>
+              <div class="flow-step-info"><b>VOTE</b><span>اقتراع سري مشفر</span></div>
+              <span class="flow-step-status">···</span>
+            </div>
+            <div class="flow-step">
+              <span class="flow-step-num">04</span>
+              <span class="flow-step-ic">${icon('receipt', 15)}</span>
+              <div class="flow-step-info"><b>VERDICT</b><span>إيصال قابل للتحقق</span></div>
+              <span class="flow-step-status">···</span>
+            </div>
+          </div>
+          <hr class="terminal-divider">
+          <div class="terminal-line"><span class="key">[STATUS]</span> <span class="val">بانتظار الناخب...</span> <span class="pulse-dot"></span></div>
         </div>
       </div>
-      <div class="hero-float hero-float-a">${icon('shield-check', 15)} هويتك محمية</div>
-      <div class="hero-float hero-float-b">${icon('lock', 15)} الصوت مجهول الهوية</div>
+      <div class="hero-float hero-float-a">${icon('shield-check', 13)} SECURE_CHANNEL</div>
+      <div class="hero-float hero-float-b">${icon('lock', 13)} END_TO_END</div>
     </div>
   </div>
 </section>
 
 <section class="stats-band" aria-label="أرقام المنصة">
   <div class="stats-grid">
-    <div class="stat-box"><b>${safeNum(counts.candidates)}</b><span>مرشحًا في الانتخابات الحالية</span></div>
-    <div class="stat-box"><b>${safeNum(counts.ballots)}</b><span>صوتًا مسجّلًا حتى الآن</span></div>
-    <div class="stat-box"><b>${safeNum(counts.elections)}</b><span>استحقاقًا انتخابيًا</span></div>
-    <div class="stat-box"><b>4</b><span>خطوات للتصويت</span></div>
+    <div class="stat-box"><b>${safeNum(counts.candidates)}</b><span><span class="stat-label-tag">EVIDENCE / 01</span>مرشحًا مسجّلًا</span></div>
+    <div class="stat-box"><b>${safeNum(counts.ballots)}</b><span><span class="stat-label-tag">EVIDENCE / 02</span>صوتًا موثّقًا</span></div>
+    <div class="stat-box"><b>${safeNum(counts.elections)}</b><span><span class="stat-label-tag">EVIDENCE / 03</span>استحقاق انتخابي</span></div>
+    <div class="stat-box"><b>4</b><span><span class="stat-label-tag">EVIDENCE / 04</span>مراحل للتحقق</span></div>
   </div>
 </section>
 
 <section class="section" id="process">
   <div class="section-head center">
-    <span class="eyebrow">كيف تعمل المنصة</span>
-    <h2>من الهوية إلى الإيصال — أربع خطوات</h2>
-    <p class="muted">رحلة واضحة ومحمية: كل خطوة تُثبت هويتك دون أن تكشف اختيارك.</p>
+    <span class="eyebrow">البروتوكول</span>
+    <h2>بروتوكول التحقق — أربع مراحل</h2>
+    <p class="muted">عملية واضحة ومؤمنة: كل مرحلة تتحقق من الهوية دون كشف الاختيار.</p>
   </div>
   <ol class="process-grid">
     <li class="process-card reveal">
@@ -186,8 +201,8 @@ function landing({ elections, demo, counts }) {
 
 <section class="section security-section">
   <div class="section-head center">
-    <span class="eyebrow">الأمان أولاً</span>
-    <h2>أمانك جزء من كل خطوة</h2>
+    <span class="eyebrow">طبقات الحماية</span>
+    <h2>بروتوكول آمن في كل مرحلة</h2>
   </div>
   <div class="security-grid">
     <article class="security-card reveal">
@@ -217,7 +232,7 @@ ${mainCandidates.length ? `
 <section class="section" id="candidates">
   <div class="section-head">
     <div>
-      <span class="eyebrow">الانتخابات</span>
+      <span class="eyebrow">EVIDENCE</span>
       <h2>${mainElection ? esc(mainElection.title) : 'قائمة المرشحين'}</h2>
       <p class="muted">${mainElection && mainElection.description ? esc(mainElection.description) : 'المرشحون المعتمدون — بمعاملة بصرية متساوية تمامًا.'}</p>
     </div>
@@ -235,9 +250,9 @@ ${mainCandidates.length ? `
 
 <section class="cta-band">
   <div class="cta-inner reveal">
-    <h2>جاهز لتسجيل صوتك؟</h2>
-    <p>رحلة التصويت تستغرق دقائق — بهويتك ووجهك فقط.</p>
-    <a class="btn btn-invert btn-lg" href="${registerHref}">${icon('vote-check', 19)} ابدأ التصويت الآن</a>
+    <h2>جاهز لبدء جلسة التحقق؟</h2>
+    <p>العملية تستغرق دقائق — بياناتك، وجهك، وصوتك المشفر.</p>
+    <a class="btn btn-invert btn-lg" href="${registerHref}">${icon('vote-check', 17)} ابدأ التحقيق في الصوت الآن</a>
   </div>
 </section>
 
@@ -440,13 +455,14 @@ function verifyPage({ voter, election, demo, rollCard }) {
       <div class="card camera-panel">
         <div class="camera-head">
           <div class="engine-pill" id="ai-engine-badge"><span class="status-dot"></span><span id="ai-engine-text">جارٍ تجهيز محرك مطابقة الوجه…</span></div>
-          <span class="cam-status" id="cam-status">جارٍ فتح الكاميرا…</span>
+          <span class="cam-status" id="cam-status">في انتظار تشغيل الكاميرا</span>
         </div>
 
         <ol class="challenge-chips" id="challenge-list" aria-label="تحديات إثبات الحيوية"></ol>
 
         <div class="camera-frame" id="camera-frame-box">
-          <video id="video-selfie" playsinline autoplay muted></video>
+          <div class="camera-start-overlay" id="camera-start-overlay"><div class="camera-start-content"><span class="cam-overlay-ic"><svg class="ic" width="34" height="34" aria-hidden="true"><use href="#i-camera"/></svg></span><b>تشغيل الكاميرا للتحقق</b><p>اضغط على الزر لفتح الكاميرا وبدء مطابقة الوجه.<br>سيطلب المتصفح إذن الوصول للكاميرا — اضغط "سماح".</p><button type="button" class="btn btn-primary btn-lg" id="btn-cam-start"><svg class="ic" width="18" height="18" aria-hidden="true"><use href="#i-camera"/></svg> فتح الكاميرا</button><button type="button" class="btn btn-outline btn-sm" id="btn-cam-upload">// أو رفع صورة من الجهاز</button></div></div>
+          <video id="video-selfie" playsinline muted></video>
           <span class="frame-corner tl" aria-hidden="true"></span>
           <span class="frame-corner tr" aria-hidden="true"></span>
           <span class="frame-corner bl" aria-hidden="true"></span>
