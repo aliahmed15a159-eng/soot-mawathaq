@@ -84,6 +84,25 @@
 
     phone?.addEventListener('input', () => { phone.value = arDigits(phone.value).slice(0, 11); });
 
+    $$('.btn-fill-card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        $$('.btn-fill-card').forEach((b) => b.classList.remove('active-chip'));
+        btn.classList.add('active-chip');
+        if ($('#full_name')) $('#full_name').value = btn.dataset.name || '';
+        if (nid) {
+          nid.value = btn.dataset.nid || '';
+          nid.dispatchEvent(new Event('input'));
+        }
+        if (dob && btn.dataset.dob) dob.value = btn.dataset.dob;
+        if (gov && btn.dataset.gov) gov.value = btn.dataset.gov;
+        if (phone && !phone.value) phone.value = '01012345678';
+        if ($('#demo-idcard-img') && btn.dataset.img) $('#demo-idcard-img').src = btn.dataset.img;
+        if ($('#demo-idcard-address') && btn.dataset.address) {
+          $('#demo-idcard-address').textContent = `${btn.dataset.address} — ${btn.dataset.gov || 'أسيوط'}`;
+        }
+      });
+    });
+
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorBox.hidden = true;
@@ -176,15 +195,32 @@
       try {
         if (stream) stream.getTracks().forEach((t) => t.stop());
         setCamStatus('جاري تشغيل الكاميرا…', false);
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
-          audio: false,
-        });
+        const constraintsList = [
+          { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
+          { video: { facingMode: facing }, audio: false },
+          { video: true, audio: false },
+        ];
+        let lastErr = null;
+        for (const c of constraintsList) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(c);
+            if (stream) break;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        if (!stream) throw (lastErr || new Error('camera_unavailable'));
         if (videoSelfie) {
           videoSelfie.srcObject = stream;
           videoSelfie.muted = true;
+          videoSelfie.playsInline = true;
+          videoSelfie.autoplay = true;
           videoSelfie.setAttribute('playsinline', '');
-          await videoSelfie.play();
+          videoSelfie.setAttribute('webkit-playsinline', '');
+          videoSelfie.onloadedmetadata = () => {
+            videoSelfie.play().catch(() => {});
+          };
+          await videoSelfie.play().catch(() => {});
         }
         if (video) {
           video.srcObject = stream;
@@ -193,9 +229,9 @@
         setCamStatus('الكاميرا شغّالة — ضع وجهك داخل الإطار ثم اضغط «التقاط السيلفي»', true);
         return true;
       } catch (err) {
-        setCamStatus('تعذّر فتح الكاميرا — يمكنك الضغط على «رفع صورة للوجه»', false);
+        setCamStatus('اضغط «تشغيل الكاميرا» للسماح بالكاميرا أو «رفع صورة للوجه»', false);
         if (errBox) {
-          errBox.textContent = 'لم نتمكن من فتح الكاميرا (' + (err.message || err.name) + ') — تأكد من السماح للكاميرا أو ارفع صورة لوجهك.';
+          errBox.textContent = 'لم نتمكن من فتح الكاميرا تلقائيًا (' + (err.message || err.name) + ') — اضغط على زر «تشغيل الكاميرا» واسمح للمتصفح باستخدام الكاميرا، أو اضغط «رفع صورة للوجه».';
           errBox.hidden = false;
         }
         return false;
@@ -499,17 +535,23 @@
     }
 
     /* ---------- تسلسل التحقق ---------- */
+    const FALLBACK_CHALLENGE = [
+      { code: 'smile', label: 'ابتسم للكاميرا' },
+      { code: 'blink', label: 'ارمش بعينيك' },
+    ];
+
     async function initSelfieChallenge() {
       if (challenge && challenge.length) return true;
-      const { data } = await postJson('/api/verify/start', {});
-      if (data && data.ok === false) {
-        if (data.code === 'otp_required' || /الموبايل/.test(data.error || '')) { location.href = '/otp'; return false; }
-        if (/الجلسة/.test(data.error || '')) { location.href = '/register'; return false; }
-        const box = $('#verify-error');
-        if (box) { box.textContent = data.error || 'تعذّر بدء التحقق'; box.hidden = false; }
-        return false;
+      try {
+        const { data } = await postJson('/api/verify/start', {});
+        if (data && data.ok && Array.isArray(data.challenge) && data.challenge.length) {
+          challenge = data.challenge;
+        } else {
+          challenge = FALLBACK_CHALLENGE;
+        }
+      } catch {
+        challenge = FALLBACK_CHALLENGE;
       }
-      challenge = (data && data.challenge) || [];
       const listEl = $('#challenge-list');
       if (listEl) listEl.innerHTML = challenge.map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
       return true;
@@ -536,6 +578,7 @@
     }
 
     function ensureLivenessComplete() {
+      if (!challenge || !challenge.length) challenge = FALLBACK_CHALLENGE;
       const defaultLm = {
         blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
         left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
@@ -553,21 +596,25 @@
       if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
     }
 
+    // استدعاء الكاميرا مباشرة كأول سطر داخل حدث النقر للحفاظ على User Gesture في كل المتصفحات
     $('#btn-start-camera')?.addEventListener('click', async () => {
-      const ok = await initSelfieChallenge();
-      if (!ok) return;
       const started = await startCamera();
+      initSelfieChallenge();
       if (started) beginLivenessMonitor();
       show('selfie');
     });
 
-    // تشغيل تلقائي لتحدي التحقق وتحميل موديل الذكاء الاصطناعي بمجرد فتح صفحة /verify
-    initSelfieChallenge().then((ok) => {
-      if (ok) {
-        ensureFaceModels();
-        startCamera().then((started) => { if (started) beginLivenessMonitor(); });
+    $('#cam-frame')?.addEventListener('click', async () => {
+      if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
+        const started = await startCamera();
+        if (started) beginLivenessMonitor();
       }
     });
+
+    // تشغيل تلقائي للكاميرا وموديل الذكاء الاصطناعي بالتوازي بمجرد فتح صفحة /verify
+    startCamera().then((started) => { if (started) beginLivenessMonitor(); });
+    initSelfieChallenge();
+    ensureFaceModels();
 
     $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
     $('#btn-use-selfie-file')?.addEventListener('click', () => $('#selfie-file')?.click());
@@ -1137,12 +1184,21 @@
       const iw = loadedPortraitImg.width, ih = loadedPortraitImg.height;
       const targetRatio = 310 / 390;
       let sx = 0, sy = 0, sw = iw, sh = ih;
-      if (iw / ih > targetRatio) {
+      if (loadedPortraitImg._faceBox) {
+        const b = loadedPortraitImg._faceBox;
+        const cx = b.x + b.width / 2;
+        const cy = b.y + b.height * 0.62;
+        sw = Math.min(iw, Math.max(b.width * 2.25, iw * 0.35));
+        sh = Math.min(ih, sw / targetRatio);
+        sw = sh * targetRatio;
+        sx = Math.max(0, Math.min(iw - sw, cx - sw / 2));
+        sy = Math.max(0, Math.min(ih - sh, cy - sh * 0.45));
+      } else if (iw / ih > targetRatio) {
         sw = ih * targetRatio;
         sx = (iw - sw) / 2;
       } else {
         sh = iw / targetRatio;
-        sy = 0;
+        sy = Math.max(0, Math.min(ih - sh, ih * 0.06));
       }
       ctx.drawImage(loadedPortraitImg, sx, sy, sw, sh, 38, 130, 310, 390);
     } else {
@@ -1246,15 +1302,54 @@
       document.getElementById('nc-gov')?.addEventListener(ev, () => renderEgyptianIdCanvas());
     });
 
+    // زر «تعديل العنوان / البطاقة» لأي بطاقة محفوظة لتحميل بياناتها وصورتها وتعديل العنوان فورًا
+    document.querySelectorAll('.btn-edit-card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (cardForm.full_name) cardForm.full_name.value = btn.dataset.name || '';
+        const addrEl = document.getElementById('nc-address');
+        if (addrEl) addrEl.value = btn.dataset.address || '';
+        if (cardForm.governorate) cardForm.governorate.value = btn.dataset.gov || 'أسيوط';
+        if (cardForm.birth_date) cardForm.birth_date.value = btn.dataset.dob || '2002-08-15';
+        if (cardForm.national_id) cardForm.national_id.value = btn.dataset.nid || '';
+        if (cardForm.gender) cardForm.gender.value = btn.dataset.gender || 'ذكر';
+        const faceSrc = btn.dataset.face || '/cards/31005292501518-face.jpg';
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => {
+          loadedPortraitImg = im;
+          renderEgyptianIdCanvas();
+        };
+        im.src = faceSrc;
+        renderEgyptianIdCanvas();
+        if (addrEl) {
+          addrEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => { addrEl.focus(); addrEl.select(); }, 250);
+        }
+      });
+    });
+
     photoInput.addEventListener('change', () => {
       const f = photoInput.files && photoInput.files[0];
       if (!f) return;
       const r = new FileReader();
       r.onload = () => {
         const im = new Image();
-        im.onload = () => {
+        im.onload = async () => {
           loadedPortraitImg = im;
           renderEgyptianIdCanvas();
+          try {
+            const ok = await loadFaceApiEngine();
+            if (ok && window.faceapi) {
+              const det = await window.faceapi.detectSingleFace(
+                im,
+                new window.faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.25 })
+              );
+              if (det && det.box) {
+                im._faceBox = det.box;
+                renderEgyptianIdCanvas();
+              }
+            }
+          } catch {}
         };
         im.src = String(r.result || '');
       };
@@ -1263,11 +1358,10 @@
 
     cardForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const file = photoInput.files && photoInput.files[0];
-      if (!file || !loadedPortraitImg) {
+      if (!loadedPortraitImg) {
         cardMsg.hidden = false;
         cardMsg.className = 'notice err';
-        cardMsg.textContent = '✗ يرجى اختيار صورة واضحة لوجه صاحب البطاقة أولًا';
+        cardMsg.textContent = '✗ يرجى اختيار صورة واضحة لوجه صاحب البطاقة أولًا (أو الضغط على «تعديل العنوان / البطاقة» لبطاقة مسجّلة)';
         return;
       }
       const btn = document.querySelector('#btn-submit-new-card');
@@ -1284,9 +1378,19 @@
       const faceCanvas = document.createElement('canvas');
       faceCanvas.width = 320; faceCanvas.height = 320;
       const fctx = faceCanvas.getContext('2d', { willReadFrequently: true });
-      const s = Math.min(loadedPortraitImg.width, loadedPortraitImg.height);
-      const sx = (loadedPortraitImg.width - s) / 2;
-      fctx.drawImage(loadedPortraitImg, sx, 0, s, s, 0, 0, 320, 320);
+      const iw = loadedPortraitImg.width, ih = loadedPortraitImg.height;
+      if (loadedPortraitImg._faceBox) {
+        const b = loadedPortraitImg._faceBox;
+        const side = Math.min(Math.min(iw, ih), Math.max(b.width, b.height) * 1.65);
+        const sx = Math.max(0, Math.min(iw - side, (b.x + b.width / 2) - side / 2));
+        const sy = Math.max(0, Math.min(ih - side, (b.y + b.height / 2) - side / 2));
+        fctx.drawImage(loadedPortraitImg, sx, sy, side, side, 0, 0, 320, 320);
+      } else {
+        const s = Math.min(iw, ih);
+        const sx = (iw - s) / 2;
+        const sy = ih > iw ? Math.min(ih - s, ih * 0.08) : 0;
+        fctx.drawImage(loadedPortraitImg, sx, sy, s, s, 0, 0, 320, 320);
+      }
       const faceDataUrl = faceCanvas.toDataURL('image/jpeg', 0.85);
       const clientHash = calcCardAHash(fctx.getImageData(0, 0, 320, 320).data, 320, 320);
 

@@ -34,6 +34,7 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Length': buf.length,
     'Cache-Control': 'no-store',
+    'Permissions-Policy': 'camera=(self), microphone=()',
     ...extraHeaders,
   });
   res.end(buf);
