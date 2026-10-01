@@ -118,7 +118,7 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, bod
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F8F6B">
+<meta name="theme-color" content="#070C0A">
 <meta name="description" content="صوت — منصة تصويت إلكترونية تجمع بين التحقق من الهوية والتصويت الإلكتروني الآمن. من هويتك .. إلى صوتك.">
 <title>${esc(title)} — صوت | من هويتك .. إلى صوتك</title>
 <script>
@@ -126,36 +126,47 @@ function shell({ title, body, active = 1, showStepper = false, wide = false, bod
 (function () {
   try {
     var saved = localStorage.getItem('soot-theme');
-    var theme = (saved === 'light' || saved === 'dark') ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=11">
+<link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body class="${esc(bodyClass)}">
 ${ICON_DEFS}
 <a class="skip-link" href="#main">تخطَّ إلى المحتوى الرئيسي</a>
 
+<div class="signal-bar" aria-hidden="true">
+  <div class="container signal-inner">
+    <span class="sig-tag"><i></i> SOOT // IDENTITY TERMINAL v2.0</span>
+    <span class="sig-sep">|</span>
+    <span class="sig-meta sig-hide-sm">FACE MATCH · LIVENESS · BALLOT</span>
+    <span class="sig-spacer"></span>
+    <span class="sig-meta sig-hide-sm">SECURE CHANNEL · TLS</span>
+    <span class="sig-sep sig-hide-sm">|</span>
+    <span class="sig-meta">CAIRO · EGY</span>
+  </div>
+</div>
+
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="/" aria-label="صوت — الصفحة الرئيسية">
-      ${logoMark(40)}
+      <span class="brand-glyph" aria-hidden="true">&lt;✓/&gt;</span>
       <span class="brand-text">
         <span class="brand-name">صوت</span>
-        <span class="brand-tag">من هويتك .. إلى صوتك</span>
+        <span class="brand-tag">Digital Ballot Lab</span>
       </span>
     </a>
 
     <nav class="main-nav" aria-label="التنقل الرئيسي">${navLinks(nav)}</nav>
 
     <div class="header-actions">
-      <span class="trust-pill">${icon('shield-check', 14)}<span>منصة تصويت رقمية موثوقة</span></span>
+      <span class="trust-pill">${icon('shield-check', 13)}<span>Verified Ballot Protocol</span></span>
       ${themeToggle({})}
       <a class="btn btn-primary btn-sm header-cta" href="/register">ابدأ التصويت</a>
       <button type="button" class="nav-burger" data-nav-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="فتح القائمة">
@@ -185,10 +196,18 @@ ${ICON_DEFS}
   <div class="container footer-grid">
     <div class="foot-brand">
       <a class="brand" href="/">
-        ${logoMark(36)}
-        <span class="brand-text"><span class="brand-name">صوت</span><span class="brand-tag">من هويتك .. إلى صوتك</span></span>
+        <span class="brand-glyph" aria-hidden="true">&lt;✓/&gt;</span>
+        <span class="brand-text"><span class="brand-name">صوت</span><span class="brand-tag">Digital Ballot Lab</span></span>
       </a>
       <p class="foot-about">منصة تصويت إلكترونية تجمع بين التحقق من الهوية بالوجه والاقتراع السري، مع إيصال قابل للتحقق في كل خطوة.</p>
+      <div class="author-block">
+        <span class="author-mark" aria-hidden="true">AS</span>
+        <span class="author-text">
+          <span class="author-name">بُني وجرّب بواسطة أحمد سامح</span>
+          <span class="author-role">Engineer • Creator • System Builder</span>
+        </span>
+      </div>
+      <span class="foot-lab">Ahmed Sameh — Digital Ballot Lab</span>
     </div>
     <nav class="foot-col" aria-label="روابط المنصة">
       <b>المنصة</b>
@@ -212,8 +231,17 @@ ${ICON_DEFS}
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
-<script src="/app.js?v=11" defer></script>
+<script>
+  /* إعدادات المحرك البصري — النسخة المحلية هي الأساس، والـ CDN احتياطي فقط */
+  window.SOOT_ENGINE = {
+    faceApiLocal: '/vendor/face-api.min.js?v=12',
+    faceApiCdn: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js',
+    modelLocal: '/models',
+    modelCdn: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model'
+  };
+</script>
+<script src="/vendor/face-api.min.js?v=12" defer></script>
+<script src="/app.js?v=12" defer></script>
 </body>
 </html>`;
 }

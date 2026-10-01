@@ -87,27 +87,42 @@ function landing({ elections, demo, counts }) {
 <section class="hero">
   <div class="hero-grid">
     <div class="hero-copy reveal">
-      ${mainElection ? `<div class="hero-meta">${stateChip(mainElection.state)}<span class="hero-meta-title">${esc(mainElection.title)}</span></div>` : ''}
-      <h1 class="hero-title">صوتك يبدأ <span class="text-accent">من هويتك</span></h1>
-      <p class="hero-lead">منصة انتخابية رقمية تجمع بين التحقق من الهوية والتصويت الإلكتروني الآمن — تحقّق بوجهك، اختر بسرّية، واحصل على إيصال يمكنك التحقق منه في أي وقت.</p>
+      <div class="case-file">
+        <span class="cf-chip">BALLOT FILE <b>#SVT-001</b></span>
+        <span class="cf-state"><i></i>OPEN</span>
+        ${mainElection ? stateChip(mainElection.state) : ''}
+      </div>
+      <h1 class="hero-title">كل صوت<br> ليه <em>بصمة</em>.</h1>
+      <p class="hero-lead">وأنا بنيت <b>صوت</b> علشان صوتك ميتسرقش وميتكررش. سجّل بهويتك، تحقّق بوشك من الكاميرا، انتخب في سرّية تامة، وخذ إيصال تقدر تتأكد منه بنفسك في أي وقت.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="${registerHref}">${icon('vote-check', 19)} ابدأ التصويت</a>
+        <a class="btn btn-primary btn-lg" href="${registerHref}">ابدأ التصويت <span class="btn-arrow">←</span></a>
         <a class="btn btn-outline btn-lg" href="#process">استكشف المنصة ${icon('chevron-down', 17)}</a>
       </div>
-      <div class="hero-trust">
-        <span>${icon('shield-check', 15)} تحقق بالوجه</span>
-        <span>${icon('lock', 15)} سرية الاقتراع</span>
-        <span>${icon('receipt', 15)} إيصال قابل للتحقق</span>
+
+      <div class="author-block">
+        <span class="author-mark" aria-hidden="true">AS</span>
+        <span class="author-text">
+          <span class="author-name">بُني وجرّب بواسطة أحمد سامح</span>
+          <span class="author-role">Engineer • Creator • System Builder</span>
+        </span>
       </div>
+
+      <p class="protocol-note">
+        <span class="proto-key">SECURE PROTOCOL:</span>
+        <span>معالجة صورة الوش بتتم بالكامل داخل متصفحك — مفيش صورة بتترفع لأي سيرفر خارجي، والصوت نفسه بيتسجّل من غير اسمك.</span>
+      </p>
+
+      ${mainElection ? `<p class="muted small" style="margin-top:14px">${icon('ballot', 14)} ${esc(mainElection.title)}</p>` : ''}
     </div>
 
     <div class="hero-visual reveal" aria-label="توضيح رحلة التصويت: من الهوية إلى التحقق بالوجه فالاقتراع فالإيصال">
       <div class="flow-panel">
         <div class="flow-head">
-          <span class="flow-head-title">${icon('layers', 16)} رحلة الناخب</span>
-          <span class="flow-live"><span class="pulse-dot"></span> مباشر</span>
+          <span class="flow-head-title">${icon('layers', 14)} SOOT // EVIDENCE TERMINAL v2.0</span>
+          <span class="flow-live"><span class="pulse-dot"></span> LIVE</span>
         </div>
 
+        <div class="flow-body">
         <div class="flow-row">
           <span class="flow-ic">${icon('id-card', 19)}</span>
           <div class="flow-info"><b>الهوية</b><span>بيانات الرقم القومي</span></div>
@@ -134,6 +149,7 @@ function landing({ elections, demo, counts }) {
           <div class="flow-info"><b>الإيصال</b><span>رقم قابل للتحقق</span></div>
           <span class="flow-mini mini-code">SOOT-24081 ${icon('check-circle', 13)}</span>
         </div>
+        </div>
       </div>
       <div class="hero-float hero-float-a">${icon('shield-check', 15)} هويتك محمية</div>
       <div class="hero-float hero-float-b">${icon('lock', 15)} الصوت مجهول الهوية</div>
@@ -152,31 +168,31 @@ function landing({ elections, demo, counts }) {
 
 <section class="section" id="process">
   <div class="section-head center">
-    <span class="eyebrow">كيف تعمل المنصة</span>
+    <span class="eyebrow"><code>PROTOCOL 01</code> كيف تعمل المنصة</span>
     <h2>من الهوية إلى الإيصال — أربع خطوات</h2>
     <p class="muted">رحلة واضحة ومحمية: كل خطوة تُثبت هويتك دون أن تكشف اختيارك.</p>
   </div>
   <ol class="process-grid">
     <li class="process-card reveal">
-      <span class="process-num">01</span>
+      <span class="process-num">INPUT 01</span>
       <span class="process-ic">${icon('id-card', 22)}</span>
       <h3>بيانات الناخب</h3>
       <p>أدخل اسمك ورقمك القومي، ويقرأ النظام تاريخ الميلاد والمحافظة تلقائيًا من الرقم.</p>
     </li>
     <li class="process-card reveal">
-      <span class="process-num">02</span>
+      <span class="process-num">VERIFY 02</span>
       <span class="process-ic">${icon('scan-face', 22)}</span>
       <h3>التحقق من الهوية</h3>
       <p>التقط صورتك عبر الكاميرا ليطابق النظام ملامحك مع البطاقة المسجّلة.</p>
     </li>
     <li class="process-card reveal">
-      <span class="process-num">03</span>
+      <span class="process-num">BALLOT 03</span>
       <span class="process-ic">${icon('ballot', 22)}</span>
       <h3>التصويت</h3>
       <p>اختر مرشحًا واحدًا من ورقة الاقتراع الإلكترونية — واختيارك سري تمامًا.</p>
     </li>
     <li class="process-card reveal">
-      <span class="process-num">04</span>
+      <span class="process-num">VERDICT 04</span>
       <span class="process-ic">${icon('receipt', 22)}</span>
       <h3>الإيصال</h3>
       <p>استلم رقم إيصال فريدًا يمكنك التحقق منه في أي وقت دون كشف اختيارك.</p>
@@ -186,7 +202,7 @@ function landing({ elections, demo, counts }) {
 
 <section class="section security-section">
   <div class="section-head center">
-    <span class="eyebrow">الأمان أولاً</span>
+    <span class="eyebrow"><code>SECURITY 02</code> الأمان أولاً</span>
     <h2>أمانك جزء من كل خطوة</h2>
   </div>
   <div class="security-grid">
@@ -217,7 +233,7 @@ ${mainCandidates.length ? `
 <section class="section" id="candidates">
   <div class="section-head">
     <div>
-      <span class="eyebrow">الانتخابات</span>
+      <span class="eyebrow"><code>CANDIDATES 03</code> الانتخابات</span>
       <h2>${mainElection ? esc(mainElection.title) : 'قائمة المرشحين'}</h2>
       <p class="muted">${mainElection && mainElection.description ? esc(mainElection.description) : 'المرشحون المعتمدون — بمعاملة بصرية متساوية تمامًا.'}</p>
     </div>

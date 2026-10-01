@@ -34,6 +34,8 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Length': buf.length,
     'Cache-Control': 'no-store',
+    // السماح الصريح بالكاميرا/الميكروفون — بما فيها داخل iframe (معاينات النشر)
+    'Permissions-Policy': 'camera=(self), microphone=(), display-capture=(self)',
     ...extraHeaders,
   });
   res.end(buf);

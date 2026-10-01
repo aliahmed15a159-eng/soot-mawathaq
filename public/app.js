@@ -230,12 +230,13 @@
 
     const video = $('#video');
     const videoSelfie = $('#video-selfie');
-    const canvas = $('#canvas');
+    const canvas = $('#canvas') || document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     let stream = null; let facing = 'user'; let challenge = [];
     let livenessEvents = []; let frames = 0; let cardData = null; let selfieData = null;
     let motionLoop = null; let eyeBaseline = 0; let lastBlink = 0;
+    let cameraFailed = false; let booting = false;
 
     const camStatus = $('#cam-status');
     function setCamStatus(text, state = '') {
@@ -245,39 +246,110 @@
       if (state) camStatus.classList.add(state);
     }
 
+    /* تشخيص سبب فشل الكاميرا برسالة مفهومة بدل رسالة عامة */
+    const CAM_ERRORS = {
+      NotAllowedError: 'المتصفح منع الوصول للكاميرا — اضغط على أيقونة القفل/الكاميرا في شريط العنوان واسمح بالوصول، ثم أعد المحاولة.',
+      PermissionDeniedError: 'المتصفح منع الوصول للكاميرا — اسمح بالوصول من إعدادات الموقع ثم أعد المحاولة.',
+      NotFoundError: 'مفيش كاميرا متوصلة بالجهاز — جرّب «رفع صورة من الجهاز».',
+      DevicesNotFoundError: 'مفيش كاميرا متوصلة بالجهاز — جرّب «رفع صورة من الجهاز».',
+      NotReadableError: 'الكاميرا مشغولة بتطبيق تاني (Zoom/Meet/تطبيق الكاميرا) — اقفل التطبيق ده وأعد المحاولة.',
+      TrackStartError: 'الكاميرا مشغولة بتطبيق تاني — اقفل التطبيق ده وأعد المحاولة.',
+      OverconstrainedError: 'الكاميرا مش بتدعم الإعدادات المطلوبة — بنجرّب إعدادات أبسط…',
+      ConstraintNotSatisfiedError: 'الكاميرا مش بتدعم الإعدادات المطلوبة — بنجرّب إعدادات أبسط…',
+      AbortError: 'حصل مقاطعة أثناء فتح الكاميرا — أعد المحاولة.',
+      SecurityError: 'المتصفح بيمنع الكاميرا على الاتصال ده — لازم الموقع يفتح عبر HTTPS.',
+    };
+
+    function isSecureContext() {
+      const h = location.hostname;
+      return !!window.isSecureContext || h === 'localhost' || h === '127.0.0.1' || h === '::1' || location.protocol === 'https:';
+    }
+
+    /* getUserMedia مع تدرّج في القيود: من الأدق للأبسط — علشان كاميرات الموبايل القديمة تشتغل */
+    async function requestCameraStream() {
+      const attempts = [
+        { video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+        { video: { facingMode: facing }, audio: false },
+        { video: true, audio: false },
+      ];
+      let lastErr = null;
+      for (const constraints of attempts) {
+        try { return await navigator.mediaDevices.getUserMedia(constraints); } catch (err) {
+          lastErr = err;
+          // الأخطاء اللي مش هتتحل بإعدادات أبسط — نوقف فورًا
+          if (err && ['NotAllowedError', 'PermissionDeniedError', 'NotFoundError', 'DevicesNotFoundError', 'NotReadableError', 'TrackStartError', 'SecurityError'].includes(err.name)) break;
+        }
+      }
+      throw lastErr || new Error('UnknownError');
+    }
+
+    async function attachStream(s) {
+      if (videoSelfie) {
+        videoSelfie.srcObject = s;
+        videoSelfie.muted = true;
+        videoSelfie.defaultMuted = true;
+        videoSelfie.setAttribute('playsinline', '');
+        videoSelfie.setAttribute('autoplay', '');
+        try { await videoSelfie.play(); } catch { /* التشغيل التلقائي مرفوض — المستخدم هيضغط التقاط */ }
+      }
+      if (video) {
+        video.srcObject = s;
+        video.muted = true;
+        video.setAttribute('playsinline', '');
+        try { await video.play(); } catch {}
+      }
+    }
+
     async function startCamera() {
       const errBox = $('#verify-error');
-      if (errBox) errBox.hidden = true;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCamStatus('الكاميرا غير مدعومة — استخدم «رفع صورة من الجهاز»', 'err');
+      const fail = (statusText, detail) => {
+        setCamStatus(statusText, 'err');
+        if (errBox && detail) { errBox.textContent = detail; errBox.hidden = false; }
+        cameraFailed = true;
         return false;
+      };
+
+      if (errBox) errBox.hidden = true;
+
+      // ١) سياق آمن؟ الكاميرا بتشتغل على HTTPS أو localhost فقط
+      if (!isSecureContext()) {
+        return fail('الكاميرا محتاجة اتصال آمن (HTTPS)',
+          'المتصفحات بتمنع الكاميرا على HTTP. افتح الموقع برابط HTTPS (زي رابط Vercel) أو من localhost.');
       }
+
+      // ٢) هل المتصفح بيدعم الكاميرا أصلًا؟
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return fail('الكاميرا غير مدعومة في المتصفح ده',
+          'جرّب Chrome أو Safari أو Edge بإصدار حديث — أو استخدم «رفع صورة من الجهاز» من تحت.');
+      }
+
       try {
-        if (stream) stream.getTracks().forEach((t) => t.stop());
+        if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
         setCamStatus('جارٍ تشغيل الكاميرا…', '');
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
-          audio: false,
-        });
-        if (videoSelfie) {
-          videoSelfie.srcObject = stream;
-          videoSelfie.muted = true;
-          videoSelfie.setAttribute('playsinline', '');
-          await videoSelfie.play();
-        }
-        if (video) {
-          video.srcObject = stream;
-          await video.play().catch(() => {});
-        }
-        setCamStatus('الكاميرا تعمل — ضع وجهك داخل الإطار', 'live');
+        stream = await requestCameraStream();
+        cameraFailed = false;
+
+        // ٣) نربط البث بالعنصر — لو العنصر مش موجود في الصفحة ده خطأ يستحق رسالة واضحة
+        if (!videoSelfie && !video) return fail('عنصر العرض غير موجود في الصفحة', 'أعد تحميل الصفحة وجرّب مرة تانية.');
+        await attachStream(stream);
+
+        // ٤) تأكيد إن البث شغّال فعلًا مش مجرد promise
+        const track = stream.getVideoTracks()[0];
+        if (!track || track.readyState !== 'live') return fail('الكاميرا اتقطعت أثناء التشغيل', 'أعد المحاولة أو ارفع صورة من الجهاز.');
+
+        const dims = `${videoSelfie?.videoWidth || track.getSettings?.().width || '?'}×${videoSelfie?.videoHeight || track.getSettings?.().height || '?'}`;
+        setCamStatus(`الكاميرا تعمل ${dims} — ضع وجهك داخل الإطار`, 'live');
+        cameraFailed = false;
         return true;
       } catch (err) {
-        setCamStatus('تعذّر فتح الكاميرا — يمكنك رفع صورة لوجهك', 'err');
-        if (errBox) {
-          errBox.textContent = 'لم نتمكن من فتح الكاميرا (' + (err.message || err.name) + ') — تأكد من السماح للكاميرا أو ارفع صورة لوجهك.';
-          errBox.hidden = false;
-        }
-        return false;
+        const name = (err && err.name) || 'UnknownError';
+        console.warn('[camera] فشل فتح الكاميرا:', name, err);
+        return fail(
+          name === 'NotAllowedError' || name === 'PermissionDeniedError'
+            ? 'محتاج إذن الكاميرا'
+            : 'تعذّر فتح الكاميرا — يمكنك رفع صورة لوجهك',
+          CAM_ERRORS[name] || `لم نتمكن من فتح الكاميرا (${name}). تأكد من السماح بالوصول أو ارفع صورة لوجهك.`
+        );
       }
     }
 
@@ -290,8 +362,10 @@
       return new Promise((resolve, reject) => {
         const im = new Image();
         im.crossOrigin = 'anonymous';
-        im.onload = () => resolve(im);
-        im.onerror = reject;
+        // مهلة أمان: لو الصورة مرجعتش (شبكة بطيئة/ملف تالف) منعلّقش رحلة التحقق للأبد
+        const timer = setTimeout(() => { try { im.src = ''; } catch (e) {} reject(new Error('image_timeout')); }, 8000);
+        im.onload = () => { clearTimeout(timer); resolve(im); };
+        im.onerror = () => { clearTimeout(timer); reject(new Error('image_decode_failed')); };
         im.src = src;
       });
     }
@@ -315,20 +389,57 @@
       return detPad && detPad.descriptor ? Array.from(detPad.descriptor) : null;
     }
 
+    /* تحميل مكتبة face-api: النسخة المحلية أولًا، والـ CDN كاحتياطي لو فشلت */
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = false;
+        s.onload = () => resolve(src);
+        s.onerror = () => reject(new Error('script_failed:' + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function ensureFaceApiLib() {
+      if (window.faceapi) return true;
+      const cfg = window.SOOT_ENGINE || {};
+      const sources = [cfg.faceApiLocal, cfg.faceApiCdn].filter(Boolean);
+      for (const src of sources) {
+        try { await loadScript(src); if (window.faceapi) return true; } catch (e) { console.warn('[face-ai] تعذّر تحميل المكتبة من', src); }
+      }
+      // آخر محاولة: انتظر نسخة الـ defer الأصلية شوية
+      for (let i = 0; i < 15 && !window.faceapi; i++) await new Promise((r) => setTimeout(r, 200));
+      return !!window.faceapi;
+    }
+
     async function ensureFaceModels() {
       const badgeTxt = $('#ai-engine-text');
       if (modelsLoaded) return true;
-      for (let i = 0; i < 30 && !window.faceapi; i++) {
-        await new Promise((r) => setTimeout(r, 200));
+      if (!(await ensureFaceApiLib())) {
+        if (badgeTxt) badgeTxt.textContent = 'محرك بصمة الوجه غير متاح — التحقق هيكمل بفحص الجودة والحيوية';
+        return false;
       }
-      if (!window.faceapi) return false;
+      const cfg = window.SOOT_ENGINE || {};
+      const modelSources = [cfg.modelLocal, cfg.modelCdn].filter(Boolean);
+      let loaded = false;
+      for (const MODEL_URL of modelSources) {
+        try {
+          await Promise.all([
+            window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+            window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          ]);
+          loaded = true;
+          break;
+        } catch (e) {
+          console.warn('[face-ai] تعذّر تحميل الموديلات من', MODEL_URL, e);
+        }
+      }
+      if (!loaded) {
+        if (badgeTxt) badgeTxt.textContent = 'تعذّر تحميل موديلات الوجه — التحقق هيكمل بفحص الجودة والحيوية';
+        return false;
+      }
       try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
-        await Promise.all([
-          window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-          window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
         modelsLoaded = true;
         // استخراج البصمة المرجعية فورًا في الخلفية
         const sources = [$('#db-card-img'), $('#db-face-ref')].filter(Boolean);
@@ -348,8 +459,8 @@
         startLiveFaceReticle();
         return true;
       } catch (e) {
-        console.warn('[face-ai] تعذّر تحميل موديلات الوجه:', e);
-        return false;
+        console.warn('[face-ai] خطأ بعد تحميل الموديلات:', e);
+        return true;
       }
     }
 
@@ -571,19 +682,45 @@
     }
 
     /* ---------- تسلسل التحقق ---------- */
+    /* تحدي احتياطي محلي — علشان الكاميرا والتحقق يشتغلوا حتى لو /api/verify/start فشل */
+    const LOCAL_CHALLENGE = [
+      { code: 'blink', label: 'ارمش بعينك مرتين', seconds: 4 },
+      { code: 'close', label: 'قرّب وشك ناحية الكاميرا', seconds: 4 },
+      { code: 'smile', label: 'ابتسم بسيط', seconds: 4 },
+    ];
+
+    function renderChallenge() {
+      const listEl = $('#challenge-list');
+      if (listEl) listEl.innerHTML = (challenge || []).map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
+    }
+
+    function setLocalChallenge() {
+      if (challenge && challenge.length) return;
+      challenge = LOCAL_CHALLENGE.slice();
+      renderChallenge();
+    }
+
     async function initSelfieChallenge() {
       if (challenge && challenge.length) return true;
-      const { data } = await postJson('/api/verify/start', {});
+      let data = null;
+      try {
+        const res = await postJson('/api/verify/start', {});
+        data = res.data;
+      } catch (e) {
+        console.warn('[verify] تعذّر بدء التحقق من الخادم — نكمل بتحدي محلي', e);
+        setLocalChallenge();
+        return false;
+      }
       if (data && data.ok === false) {
         if (data.code === 'otp_required' || /الموبايل/.test(data.error || '')) { location.href = '/otp'; return false; }
         if (/الجلسة/.test(data.error || '')) { location.href = '/register'; return false; }
+        setLocalChallenge();
         const box = $('#verify-error');
         if (box) { box.textContent = data.error || 'تعذّر بدء التحقق'; box.hidden = false; }
         return false;
       }
-      challenge = (data && data.challenge) || [];
-      const listEl = $('#challenge-list');
-      if (listEl) listEl.innerHTML = challenge.map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
+      challenge = (data && Array.isArray(data.challenge) && data.challenge.length) ? data.challenge : LOCAL_CHALLENGE.slice();
+      renderChallenge();
       return true;
     }
 
@@ -605,29 +742,49 @@
       if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
     }
 
-    $('#btn-start-camera')?.addEventListener('click', async () => {
-      const ok = await initSelfieChallenge();
-      if (!ok) return;
+    $('#btn-start-camera')?.addEventListener('click', async (e) => {
+      const b = e.currentTarget;
+      b.disabled = true;
       const started = await startCamera();
       if (started) beginLivenessMonitor();
+      b.disabled = false;
+      initSelfieChallenge().catch(() => {});
       show('selfie');
     });
 
-    // تشغيل تلقائي للتحدي وتحميل موديل الوجه عند فتح الصفحة
-    initSelfieChallenge().then((ok) => {
-      if (ok) {
-        ensureFaceModels();
-        startCamera().then((started) => { if (started) beginLivenessMonitor(); });
-      }
+    /* تشغيل تلقائي — الكاميرا أولًا ومستقلة تمامًا عن أي طلب شبكة.
+       قبل كده كانت الكاميرا مش بتفتح خالص لو /api/verify/start فشل. */
+    async function bootVerify() {
+      if (booting) return;
+      booting = true;
+      show('selfie');
+      setLocalChallenge();            // ارسم التحدي فورًا (يتحدّث من الخادم لو وصل)
+      let started = false;
+      try { started = await startCamera(); } catch (e) { console.warn('[camera] خطأ أثناء الإقلاع:', e); }
+      if (started) beginLivenessMonitor();
+      initSelfieChallenge().catch(() => {});
+      ensureFaceModels().catch((e) => console.warn('[face-ai]', e));
+      booting = false;
+    }
+    bootVerify();
+
+    /* إعادة المحاولة التلقائية لما المستخدم يرجع للتبويب أو يوصل كاميرا جديدة */
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && cameraFailed) startCamera().then((ok) => { if (ok) beginLivenessMonitor(); });
     });
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', () => {
+        if (cameraFailed) startCamera().then((ok) => { if (ok) beginLivenessMonitor(); });
+      });
+    }
 
     $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
     $('#btn-use-selfie-file')?.addEventListener('click', () => $('#selfie-file')?.click());
     $('#selfie-file')?.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const ok = await initSelfieChallenge();
-      if (!ok) return;
+      setLocalChallenge();                       // لا نعتمد على الخادم لفتح مسار رفع الصورة
+      initSelfieChallenge().catch(() => {});
       const img = new Image();
       img.onload = () => {
         canvas.width = Math.min(800, img.width);
@@ -696,7 +853,14 @@
       if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
         const started = await startCamera();
         if (!started) return;
-        await new Promise((r) => setTimeout(r, 400));
+        // انتظر أول إطار حقيقي من الكاميرا قبل الالتقاط
+        for (let i = 0; i < 25 && !(videoSelfie && videoSelfie.videoWidth); i++) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        if (!videoSelfie || !videoSelfie.videoWidth) {
+          setCamStatus('الكاميرا لسه بتجهّز — استنى ثانية وجرّب تاني', 'err');
+          return;
+        }
       }
       setCamStatus('تم الالتقاط — راجع الصورة ثم ابدأ المطابقة', 'live');
       const c = grabFrame(videoSelfie, 720);

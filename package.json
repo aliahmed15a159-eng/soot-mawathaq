@@ -10,12 +10,14 @@
     "test": "node tools/smoke-test.js",
     "test:flow": "node tools/browser-flow.js",
     "test:visual": "node tools/visual-check.js shots",
-    "seed": "node tools/seed-supabase.js"
+    "seed": "node tools/seed-supabase.js",
+    "test:camera": "node tools/camera-check.js"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
-    "playwright": "^1.48.0"
+    "jsdom": "^30.1.1",
+    "playwright": "^1.63.0"
   }
 }
