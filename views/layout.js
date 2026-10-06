@@ -1,9 +1,3 @@
-'use strict';
-/**
- * هيكل منصة «صوت» — هوية بصرية زمردية، وضع فاتح/داكن، RTL أصيل
- * الشعار: ورقة اقتراع + علامة تحقق — يعمل أيقونةً وشعارًا كاملًا وفي الوضعين.
- */
-
 function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -13,209 +7,224 @@ function esc(s) {
     .replace(/'/g, '&#39;');
 }
 
-/* ------------------------------------------------------------------ مكتبة الأيقونات (خطوط فيكتور رقيقة) */
-const ICON_DEFS = `<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
-  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
-  <symbol id="i-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/></symbol>
-  <symbol id="i-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="m9 9 6 6M15 9l-6 6"/></symbol>
-  <symbol id="i-question-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.2-2.6 3.8"/><line x1="12" y1="17.2" x2="12.01" y2="17.2"/></symbol>
-  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
-  <symbol id="i-shield-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m8.8 12 2.3 2.3 4.3-4.8"/></symbol>
-  <symbol id="i-fingerprint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11a3 3 0 0 0-3 3c0 2.5-.5 4.5-1.5 6"/><path d="M17.6 17.5A15 15 0 0 0 18 14a6 6 0 0 0-12 0c0 .7 0 1.4-.2 2.1"/><path d="M8.5 5.6A9 9 0 0 1 21 14c0 1.2-.1 2.4-.3 3.5"/><path d="M6.4 8.1A9 9 0 0 0 3 14c0 .8 0 1.6.2 2.4"/><path d="M12 14c0 3-.6 5.5-1.7 7.5"/></symbol>
-  <symbol id="i-id-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><circle cx="8.4" cy="11" r="2.1"/><path d="M5.2 16.4a3.6 3.6 0 0 1 6.4 0"/><path d="M14.5 9.5h4M14.5 13h4M14.5 16.5h2.4"/></symbol>
-  <symbol id="i-scan-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5.5A2.5 2.5 0 0 1 5.5 3H7"/><path d="M17 3h1.5A2.5 2.5 0 0 1 21 5.5V7"/><path d="M21 17v1.5a2.5 2.5 0 0 1-2.5 2.5H17"/><path d="M7 21H5.5A2.5 2.5 0 0 1 3 18.5V17"/><path d="M9 9.3v1M15 9.3v1"/><path d="M9.2 14.6a4 4 0 0 0 5.6 0"/><path d="M12 9.3v3.2h-.8"/></symbol>
-  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.5h-5L7.2 7H4.5a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h15a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2.7l-2.3-2.5z"/><circle cx="12" cy="13" r="3.4"/></symbol>
-  <symbol id="i-ballot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h14a1.5 1.5 0 0 1 1.5 1.5v3.5h-17V5A1.5 1.5 0 0 1 5 3.5z"/><path d="M3.5 8.5h17V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20V8.5z"/><path d="m9 14.2 2.2 2.2 3.8-4.4"/></symbol>
-  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5h14V21l-2.3-1.6L14.4 21l-2.4-1.6L9.6 21l-2.3-1.6L5 21V2.5z"/><path d="M9 7h6M9 10.5h6M9 14h3.4"/></symbol>
-  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.6-4.6"/></symbol>
-  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5 5l1.6 1.6M17.4 17.4 19 19M19 5l-1.6 1.6M6.6 17.4 5 19"/></symbol>
-  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
-  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
-  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></symbol>
-  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
-  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
-  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
-  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></symbol>
-  <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
-  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></symbol>
-  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M8 2.8V7M16 2.8V7M3.5 10.5h17"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.9 17a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
-  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 11v5.5"/><line x1="12" y1="7.6" x2="12.01" y2="7.6"/></symbol>
-  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 7v5l3.2 2"/></symbol>
-  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></symbol>
-  <symbol id="i-vote-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 1.7 5.6a2 2 0 0 0 1.9 1.4h6.8a2 2 0 0 0 1.9-1.4L19 12"/><path d="m9 11.6 2.2 2.2 4-4.6"/><path d="M4 8h16"/></symbol>
-  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.5 9 4.8-9 4.8-9-4.8 9-4.8z"/><path d="m3 12.2 9 4.8 9-4.8"/><path d="m3 16.9 9 4.8 9-4.8"/></symbol>
-  <symbol id="i-server" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="7" rx="2"/><rect x="3" y="13.5" width="18" height="7" rx="2"/><path d="M7 7h.01M7 17h.01"/></symbol>
-  <!-- الرموز الانتخابية -->
-  <symbol id="sym-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M8 21h8"/><path d="M5 7 2 14h6L5 7z"/><path d="M19 7l-3 7h6l-3-7z"/></symbol>
-  <symbol id="sym-falcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 9l3 2 5-3 5 3 3-2-8-6z"/><path d="m7 11-2 6 7-2 7 2-2-6"/><path d="M12 8v13"/></symbol>
-  <symbol id="sym-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="m4.9 4.9 2.1 2.1"/><path d="m17 17 2.1 2.1"/><path d="m19.1 4.9-2.1 2.1"/><path d="m7 17-2.1 2.1"/></symbol>
-  <symbol id="sym-palm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V9"/><path d="M12 9C9 5 4 6 3 9c3-1 6 0 9 0z"/><path d="M12 9c3-4 8-3 9 0-3-1-6 0-9 0z"/><path d="M12 9c-2-5-6-6-8-4 3 0 6 2 8 4z"/><path d="M12 9c2-5 6-6 8-4-3 0-6 2-8 4z"/><path d="M8 22h8"/></symbol>
-</svg>`;
-
-/* شعار «صوت» — ورقة اقتراع بعلامة تحقق داخل مربع زمردية */
-function logoMark(size = 40) {
-  return `<svg class="logo-mark" width="${size}" height="${size}" viewBox="0 0 48 48" role="img" aria-label="شعار صوت">
-  <defs><linearGradient id="slogo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#17A97D"/><stop offset="1" stop-color="#0B7A58"/></linearGradient></defs>
-  <rect x="1" y="1" width="46" height="46" rx="13" fill="url(#slogo-g)"/>
-  <path d="M16.4 11.5h9.4l8.7 8.7V36a2.5 2.5 0 0 1-2.5 2.5H16.4a2.5 2.5 0 0 1-2.5-2.5V14a2.5 2.5 0 0 1 2.5-2.5z" fill="#F7FAF8"/>
-  <path d="M25.8 11.5v6.2a2.5 2.5 0 0 0 2.5 2.5h6.2z" fill="#BFE9D9"/>
-  <path d="m18.7 27.3 4 4 7.1-8.2" fill="none" stroke="#0F8F6B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
+function icon(name, size = 18, cls = 'ic') {
+  return `<svg class="${cls}" width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 }
 
-function icon(name, size = 18) {
-  return `<svg class="ic" width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const SPRITE = `
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+    </symbol>
+    <symbol id="i-id" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.5 16.5c.7-1.6 2-2.3 3-2.3s2.3.7 3 2.3"/><path d="M14 9h5"/><path d="M14 13h5"/><path d="M14 17h3"/>
+    </symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/>
+    </symbol>
+    <symbol id="i-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/>
+    </symbol>
+    <symbol id="i-vote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/>
+    </symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7" rx="1"/><rect x="12" y="6" width="3" height="11" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </symbol>
+    <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+    </symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>
+    </symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+    </symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+    </symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+    </symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+    </symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
+    </symbol>
+    <symbol id="sym-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v18"/><path d="M5 7h14"/><path d="m5 7-3 6h6l-3-6Z"/><path d="m19 7-3 6h6l-3-6Z"/><path d="M8 21h8"/>
+    </symbol>
+    <symbol id="sym-falcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3c3.5 0 6.5 2.5 7.5 6l2.5 2-3 1.5c-.5 4-3.5 7.5-7 8.5-3.5-1-6.5-4.5-7-8.5L2 11l2.5-2C5.5 5.5 8.5 3 12 3Z"/><circle cx="12" cy="10" r="1.5"/>
+    </symbol>
+    <symbol id="sym-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </symbol>
+    <symbol id="sym-palm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4"/><path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3"/><path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35Z"/><path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14"/>
+    </symbol>
+  </defs>
+</svg>`;
+
+function parseSlogan(slogan = '', idx = 0) {
+  const clean = String(slogan || '').replace(/[⚖️🦅☀️🌴]/g, '').trim();
+  const parts = clean.split('·').map((s) => s.trim()).filter(Boolean);
+  const role = parts[0] || clean || 'مرشح معتمد';
+  const rawSym = parts.slice(1).join(' · ') || ['رمز: الميزان', 'رمز: الصقر', 'رمز: الشمس', 'رمز: النخلة'][idx % 4];
+  let symId = 'sym-scale';
+  if (/صقر|نسر/.test(rawSym)) symId = 'sym-falcon';
+  else if (/شمس/.test(rawSym)) symId = 'sym-sun';
+  else if (/نخل/.test(rawSym)) symId = 'sym-palm';
+  const symLabel = rawSym.replace(/^رمز\s*:?\s*/, '').trim();
+  return {
+    role,
+    symbolText: symLabel || 'الميزان',
+    symbolSvg: `<svg class="sym-ic" width="15" height="15" aria-hidden="true"><use href="#${symId}"/></svg>`,
+  };
 }
 
-/* ------------------------------------------------------------------ خطوات رحلة التصويت */
-const STEP_DEFS = [
-  ['01', 'البيانات'],
-  ['02', 'التحقق'],
-  ['03', 'الاقتراع'],
-  ['04', 'الإيصال'],
-];
+function candidateSvg(c = {}, idx = 0) {
+  if (c && c.photo_url) return c.photo_url;
+  const sortNum = Number.isFinite(Number(c && c.sort)) ? Number(c.sort) : (idx + 1);
+  return `/candidates/c${((sortNum - 1) % 4) + 1}.jpg`;
+}
+
+function symbolIcon(sym = '', idx = 0) {
+  const { symbolSvg } = parseSlogan(sym, idx);
+  return symbolSvg;
+}
 
 function stepper(active = 1) {
-  return `<ol class="stepper" aria-label="خطوات التصويت">${STEP_DEFS.map(([num, label], i) => {
-    const n = i + 1;
-    const state = n < active ? 'done' : n === active ? 'active' : 'todo';
-    return `<li class="step ${state}" aria-current="${n === active ? 'step' : 'false'}">
-      <span class="step-dot">${n < active ? icon('check', 14) : esc(num)}</span>
-      <span class="step-label">${esc(label)}</span>
-    </li>`;
-  }).join('')}</ol>`;
+  const steps = [
+    { n: '01', label: 'بيانات الناخب', sub: 'الرقم القومي والمحافظة', tag: 'STEP / 01' },
+    { n: '02', label: 'مطابقة الوجه', sub: 'بصمة الكاميرا الحية', tag: 'STEP / 02' },
+    { n: '03', label: 'ورقة الاقتراع', sub: 'تصويت سري معزول', tag: 'STEP / 03' },
+    { n: '04', label: 'إيصال التوثيق', sub: 'كود تحقق رقمي فوري', tag: 'STEP / 04' },
+  ];
+  return `
+  <ol class="stepper" aria-label="مراحل التصويت">
+    ${steps.map((s, i) => {
+      const idx = i + 1;
+      const cls = idx < active ? 'step done' : idx === active ? 'step active' : 'step';
+      return `<li class="${cls}" ${idx === active ? 'aria-current="step"' : ''}>
+        <span class="step-dot">${idx < active ? icon('check', 16) : s.n}</span>
+        <div class="step-copy">
+          <b class="step-label">${s.label}</b>
+          <span class="step-sub">${s.sub}</span>
+        </div>
+        <small class="step-tag">${s.tag}</small>
+      </li>`;
+    }).join('')}
+  </ol>`;
 }
 
-/* ------------------------------------------------------------------ التبديل بين الوضع الفاتح والداكن */
-function themeToggle({ inMenu = false } = {}) {
-  return `<button type="button" class="theme-toggle${inMenu ? ' in-menu' : ''}" data-theme-toggle
-    aria-label="التبديل بين الوضع الفاتح والداكن" title="الوضع الفاتح / الداكن">
-    <span class="tt-track"><span class="tt-thumb">${icon('sun', 14)}${icon('moon', 14)}</span></span>
-    <span class="tt-label" data-theme-label>داكن</span>
-  </button>`;
-}
-
-/* ------------------------------------------------------------------ القائمة الرئيسية */
-const NAV_LINKS = [
-  { href: '/', key: 'home', label: 'الرئيسية' },
-  { href: '/#candidates', key: 'candidates', label: 'المرشحون' },
-  { href: '/results', key: 'results', label: 'النتائج' },
-  { href: '/verify-receipt', key: 'verify-receipt', label: 'التحقق من الإيصال' },
-];
-
-function navLinks(active) {
-  return NAV_LINKS.map((l) => `<a href="${l.href}"${l.key === active ? ' aria-current="page"' : ''}>${l.label}</a>`).join('');
-}
-
-/* ------------------------------------------------------------------ الهيكل العام */
-function shell({ title, body, active = 1, showStepper = false, wide = false, bodyClass = '', nav = '' }) {
+function layout({ title, body, step = 0, active = 0, showStepper = false, wide = false, nav = '' }) {
+  const pageTitle = title ? `${esc(title)} — صوت | منصة التصويت الموثّق` : 'صوت | من هويتك .. إلى صوتك';
+  const stepNum = step || (showStepper ? active : 0);
+  const bodyHasStepper = typeof body === 'string' && body.includes('class="stepper"');
   return `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="scrollbar-thin scrollbar-stable">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0F8F6B">
-<meta name="description" content="صوت — منصة تصويت إلكترونية تجمع بين التحقق من الهوية والتصويت الإلكتروني الآمن. من هويتك .. إلى صوتك.">
-<title>${esc(title)} — صوت | من هويتك .. إلى صوتك</title>
-<script>
-/* استرجاع المظهر قبل الرسم لمنع الوميض */
-(function () {
-  try {
-    var saved = localStorage.getItem('soot-theme');
-    var theme = (saved === 'light' || saved === 'dark') ? saved
-      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
-})();
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=11">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f4ea">
+  <title>${pageTitle}</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preload" href="/assets/cairo-sub.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="${esc(bodyClass)}">
-${ICON_DEFS}
-<a class="skip-link" href="#main">تخطَّ إلى المحتوى الرئيسي</a>
+<body class="antialiased">
+  ${SPRITE}
+  <a class="skip-link" href="#main-content">تخطَّ إلى المحتوى الرئيسي</a>
+  <main class="paper-page" id="top">
+    <div class="page-shell ${wide ? 'wide' : ''}">
+      <header class="site-header">
+        <a class="sketch-logo" href="/" aria-label="صوت — الصفحة الرئيسية">
+          <b>صـ</b>
+          <span>
+            <strong>صوت موثّق</strong>
+            <small>BIOMETRIC BALLOT LAB</small>
+          </span>
+        </a>
+        <nav class="site-nav" aria-label="التنقل الرئيسي">
+          <a href="/#scanner" ${nav === 'home' ? 'aria-current="page"' : ''}>بوابة التحقق</a>
+          <a href="/#candidates" ${nav === 'candidates' ? 'aria-current="page"' : ''}>المرشحون</a>
+          <a href="/results" ${nav === 'results' ? 'aria-current="page"' : ''}>النتائج</a>
+          <a href="/verify-receipt" ${nav === 'verify-receipt' ? 'aria-current="page"' : ''}>فحص إيصال</a>
+          <a href="/presentation" ${nav === 'presentation' ? 'aria-current="page"' : ''}>العرض التقديمي</a>
+          <a href="/admin" ${nav === 'admin' ? 'aria-current="page"' : ''}>الإشراف</a>
+        </nav>
+        <div class="header-actions">
+          <a class="sketch-button header-button" href="/register">ابدأ التصويت الآن</a>
+          <button type="button" class="sketch-button nav-burger" data-nav-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="فتح القائمة">
+            ${icon('menu', 20)}
+          </button>
+        </div>
+      </header>
 
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="/" aria-label="صوت — الصفحة الرئيسية">
-      ${logoMark(40)}
-      <span class="brand-text">
-        <span class="brand-name">صوت</span>
-        <span class="brand-tag">من هويتك .. إلى صوتك</span>
-      </span>
-    </a>
+      <div class="mobile-nav" id="mobile-nav" hidden>
+        <nav aria-label="قائمة الجوال">
+          <a href="/#scanner">بوابة التحقق والتصويت</a>
+          <a href="/#candidates">المرشحون والبرامج</a>
+          <a href="/results">النتائج المباشرة</a>
+          <a href="/verify-receipt">فحص إيصال التصويت</a>
+          <a href="/cards-demo">بطاقات التجربة الجاهزة</a>
+          <a href="/presentation">العرض التقديمي للمشروع</a>
+          <a href="/admin">لوحة لجنة الإشراف</a>
+          <a class="sketch-button header-button mobile-cta" href="/register">ابدأ التصويت الآن</a>
+        </nav>
+      </div>
 
-    <nav class="main-nav" aria-label="التنقل الرئيسي">${navLinks(nav)}</nav>
+      <div id="main-content">
+        ${stepNum && !bodyHasStepper ? stepper(stepNum) : ''}
+        ${body}
+      </div>
 
-    <div class="header-actions">
-      <span class="trust-pill">${icon('shield-check', 14)}<span>منصة تصويت رقمية موثوقة</span></span>
-      ${themeToggle({})}
-      <a class="btn btn-primary btn-sm header-cta" href="/register">ابدأ التصويت</a>
-      <button type="button" class="nav-burger" data-nav-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="فتح القائمة">
-        ${icon('menu', 21)}
-      </button>
+      <footer>
+        <p>صوت موثّق — مختبر التحقق البيومتري والاقتراع السري المشفّر. جميع الأصوات مفصولة تمامًا عن الهوية الشخصية ومحمية بتوقيع رقمي.</p>
+        <b>SOOT // VERIFIED BALLOT LAB // EGYPT</b>
+      </footer>
     </div>
-  </div>
-
-  <div class="mobile-nav" id="mobile-nav" hidden>
-    <nav aria-label="قائمة الجوال">
-      ${navLinks(nav)}
-      <a class="mobile-cta" href="/register">ابدأ التصويت</a>
-    </nav>
-    <div class="mobile-nav-foot">
-      ${themeToggle({ inMenu: true })}
-      <span class="trust-line">${icon('shield-check', 14)} منصة تصويت رقمية موثوقة</span>
-    </div>
-  </div>
-</header>
-
-<main class="${wide ? 'container wide' : 'container'}" id="main">
-  ${showStepper ? stepper(active) : ''}
-  ${body}
-</main>
-
-<footer class="site-footer">
-  <div class="container footer-grid">
-    <div class="foot-brand">
-      <a class="brand" href="/">
-        ${logoMark(36)}
-        <span class="brand-text"><span class="brand-name">صوت</span><span class="brand-tag">من هويتك .. إلى صوتك</span></span>
-      </a>
-      <p class="foot-about">منصة تصويت إلكترونية تجمع بين التحقق من الهوية بالوجه والاقتراع السري، مع إيصال قابل للتحقق في كل خطوة.</p>
-    </div>
-    <nav class="foot-col" aria-label="روابط المنصة">
-      <b>المنصة</b>
-      <a href="/">الرئيسية</a>
-      <a href="/#candidates">المرشحون</a>
-      <a href="/results">النتائج</a>
-      <a href="/verify-receipt">التحقق من الإيصال</a>
-      <a href="/register">ابدأ التصويت</a>
-    </nav>
-    <div class="foot-col">
-      <b>الأمان والخصوصية</b>
-      <span>${icon('shield-check', 14)} تحقق من الهوية قبل الاقتراع</span>
-      <span>${icon('lock', 14)} سرية التصويت مكفولة</span>
-      <span>${icon('receipt', 14)} إيصال موثّق لكل صوت</span>
-      <span>${icon('fingerprint', 14)} بيانات أدنى فقط في كل مرحلة</span>
-    </div>
-  </div>
-  <div class="container footer-bottom">
-    <p class="foot-disclaimer">${icon('info', 14)} هذا المشروع نموذج تجريبي لمنصة تصويت إلكترونية، وليس منصة انتخابية حكومية رسمية.</p>
-    <span class="foot-copy">صوت © 2026</span>
-  </div>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" crossorigin="anonymous" defer></script>
-<script src="/app.js?v=11" defer></script>
+  </main>
+  <script src="/vendor/face-api.min.js" defer></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>`;
 }
 
-module.exports = { shell, esc, icon, stepper, logoMark, themeToggle };
+module.exports = { layout, shell: layout, icon, esc, stepper, candidateSvg, symbolIcon, parseSlogan };

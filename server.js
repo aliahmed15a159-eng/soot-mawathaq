@@ -19,9 +19,12 @@ const adminViews = require('./views/admin');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
+  '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png',
-  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.json': 'application/json; charset=utf-8', '.bin': 'application/octet-stream', '.ico': 'image/x-icon',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.json': 'application/json; charset=utf-8',
+  '.bin': 'application/octet-stream', '.ico': 'image/x-icon',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 
 const BOOT_AT = Date.now();
@@ -34,6 +37,8 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Length': buf.length,
     'Cache-Control': 'no-store',
+    'Permissions-Policy': 'camera=*, microphone=()',
+    'Feature-Policy': 'camera *',
     ...extraHeaders,
   });
   res.end(buf);
@@ -41,7 +46,11 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
 
 function sendJson(res, obj, status = 200) {
   const buf = Buffer.from(JSON.stringify(obj), 'utf8');
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': buf.length, 'Cache-Control': 'no-store' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': buf.length,
+    'Cache-Control': 'no-store',
+  });
   res.end(buf);
 }
 
@@ -100,6 +109,7 @@ function serveStatic(req, res, pathname) {
   res.writeHead(200, {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': buf.length,
+    'Access-Control-Allow-Origin': '*',
     'Cache-Control': (ext === '.woff2' || ext === '.svg' || ext === '.bin' || pathname.startsWith('/models/') || pathname.startsWith('/vendor/')) ? 'public, max-age=604800' : 'no-cache',
   });
   res.end(buf);
@@ -113,11 +123,19 @@ async function handle(req, res) {
   const pathname = decodeURIComponent(url.pathname);
   const q = url.searchParams;
   const ip = clientIp(req);
-  const sess = session.readSession(req);
+  let sess = session.readSession(req);
   const isAdmin = session.isAdmin(req);
   const demo = db.mode === 'demo';
 
+  // إذا وصل رمز الجلسة عبر الرابط (_st) في بيئة تمنع الكوكيز، نعيد تثبيت الكوكي
+  if (sess && q.get('_st')) {
+    session.startSession(res, sess, req);
+  }
+
   /* ---------- ملفات ثابتة ---------- */
+  if (req.method === 'GET' && pathname === '/presentation') {
+    if (serveStatic(req, res, '/presentation.html')) return;
+  }
   if (req.method === 'GET' && (pathname === '/' ? false : serveStatic(req, res, pathname))) return;
 
   /* ---------- الصحة ---------- */
@@ -127,7 +145,11 @@ async function handle(req, res) {
 
   /* ---------- الرئيسية ---------- */
   if (pathname === '/' && req.method === 'GET') {
-    const elections = (await db.listElections()).map((e) => ({ ...e, state: api.electionState(e) }));
+    const [rawElections, allCards] = await Promise.all([
+      db.listElections(),
+      db.listIdCards(),
+    ]);
+    const elections = rawElections.map((e) => ({ ...e, state: api.electionState(e) }));
     let candidates = 0; let ballots = 0;
     for (const e of elections) {
       const cList = await db.listCandidates(e.id);
@@ -144,7 +166,12 @@ async function handle(req, res) {
     }
     return sendHtml(res, shell({
       title: 'الرئيسية',
-      body: pages.landing({ elections, demo, counts: { elections: elections.length, candidates, ballots } }),
+      body: pages.landing({
+        elections,
+        demo,
+        counts: { elections: elections.length, candidates, ballots },
+        cards: (allCards || []).filter((c) => c.national_id_plain && c.card_image),
+      }),
       bodyClass: 'page-landing', nav: 'home',
     }));
   }
@@ -173,9 +200,9 @@ async function handle(req, res) {
     const body = await readJson(req);
     const result = await api.register({ body, session: sess });
     if (!result.ok) return sendJson(res, result, 400);
-    session.startSession(res, { ...result.session, kiosk: !!body.kiosk });
+    const { signed } = session.startSession(res, { ...result.session, kiosk: !!body.kiosk }, req);
     const needOtp = result.otp && result.otp.required;
-    return sendJson(res, { ok: true, otp: result.otp || null, redirect: needOtp ? '/otp' : '/verify' });
+    return sendJson(res, { ok: true, otp: result.otp || null, redirect: needOtp ? '/otp' : '/verify', _st: signed });
   }
 
   /* ---------- كود الموبايل (OTP) ---------- */
@@ -184,10 +211,9 @@ async function handle(req, res) {
     const voter = await db.findVoterById(sess.vid);
     const otpStatus = api.otpStatus();
     if (!otpStatus.enabled) return redirect(res, '/verify');
-    // نولّد كودًا جديدًا لو مفيش كود ساري (مثلًا المستخدم رجع للصفحة لاحقًا)
     const sent = await api.otpForSession({ session: sess, phoneHint: voter.phone_masked });
     if (sent && sent.hash && (!sess.otp_hash || sess.otp_hash !== sent.hash)) {
-      session.startSession(res, { ...sess, otp_hash: sent.hash, otp_exp: sent.expiresAt });
+      session.startSession(res, { ...sess, otp_hash: sent.hash, otp_exp: sent.expiresAt }, req);
     }
     return sendHtml(res, shell({
       title: 'تأكيد الموبايل',
@@ -206,8 +232,8 @@ async function handle(req, res) {
     const body = await readJson(req);
     const result = await api.confirmOtp({ session: sess, body });
     if (!result.ok) return sendJson(res, result, 400);
-    session.startSession(res, { ...sess, ...(result.session_patch || {}) });
-    return sendJson(res, { ok: true, redirect: result.redirect || '/verify' });
+    const { signed } = session.startSession(res, { ...sess, ...(result.session_patch || {}) }, req);
+    return sendJson(res, { ok: true, redirect: result.redirect || '/verify', _st: signed });
   }
 
   if (pathname === '/api/otp/resend' && req.method === 'POST') {
@@ -215,10 +241,11 @@ async function handle(req, res) {
     if (!rl.ok) return tooMany(res, rl);
     const body = await readJson(req);
     const result = await api.resendOtp({ session: sess, body });
+    let signed = null;
     if (result.ok && result.session_patch && sess) {
-      session.startSession(res, { ...sess, ...result.session_patch });
+      signed = session.startSession(res, { ...sess, ...result.session_patch }, req).signed;
     }
-    return sendJson(res, { ...result, session_patch: undefined });
+    return sendJson(res, { ...result, session_patch: undefined, ...(signed ? { _st: signed } : {}) });
   }
 
   /* ---------- التحقق ---------- */
@@ -241,7 +268,8 @@ async function handle(req, res) {
   if (pathname === '/api/verify/start' && req.method === 'POST') {
     const rl = sec.rateLimit(`verify:${ip}`, 30, 60_000);
     if (!rl.ok) return tooMany(res, rl);
-    return sendJson(res, await api.verifyStart({ session: sess }));
+    const out = await api.verifyStart({ session: sess });
+    return sendJson(res, { ...out, ...(sess ? { _st: session.startSession(res, sess, req).signed } : {}) });
   }
 
   if (pathname === '/api/verify/complete' && req.method === 'POST') {
@@ -251,13 +279,12 @@ async function handle(req, res) {
     const result = await api.verifyComplete({ session: sess, body });
     if (!result.ok) return sendJson(res, result, 400);
 
+    let signed = null;
     if (result.status === 'approved' && !result.repeat) {
-      // الرمز يُحفظ داخل جلسة موقّعة HttpOnly — المتصفح مايشوفوش كنص صريح
-      session.startSession(res, { vid: sess.vid, eid: sess.eid, name: sess.name, kiosk: !!sess.kiosk, token: result.token });
+      signed = session.startSession(res, { vid: sess.vid, eid: sess.eid, name: sess.name, kiosk: !!sess.kiosk, token: result.token }, req).signed;
     }
-    // لا نُعيد الرمز ولا أي بيانات حساسة للمتصفح
     const { token, ...safe } = result;
-    return sendJson(res, safe);
+    return sendJson(res, { ...safe, ...(signed ? { _st: signed } : {}) });
   }
 
   if (pathname === '/api/review/status' && req.method === 'GET') {
@@ -268,8 +295,8 @@ async function handle(req, res) {
     const body = await readJson(req);
     const result = await api.claimReviewToken({ reviewId: body.review_id, session: sess });
     if (!result.ok) return sendJson(res, result, 400);
-    session.startSession(res, { vid: sess.vid, eid: result.election_id, name: sess.name, token: result.token, kiosk: !!sess.kiosk });
-    return sendJson(res, { ok: true, redirect: '/vote' });
+    const { signed } = session.startSession(res, { vid: sess.vid, eid: result.election_id, name: sess.name, token: result.token, kiosk: !!sess.kiosk }, req);
+    return sendJson(res, { ok: true, redirect: '/vote', _st: signed });
   }
 
   if (pathname === '/review-status' && req.method === 'GET') {
@@ -308,7 +335,7 @@ async function handle(req, res) {
     const body = await readJson(req);
     const result = await api.castVote({ session: sess, body });
     if (!result.ok) return sendJson(res, result, 400);
-    if (sess && sess.kiosk) session.endSession(res); // منصة مشتركة: نفضّي الجلسة بعد التسجيل
+    if (sess && sess.kiosk) session.endSession(res, req);
     return sendJson(res, result);
   }
 
@@ -339,6 +366,17 @@ async function handle(req, res) {
     return sendHtml(res, shell({ title: 'التحقق من إيصال', body: pages.receiptLookupPage({ code, result }), nav: 'verify-receipt' }));
   }
 
+  if (pathname === '/cards-demo' && req.method === 'GET') {
+    return sendHtml(res, shell({ title: 'بطاقات التجربة الجاهزة', body: pages.cardsDemoPage(), nav: 'cards' }));
+  }
+
+  if (pathname === '/api/receipt/check' && req.method === 'POST') {
+    const body = await readJson(req);
+    const code = String(body.code || '').trim();
+    const r = await api.receiptStatus({ code });
+    return sendJson(res, r);
+  }
+
   /* ---------- النتائج ---------- */
   if (pathname === '/results' && req.method === 'GET') {
     const elections = await db.listElections();
@@ -357,7 +395,7 @@ async function handle(req, res) {
     const done = q.get('done');
     return sendHtml(res, shell({
       title: 'منصة اقتراع',
-      body: (done ? '<div class="notice ok">تم تسجيل الصوت وتفريغ الجلسة — الناخب اللي بعده يبدأ من الصفر.</div>' : '') + pages.kioskPage({ elections }),
+      body: (done ? '<div class="notice notice-ok" style="margin-bottom:16px">تم تسجيل الصوت وتفريغ الجلسة — الناخب اللي بعده يبدأ من الصفر.</div>' : '') + pages.kioskPage({ elections }),
     }));
   }
 
@@ -384,13 +422,13 @@ async function handle(req, res) {
         body: adminViews.adminLogin({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', email: form.email || '' }),
       }), 401);
     }
-    session.startAdmin(res);
+    session.startAdmin(res, req);
     await db.audit({ action: 'admin_login', actor: emailIn || `ip:${ip}` });
     return redirect(res, '/admin');
   }
 
   if (pathname === '/api/admin/logout' && req.method === 'POST') {
-    session.endAdmin(res);
+    session.endAdmin(res, req);
     return redirect(res, '/admin');
   }
 
@@ -398,7 +436,7 @@ async function handle(req, res) {
     if (!isAdmin) return sendHtml(res, shell({ title: 'دخول الإدارة', body: adminViews.adminLogin({}) }));
     const [stats, elections, reviews, audit, providersHealth, roll, cards] = await Promise.all([
       api.stats(), db.listElections(), db.listReviews('pending'), db.listAudit(60),
-      api.providersHealth(), db.voterRollStats(), db.listIdCards(),
+      api.providersHealth(), api.voterRollStats(), db.listIdCards(),
     ]);
     const enrichedElections = [];
     for (const e of elections) {
