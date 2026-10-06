@@ -1,688 +1,1169 @@
-'use strict';
-/**
- * صفحات الناخبين — تصميم كاشف (Kashif Paper Dossier & Sketch Neo-Brutalist Style)
- */
-const { esc, icon, stateBadge, fmtDate } = require('./layout');
+const { icon, esc, candidateSvg, symbolIcon, parseSlogan } = require('./layout');
 
-const CANDIDATE_SYMBOLS = [
-  { id: 'sym-scale', label: 'رمز الميزان', code: 'CAND / 01' },
-  { id: 'sym-falcon', label: 'رمز الصقر', code: 'CAND / 02' },
-  { id: 'sym-sun', label: 'رمز الشمس', code: 'CAND / 03' },
-  { id: 'sym-palm', label: 'رمز النخلة', code: 'CAND / 04' },
+const STATE_AR = {
+  open: 'الاقتراع مفتوح الآن',
+  closed: 'الاقتراع مغلق',
+  upcoming: 'يبدأ قريبًا',
+};
+
+const DEMO_CARDS = [
+  {
+    nid: '31005292501518',
+    name: 'علي أحمد علي محمد',
+    dob: '2010-05-29',
+    gov: 'أسيوط',
+    gender: 'ذكر',
+    phone: '01012345678',
+    cardImg: '/cards/31005292501518.jpg',
+    faceImg: '/cards/31005292501518-face.jpg',
+    badge: 'البطاقة الأساسية للتجربة',
+  },
+  {
+    nid: '30203120102345',
+    name: 'سارة محمود عبد الرحمن',
+    dob: '2002-03-12',
+    gov: 'القاهرة',
+    gender: 'أنثى',
+    phone: '01123456789',
+    cardImg: '/cards/30203120102345.svg',
+    faceImg: '/cards/30203120102345.svg',
+    badge: 'بطاقة تجريبية ٢',
+  },
+  {
+    nid: '29807152101234',
+    name: 'مينا عبد المسيح حنا',
+    dob: '1998-07-15',
+    gov: 'الجيزة',
+    gender: 'ذكر',
+    phone: '01234567890',
+    cardImg: '/cards/29807152101234.svg',
+    faceImg: '/cards/29807152101234.svg',
+    badge: 'بطاقة تجريبية ٣',
+  },
 ];
 
-function cleanSloganText(str = '') {
-  return String(str || '')
-    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function parseSlogan(slogan = '', idx = 0) {
-  const cleaned = cleanSloganText(slogan);
-  const parts = cleaned.split('·').map((s) => s.trim()).filter(Boolean);
-  const role = parts[0] || cleaned || 'مرشح رئاسي';
-  const sym = CANDIDATE_SYMBOLS[idx % CANDIDATE_SYMBOLS.length];
-  let symbolText = sym.label;
-  if (parts[1]) {
-    const rawSym = parts[1].replace(/^رمز\s*:?\s*/, '').trim();
-    if (rawSym) symbolText = `رمز ${rawSym}`;
-  }
-  const symbolSvg = `<svg class="sym-ic" width="16" height="16" aria-hidden="true"><use href="#${sym.id}"/></svg>`;
-  return { role, symbolText, symbolSvg, symId: sym.id, code: sym.code };
-}
-
-function toArNum(n) {
-  return String(n ?? 0).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
-}
-
-/* ------------------------------------------------------------------ ١) الرئيسية */
-function landing({ elections = [], counts = {} }) {
-  const activeElection = elections.find((e) => e.state === 'open') || elections[0] || {
-    id: 1,
-    title: 'الانتخابات العامة لرئاسة المجلس الوطني ٢٠٢٦',
-    description: 'الاقتراع الإلكتروني الموثّق ببطاقة الرقم القومي وبصمة الوجه لاختيار رئيس المجلس الوطني للدورة ٢٠٢٦ - ٢٠٣٠.',
-    state: 'open',
-    ends_at: '2026-10-30T20:00:00Z',
-    candidates: [],
-    total_ballots: 0,
-  };
-
-  const cands = activeElection.candidates || [];
-  const totalVotes = activeElection.total_ballots || counts.ballots || 0;
-
-  const miniCandRows = cands.map((c, idx) => {
-    const { role, symbolText, symbolSvg } = parseSlogan(c.slogan, idx);
-    const photo = c.photo_url || `/candidates/c${(idx % 4) + 1}.jpg`;
-    return `
-      <a class="terminal-cand-row" href="/register?e=${esc(activeElection.id)}">
-        <span class="tcr-num">0${idx + 1}</span>
-        <img src="${esc(photo)}" alt="${esc(c.name)}" class="tcr-avatar"/>
-        <div class="tcr-info">
-          <b>${esc(c.name)}</b>
-          <small>${esc(role)}</small>
-        </div>
-        <span class="tcr-sym">${symbolSvg} ${esc(symbolText)}</span>
-      </a>`;
-  }).join('');
-
-  const candidateCards = cands.map((c, idx) => {
-    const { role, symbolText, symbolSvg, code } = parseSlogan(c.slogan, idx);
-    const photo = c.photo_url || `/candidates/c${(idx % 4) + 1}.jpg`;
-    const numAr = toArNum(idx + 1);
-    return `
-      <article class="cand-dossier-card">
-        <div class="cdc-file-tab">${code}</div>
-        <div class="cdc-top-bar">
-          <span class="cdc-num">المرشح رقم (${numAr})</span>
-          <span class="cdc-symbol">${symbolSvg} <b>${esc(symbolText)}</b></span>
-        </div>
-        <div class="cdc-profile">
-          <div class="cdc-photo-frame">
-            <img src="${esc(photo)}" alt="${esc(c.name)}" loading="lazy"/>
-          </div>
-          <div class="cdc-title-block">
-            <h3>${esc(c.name)}</h3>
-            <span class="cdc-role">${esc(role)}</span>
-          </div>
-        </div>
-        <p class="cdc-program">${esc(c.program || '')}</p>
-        <div class="cdc-votes-box">
-          <div class="cdc-votes-meta">
-            <span>الأصوات بالصندوق</span>
-            <b>${c.votes || 0} صوت (${c.percent || 0}%)</b>
-          </div>
-          <div class="score-track safe"><span style="width:${Math.max(4, c.percent || 0)}%"></span></div>
-        </div>
-        <a class="sketch-button scan-button" href="/register?e=${esc(activeElection.id)}">
-          ${icon('ballot', 19)} صوّت لهذا المرشح الآن
-        </a>
-      </article>`;
-  }).join('');
+/* ---------------------------------------------------------- ١) الصفحة الرئيسية (بأسلوب Kashif AI) */
+function landing({ elections = [], counts = {}, cards = [] } = {}) {
+  const activeElection = elections.find((e) => e.state === 'open') || elections[0] || null;
+  const candidates = activeElection && activeElection.candidates ? activeElection.candidates : [];
+  const sampleCards = cards.length ? cards : DEMO_CARDS;
+  const firstCard = sampleCards[0] || DEMO_CARDS[0];
 
   return `
-<section class="hero" id="top">
-  <div class="hero-copy">
-    <div class="case-kicker">
-      <span>BALLOT FILE</span>
-      <b>#VOT-2026</b>
-      <i>OPEN</i>
-    </div>
-    <h1>كل صوت<br/>ليه <span>أثر.</span></h1>
-    <p>وأنا بنيت <b>صوت موثّق</b> علشان يضمن إن صوتك يوصل صح. سجّل ببيانات بطاقتك القومية، طابق وشك بالكاميرا المباشرة، واختار مرشحك في سرية تامة مع إيصال فوري.</p>
-    <div class="hero-action-row">
-      <a class="sketch-button primary-button" href="/register?e=${esc(activeElection.id)}">ابدأ التصويت الآن</a>
-      <span class="hand-arrow" aria-hidden="true">←</span>
-      <a class="sketch-button secondary-button" href="/results?e=${esc(activeElection.id)}">نتائج الفرز (${totalVotes})</a>
-    </div>
-    <div class="investigator-signature">
-      <div class="signature-mark">Ali Ahmed<span></span></div>
-      <div>
-        <b>بُني وجُرّب بواسطة علي أحمد</b>
-        <small>ENGINEER • CREATOR • SYSTEM BUILDER</small>
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="case-kicker">
+        <span>BALLOT FILE</span>
+        <b>#EG-2026</b>
+        <i>OPEN</i>
       </div>
-    </div>
-    <div class="trust-note">
-      <span class="mini-shield">${icon('shield', 17)}</span>
-      <span><b>بروتوكول آمن:</b> مطابقة الوجه بالذكاء الاصطناعي 128-D — مع فصل كامل بين هوية الناخب وورقة الاقتراع</span>
-    </div>
-  </div>
-
-  <section class="scanner-frame" id="scanner" aria-label="غرفة الاقتراع الفوري">
-    <div class="file-tab">ELECTION / 01</div>
-    <div class="case-spine" aria-hidden="true">ALI AHMED — BIOMETRIC VOTING LAB</div>
-    <div class="blueprint-marks" aria-hidden="true"><span>+</span><span>&lt;/&gt;</span><span>⌁</span></div>
-    <span class="corner-mark corner-one"></span>
-    <span class="corner-mark corner-two"></span>
-
-    <div class="scanner-topline">
-      <div><span class="status-dot"></span> لجنة الاقتراع جاهزة</div>
-      <span>SOOT // BALLOT TERMINAL v2.6</span>
-    </div>
-
-    <div class="terminal-election-head">
-      <span class="terminal-tag">الاستحقاق الانتخابي النشط</span>
-      <h2>${esc(activeElection.title)}</h2>
-      <div class="intel-grid" style="margin-top:10px">
-        <div class="intel-check safe">
-          <span>TOTAL BALLOTS // إجمالي الأصوات</span>
-          <b>${totalVotes} صوت صحيح في الصندوق</b>
+      <div class="eyebrow">
+        ${icon('sparkle', 14)}
+        <span>تحقق بيومتري حي بالذكاء الاصطناعي</span>
+      </div>
+      <h1>من هويتك ..<br><span>إلى صوتك</span></h1>
+      <p>
+        منصة تصويت إلكتروني موثّقة بالتحقق الحي من الوجه والبطاقة الشخصية.
+        نفحص تطابق البصمة البيومترية (128-D) مع كشف الحياة لحظيًا، ثم نصدر لك رمز اقتراع سريًا معزولًا تمامًا عن هويتك.
+      </p>
+      <div class="hero-action-row">
+        <a class="sketch-button primary-button" href="/register${activeElection ? `?e=${activeElection.id}` : ''}">ابدأ التحقق والتصويت</a>
+        <span class="hand-arrow" aria-hidden="true">←</span>
+      </div>
+      <div class="investigator-signature">
+        <div class="signature-mark">
+          Soot-Biometric
+          <span></span>
         </div>
-        <div class="intel-check info">
-          <span>CANDIDATES // المرشحون</span>
-          <b>${cands.length} مرشحين بالقائمة النهائية</b>
+        <div>
+          <b>مختبر صوت للتوثيق الانتخابي الرقمي</b>
+          <small>128-D FACE MATCH + LIVENESS + ZERO-LINK BALLOT</small>
         </div>
+      </div>
+      <div class="trust-note">
+        <span class="mini-shield">${icon('shield', 17)}</span>
+        <span>لا تُحفظ صور الكاميرا بعد استخراج البصمة، ولا يمكن ربط ورقة الاقتراع بالرقم القومي.</span>
       </div>
     </div>
 
-    <div class="input-stage" style="padding-top:14px">
-      <label><span>القائمة A</span> اضغط على أي مرشح لبدء التصويت أو استعرض برامجهم بالأسفل</label>
-      <div class="terminal-cand-list">
-        ${miniCandRows}
+    <div class="scanner-frame" id="scanner">
+      <div class="file-tab">EVIDENCE / 01</div>
+      <div class="case-spine">CASE // BIOMETRIC-VOTE-01</div>
+      <div class="blueprint-marks" aria-hidden="true">
+        <span>+</span>
+        <span>&lt;/&gt;</span>
+        <span>⌁</span>
       </div>
-      <a class="sketch-button scan-button" href="/register?e=${esc(activeElection.id)}">
-        ${icon('face', 20)} ادخل لجنة التصويت والتحقق الآن
-      </a>
-    </div>
+      <span class="corner-mark corner-one"></span>
+      <span class="corner-mark corner-two"></span>
 
-    <span class="red-sticker">
-      <b>موثّق</b>
-      ${icon('shield', 24)}
-    </span>
-  </section>
-</section>
-
-<section class="steps-row" id="how">
-  <article>
-    <span>01</span>
-    <div>
-      <b>مطابقة بطاقة الرقم القومي</b>
-      <p>فحص الاسم والرقم القومي مع البطاقة المسجّلة بالسجل</p>
-    </div>
-    <small>IDENTITY</small>
-  </article>
-  <article>
-    <span>02</span>
-    <div>
-      <b>كاميرا السيلفي &amp; الـAI</b>
-      <p>مطابقة حية 128-D لمنع انتحال الصفة أو التصوير</p>
-    </div>
-    <small>BIOMETRIC</small>
-  </article>
-  <article>
-    <span>03</span>
-    <div>
-      <b>ورقة الاقتراع والإيصال</b>
-      <p>صوت سري مشفّر وكود إيصال للتحقق من الفرز</p>
-    </div>
-    <small>VERDICT</small>
-  </article>
-</section>
-
-<section class="section" id="candidates-section">
-  <div class="dossier-section-head">
-    <div>
-      <div class="case-kicker"><span>CANDIDATES</span><b>#LIST-04</b><i>OFFICIAL</i></div>
-      <h2>المرشحون والبرامج الانتخابية</h2>
-    </div>
-    <a class="sketch-button secondary-button" href="/results?e=${esc(activeElection.id)}">عرض جدول الفرز الكامل ←</a>
-  </div>
-  <div class="candidates-dossier-grid">
-    ${candidateCards}
-  </div>
-</section>`;
-}
-
-/* ------------------------------------------------------------------ ٢) التسجيل */
-function registerPage({ election, cards = [] }) {
-  const governorates = [
-    'أسيوط', 'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'القليوبية',
-    'كفر الشيخ', 'الغربية', 'المنوفية', 'البحيرة', 'الإسماعيلية', 'بورسعيد', 'السويس',
-    'دمياط', 'بني سويف', 'الفيوم', 'المنيا', 'سوهاج', 'قنا', 'الأقصر', 'أسوان',
-    'البحر الأحمر', 'الوادي الجديد', 'مطروح', 'شمال سيناء', 'جنوب سيناء',
-  ];
-
-  const usableCards = cards.length ? cards : [{
-    full_name: 'علي أحمد علي محمد',
-    national_id_plain: '31005292501518',
-    birth_date: '2010-05-29',
-    governorate: 'أسيوط',
-    address: 'ش الجمهورية — قسم أول أسيوط',
-    card_image: '/cards/31005292501518.jpg',
-  }];
-
-  const quickFillButtons = usableCards.map((c, idx) => `
-    <button class="sketch-button small-sketch-btn ${idx === 0 ? 'active-chip' : ''} btn-fill-card" type="button"
-      data-name="${esc(c.full_name)}"
-      data-nid="${esc(c.national_id_plain)}"
-      data-dob="${esc(c.birth_date)}"
-      data-gov="${esc(c.governorate)}"
-      data-card-img="${esc(c.card_image || '/cards/31005292501518.jpg')}"
-      data-phone="01012345678">
-      ${esc(c.full_name)} (${esc(c.national_id_plain)})
-    </button>`).join('');
-
-  return `
-<div class="register-layout">
-  <section class="scanner-frame" style="min-height:auto;transform:none">
-    <div class="file-tab">STEP 01 // REGISTER</div>
-    <div class="case-spine" aria-hidden="true">VOTER ROLL — NATIONAL ID MATCH</div>
-    <span class="corner-mark corner-one"></span>
-    <span class="corner-mark corner-two"></span>
-
-    <div class="scanner-topline">
-      <div><span class="status-dot"></span> مطابقة السجل المدني جاهزة</div>
-      <span>SOOT // ID VERIFICATION v2.6</span>
-    </div>
-
-    <form id="register-form" novalidate>
-      <input type="hidden" name="election_id" value="${esc(election?.id || 1)}"/>
-
-      <div class="intel-panel" style="margin-top:0;margin-bottom:18px">
-        <div class="intel-title">
-          <span>STORED ID CARDS // بطاقات جاهزة للتجربة</span>
-          <b>اختر بطاقة لملء البيانات فورًا</b>
-        </div>
-        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
-          ${quickFillButtons}
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="full_name"><span>الدليل A</span> الاسم الرباعي (كما هو مدوّن في البطاقة)</label>
-        <input id="full_name" name="full_name" type="text" required autocomplete="name"
-               placeholder="مثال: علي أحمد علي محمد"/>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="national_id"><span>الدليل B</span> الرقم القومي (14 رقم)</label>
-          <input id="national_id" name="national_id" type="text" inputmode="numeric" maxlength="14"
-                 class="mono" required placeholder="31005292501518"/>
-          <small class="hint" id="nid-hint">يُستخرج منه تاريخ الميلاد والمحافظة تلقائيًا</small>
-        </div>
-
-        <div class="field">
-          <label for="birth_date"><span>الدليل C</span> تاريخ الميلاد</label>
-          <input id="birth_date" name="birth_date" type="date" required/>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="governorate"><span>الدليل D</span> المحافظة</label>
-          <select id="governorate" name="governorate" required>
-            <option value="">اختر المحافظة</option>
-            ${governorates.map((g) => `<option value="${g}">${g}</option>`).join('')}
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="phone"><span>الدليل E</span> رقم الموبايل</label>
-          <input id="phone" name="phone" type="tel" inputmode="tel" class="mono"
-                 required placeholder="01012345678"/>
-        </div>
-      </div>
-
-      <div class="nid-preview" id="nid-preview" aria-live="polite" hidden>
-        <span class="partial-badge">النوع: <b id="np-gender">—</b></span>
-        <span class="partial-badge">الميلاد: <b id="np-dob">—</b></span>
-        <span class="partial-badge">المحافظة: <b id="np-gov">—</b></span>
-      </div>
-
-      <label class="consent-row" style="margin-bottom:14px!important">
-        <input type="checkbox" name="consent" id="consent" required checked/>
-        <span>
-          <b>أقرّ بصحة بيانات الرقم القومي المدخلة</b>
-          <small>وأوافق على مطابقة صورة الوجه بالكاميرا مع البطاقة المسجّلة في قاعدة البيانات للتحقق من الهوية فقط.</small>
-        </span>
-      </label>
-
-      <div class="error-note" id="form-error" role="alert" hidden></div>
-
-      <button class="sketch-button scan-button" type="submit" id="submit-btn">
-        ${icon('camera', 20)} متابعة إلى كاميرا مطابقة الوجه ←
-      </button>
-    </form>
-  </section>
-
-  <aside class="register-side-card">
-    <div class="case-kicker" style="margin-bottom:10px"><span>DB RECORD</span><b>#ID-CARD</b><i>VERIFIED</i></div>
-    <h3>البطاقة المرجعية بالسجل</h3>
-    <p class="muted small">يستدعي النظام بطاقتك المسجّلة في قاعدة البيانات لمطابقة ملامح الوجه بها في الخطوة التالية بدون الحاجة لرفع البطاقة:</p>
-    <div class="mini-id-preview">
-      <img id="register-card-preview-img" src="${esc(usableCards[0]?.card_image || '/cards/31005292501518.jpg')}" alt="بطاقة الرقم القومي"/>
-    </div>
-    <div class="signal-list">
-      <div>${icon('check', 16)} <span>لا يُطلب منك تصوير أو رفع البطاقة الورقية.</span></div>
-      <div>${icon('check', 16)} <span>الانتقال فوري إلى الكاميرا بدون رسائل OTP.</span></div>
-      <div>${icon('check', 16)} <span>يرفض النظام أي شخص آخر غير صاحب البطاقة.</span></div>
-    </div>
-  </aside>
-</div>`;
-}
-
-/* ------------------------------------------------------------------ ٢-ب) OTP */
-function otpPage() {
-  return `
-<section class="scanner-frame" style="min-height:auto">
-  <h2>تأكيد الموبايل غير مطلوب</h2>
-  <a class="sketch-button scan-button" href="/verify">المتابعة لكاميرا الوجه</a>
-</section>`;
-}
-
-/* ------------------------------------------------------------------ ٣) التحقق البيومتري (الكاميرا) */
-function verifyPage({ voter, election, rollCard }) {
-  const cardImg = (rollCard && rollCard.card_image) || '/cards/31005292501518.jpg';
-  const faceImg = (rollCard && rollCard.face_image) || '/cards/31005292501518-face.jpg';
-  return `
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js" defer></script>
-
-<section id="verify-app">
-  <canvas id="canvas" hidden></canvas>
-
-  <div class="error-note" id="verify-error" role="alert" style="margin-bottom:14px" hidden></div>
-
-  <!-- المرحلة ١: الكاميرا والتقاط السيلفي -->
-  <div class="v-step" data-step="selfie">
-    <div class="verify-grid">
-      <!-- يمين: بطاقة الناخب المسجّلة في القاعدة -->
-      <div class="register-side-card">
-        <div class="case-kicker" style="margin-bottom:10px"><span>STORED ID</span><b>#REF-FACE</b><i>READY</i></div>
-        <h3>بطاقة صاحب القيد بالسجل</h3>
-        <p class="muted small">تتم مقارنة الكاميرا المباشرة مع بصمة الوجه المستخرجة من هذه البطاقة:</p>
-        <div class="db-face-summary">
-          <img id="db-face-ref" src="${esc(faceImg)}" alt="صورة الوجه بالبطاقة" crossorigin="anonymous" class="db-face-avatar"/>
-          <div>
-            <b>${esc(voter.full_name)}</b>
-            <span class="muted small" style="display:block">الرقم القومي: <code class="mono">${esc(voter.national_id_masked || '********1518')}</code></span>
-            <span class="muted small" style="display:block">العنوان: ${esc((rollCard && rollCard.address) || voter.governorate)}</span>
-          </div>
-        </div>
-        <div class="mini-id-preview" style="margin-bottom:10px">
-          <img id="db-card-img" src="${esc(cardImg)}" alt="بطاقة الرقم القومي المسجّلة" crossorigin="anonymous"/>
-        </div>
-        <div class="sandbox-polling-indicator">
+      <div class="scanner-topline">
+        <div>
           <span class="status-dot"></span>
-          <span id="ai-engine-text">جاري تجهيز محرك البصمة العصبية 128-D…</span>
+          <b>محطة فحص الهوية والاقتراع السري</b>
         </div>
+        <span>SOOT TERMINAL // V2.6</span>
       </div>
 
-      <!-- يسار: تيرمينال الكاميرا المباشرة -->
-      <section class="scanner-frame" style="min-height:auto;transform:none">
-        <div class="file-tab">STEP 02 // LIVE CAMERA</div>
-        <div class="case-spine" aria-hidden="true">128-D NEURAL FACE VERIFICATION</div>
-        <span class="corner-mark corner-one"></span>
-        <span class="corner-mark corner-two"></span>
+      <div class="mode-tabs" role="tablist" aria-label="أوضاع المحطة">
+        <button type="button" role="tab" aria-selected="true" class="active" data-hero-tab="quick-vote">
+          ${icon('id', 16)}
+          <span>تسجيل سريع</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" data-hero-tab="receipt-check">
+          ${icon('receipt', 16)}
+          <span>فحص إيصال</span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" data-hero-tab="candidates-peek">
+          ${icon('users', 16)}
+          <span>المرشحون (${candidates.length})</span>
+        </button>
+      </div>
 
-        <div class="scanner-topline">
-          <div><span class="status-dot"></span> <span id="cam-status">جاري تشغيل الكاميرا…</span></div>
-          <span>CAMERA // BIOMETRIC LAB</span>
-        </div>
-
-        <ul class="challenge-list" id="challenge-list" aria-live="polite"></ul>
-
-        <div class="camera-frame selfie-mode" id="camera-frame-box">
-          <video id="video-selfie" playsinline autoplay muted></video>
-          <div class="frame-guide face-guide" id="face-guide-box">
-            <span id="face-guide-label">ضع وجهك في منتصف الإطار</span>
+      <!-- تبويب ١: تسجيل سريع وبطاقة التجربة -->
+      <div class="input-stage" data-hero-panel="quick-vote">
+        <label for="hero-nid-preview">
+          <span>ID-14</span>
+          بطاقة ناخب جاهزة للتجربة الفورية
+        </label>
+        <div class="intel-panel" style="margin-top:0">
+          <div class="intel-title">
+            <span>REGISTERED VOTER RECORD</span>
+            <b>${esc(firstCard.national_id_plain || firstCard.nid)}</b>
           </div>
-          <div class="liveness-meter"><span id="liveness-bar"></span></div>
-        </div>
-
-        <div class="studio-controls">
-          <button class="sketch-button scan-button" type="button" id="btn-capture-selfie" style="margin-top:0;flex:2">
-            ${icon('camera', 20)} التقاط السيلفي ومطابقة الوجه
-          </button>
-          <button class="sketch-button small-sketch-btn" type="button" id="btn-start-camera">تشغيل الكاميرا</button>
-          <button class="sketch-button small-sketch-btn" type="button" id="btn-switch-cam">تبديل الكاميرا</button>
-          <button class="sketch-button small-sketch-btn" type="button" id="btn-use-selfie-file">رفع صورة للوجه</button>
-          <input type="file" id="selfie-file" accept="image/*" capture="user" hidden/>
-        </div>
-
-        <div class="captured" id="selfie-preview" hidden>
-          <div class="captured-head">
-            <b>✓ تم التقاط صورة الوجه — اضغط «تأكيد ومطابقة الوجه الآن»:</b>
-          </div>
-          <img id="selfie-img" alt="صورة السيلفي الملتقطة" crossorigin="anonymous"/>
-          <div class="captured-actions">
-            <button class="sketch-button scan-button" type="button" id="btn-selfie-ok" style="margin-top:0;flex:2">
-              ${icon('check', 20)} تأكيد ومطابقة الوجه الآن ←
-            </button>
-            <button class="sketch-button small-sketch-btn" type="button" id="btn-selfie-retake">إعادة الالتقاط</button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- المرحلة ٢: جاري الفحص -->
-  <div class="v-step scanner-frame" data-step="processing" style="min-height:auto;transform:none" hidden>
-    <div class="loading-stage">
-      <div class="scan-circle">${icon('face', 36)}</div>
-      <h2>جاري مطابقة بصمة الوجه مع بطاقة الرقم القومي…</h2>
-      <p>يتم استخراج 128 نقطة حيوية من الوجه ومقارنتها بصورة البطاقة المسجّلة</p>
-      <ul class="progress-list" id="progress-list">
-        <li data-k="card">قراءة بصمة الوجه المرجعية من البطاقة المسجّلة</li>
-        <li data-k="live">فحص علامات الحيوية ووجود وجه بشري واضح</li>
-        <li data-k="face">حساب المسافة الإقليدية (128-D Euclidean Distance)</li>
-        <li data-k="decision">إصدار قرار التحقق وتجهيز ورقة الاقتراع</li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- المرحلة ٣: النتيجة -->
-  <div class="v-step scanner-frame" data-step="result" style="min-height:auto;transform:none" hidden>
-    <div id="result-box"></div>
-  </div>
-</section>`;
-}
-
-/* ------------------------------------------------------------------ ٤) ورقة الاقتراع */
-function votePage({ election, candidates, voter }) {
-  const cards = candidates.map((c, idx) => {
-    const { role, symbolText, symbolSvg, code } = parseSlogan(c.slogan, idx);
-    const photo = c.photo_url || `/candidates/c${(idx % 4) + 1}.jpg`;
-    const numAr = toArNum(idx + 1);
-    return `
-      <label class="ballot-cand-card" for="cand-${esc(c.id)}">
-        <input type="radio" name="candidate_id" id="cand-${esc(c.id)}" value="${esc(c.id)}" required/>
-        <div class="ballot-card-inner">
-          <div class="ballot-card-top">
-            <span class="ballot-num">${code} // المرشح رقم (${numAr})</span>
-            <span class="ballot-symbol">${symbolSvg} <b>${esc(symbolText)}</b></span>
-          </div>
-          <div class="ballot-person">
-            <img class="ballot-avatar" src="${esc(photo)}" alt="${esc(c.name)}"/>
-            <div class="ballot-person-info">
-              <strong class="ballot-name">${esc(c.name)}</strong>
-              <span class="ballot-role">${esc(role)}</span>
+          <div class="intel-grid">
+            <div class="intel-check safe">
+              <span>اسم الناخب المسجّل</span>
+              <b>${icon('check-circle', 14)} ${esc(firstCard.full_name || firstCard.name)}</b>
+            </div>
+            <div class="intel-check info">
+              <span>المحافظة وتاريخ الميلاد</span>
+              <b>${esc(firstCard.governorate || firstCard.gov)} · ${esc(firstCard.birth_date || firstCard.dob)}</b>
+            </div>
+            <div class="intel-check safe">
+              <span>بصمة الوجه (128-D)</span>
+              <b>${icon('face', 14)} جاهزة للمطابقة بالكاميرا</b>
+            </div>
+            <div class="intel-check warning">
+              <span>حالة الاستحقاق</span>
+              <b>${activeElection ? esc(STATE_AR[activeElection.state] || 'مفتوح') : 'جاهز'}</b>
             </div>
           </div>
-          <p class="ballot-program">${esc(c.program || '')}</p>
-          <div class="ballot-select-bar">
-            <span class="ballot-radio-indicator">${icon('check', 16)}</span>
-            <span class="ballot-select-label">التأشير لاختيار هذا المرشح</span>
+        </div>
+
+        <div class="external-options">
+          <div class="consent-row">
+            ${icon('camera', 18)}
+            <span>
+              <b>كاميرا حقيقية + محاكي ذكي</b>
+              <small>يعمل بالكاميرا المباشرة أو بالمحاكي التفاعلي عند غياب الكاميرا.</small>
+            </span>
+          </div>
+          <div class="consent-row">
+            ${icon('lock', 18)}
+            <span>
+              <b>عزل تام للهوية عن الصوت</b>
+              <small>توقيع HMAC منفصل يمنع كشف اختيارك الانتخابي لأي جهة.</small>
+            </span>
           </div>
         </div>
-      </label>`;
-  }).join('');
 
-  return `
-<section class="scanner-frame" style="min-height:auto;transform:none">
-  <div class="file-tab">STEP 03 // OFFICIAL BALLOT</div>
-  <div class="case-spine" aria-hidden="true">SECRET BALLOT — ONE PERSON ONE VOTE</div>
-  <span class="corner-mark corner-one"></span>
-  <span class="corner-mark corner-two"></span>
-
-  <div class="scanner-topline">
-    <div><span class="status-dot"></span> الناخب الموثّق: ${esc(voter.full_name)}</div>
-    <span>BALLOT // PAPER #2026</span>
-  </div>
-
-  <form id="vote-form" data-election="${esc(election.id)}">
-    <input type="hidden" name="election_id" value="${esc(election.id)}"/>
-    <div style="margin-bottom:16px">
-      <h2 style="font-size:24px;font-weight:900;margin:0 0 4px">${esc(election.title)}</h2>
-      <p class="muted small">اختار مرشح واحد فقط من القائمة المعتمدة، وبعدها اضغط «تأكيد وإيداع الصوت في الصندوق»:</p>
-    </div>
-    <div class="ballot-grid">${cards}</div>
-    <div class="error-note" id="vote-error" role="alert" hidden></div>
-    <button class="sketch-button scan-button" type="submit" id="cast-btn">
-      ${icon('ballot', 20)} تأكيد وإيداع الصوت في الصندوق الآن ←
-    </button>
-  </form>
-</section>
-
-<dialog id="confirm-dialog" class="confirm">
-  <div class="scan-circle" style="margin:0 auto 12px">${icon('ballot', 32)}</div>
-  <h3>تأكيد نهائي لإيداع الصوت</h3>
-  <p>أنت على وشك تسجيل صوتك رسميًا لصالح المرشح:<br/><b id="confirm-name" class="confirm-cand-highlight">—</b></p>
-  <p class="muted small">بعد الإيداع لا يمكن تعديل الاختيار ويصدر لك إيصال رسمي.</p>
-  <div class="row" style="justify-content:center;margin-top:18px">
-    <button class="sketch-button primary-button" id="confirm-yes" type="button">نعم، سجّل صوتي</button>
-    <button class="sketch-button small-sketch-btn" id="confirm-no" type="button">تراجع</button>
-  </div>
-</dialog>`;
-}
-
-/* ------------------------------------------------------------------ ٥) الإيصال */
-function receiptPage({ receipt, electionTitle, total, castAt }) {
-  return `
-<section class="scanner-frame" style="max-width:680px;margin:0 auto;min-height:auto;text-align:center">
-  <div class="file-tab">STEP 04 // RECEIPT</div>
-  <div class="scanner-topline">
-    <div><span class="status-dot"></span> تم تسجيل الصوت في الصندوق</div>
-    <span>RECEIPT // VERIFIED</span>
-  </div>
-  <div class="scan-circle" style="margin:10px auto 14px;background:var(--green);color:#fff">${icon('check', 36)}</div>
-  <h1 style="font-size:32px;font-weight:900;margin:0 0 6px">الإيصال صحيح — صوتك وصل!</h1>
-  <p class="muted">تم احتساب صوتك في <b>${esc(electionTitle)}</b> بمعزل تام عن بياناتك الشخصية.</p>
-
-  <div class="receipt-code mono" id="receipt-code">${esc(receipt)}</div>
-
-  <div class="row center-row" style="margin:16px 0">
-    <button class="sketch-button primary-button" id="btn-copy" type="button">نسخ رقم الإيصال</button>
-    <button class="sketch-button small-sketch-btn" onclick="window.print()" type="button">طباعة</button>
-    <a class="sketch-button small-sketch-btn" href="/verify-receipt?code=${esc(receipt)}">فحص الإيصال</a>
-  </div>
-
-  <div class="intel-grid" style="text-align:right">
-    <div class="intel-check safe"><span>CAST TIME // وقت التصويت</span><b>${fmtDate(castAt)}</b></div>
-    <div class="intel-check info"><span>BOX TOTAL // إجمالي الصندوق</span><b>${total} صوت صحيح</b></div>
-  </div>
-
-  <div class="row center-row" style="margin-top:20px">
-    <a class="sketch-button scan-button" href="/results" style="max-width:320px">مشاهدة نتائج الفرز اللحظية ←</a>
-  </div>
-</section>`;
-}
-
-function receiptLookupPage({ code = '', result = null }) {
-  const r = result || {};
-  const map = {
-    found: `<div class="intel-panel" style="border-color:var(--green)"><div class="intel-title"><span>VERIFIED RECEIPT</span><b>${esc(code)}</b></div><p style="margin-top:8px;font-weight:800;color:#087451">✓ الإيصال صحيح ومُدرج في الصندوق — تم تسجيل هذا الصوت في «${esc(r.election_title)}» بتاريخ ${fmtDate(r.cast_at)}.</p></div>`,
-    notfound: `<div class="error-note">✗ مفيش صوت مسجّل بهذا الرقم — تأكد من كتابة رقم الإيصال بشكل صحيح.</div>`,
-    bad: `<div class="error-note">✗ صيغة رقم الإيصال غير صحيحة.</div>`,
-  };
-  return `
-<section class="scanner-frame" style="max-width:680px;margin:0 auto;min-height:auto">
-  <div class="file-tab">VERIFY // RECEIPT</div>
-  <div class="scanner-topline">
-    <div><span class="status-dot"></span> فحص إيصال التصويت</div>
-    <span>SOOT // RECEIPT CHECKER</span>
-  </div>
-  <form method="get" action="/verify-receipt" class="input-stage" style="padding-top:8px">
-    <label for="code"><span>الدليل #</span> اكتب رقم إيصال التصويت المكون من 10 حروف وأرقام</label>
-    <input id="code" name="code" value="${esc(code)}" placeholder="ABCDE-12345" class="mono" required/>
-    <button class="sketch-button scan-button" type="submit">فحص الإيصال الآن</button>
-  </form>
-  ${r.kind ? `<div style="margin-top:16px">${map[r.kind] || ''}</div>` : ''}
-</section>`;
-}
-
-/* ------------------------------------------------------------------ ٦) النتائج */
-function resultsPage({ data }) {
-  if (!data) {
-    return `<section class="scanner-frame"><h1>نتائج الفرز</h1><p class="muted">لا توجد بيانات متاحة حاليًا.</p></section>`;
-  }
-
-  const sorted = [...(data.candidates || [])].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-  const rows = sorted.map((c, idx) => {
-    const { role, symbolText, symbolSvg } = parseSlogan(c.slogan, (c.sort || idx + 1) - 1);
-    const photo = c.photo_url || `/candidates/c${((c.sort || idx + 1) - 1) % 4 + 1}.jpg`;
-    const votes = Number(c.votes) || 0;
-    const pct = Number(c.percent) || 0;
-    const isLeader = idx === 0 && votes > 0;
-    return `
-    <div class="result-cand-row ${isLeader ? 'leader' : ''}">
-      <div class="res-cand-rank">0${idx + 1}</div>
-      <img class="res-cand-photo" src="${esc(photo)}" alt="${esc(c.name)}"/>
-      <div class="res-cand-body">
-        <div class="res-cand-top">
-          <div>
-            <b class="res-cand-name">${esc(c.name)}</b>
-            ${isLeader ? `<span class="ai-badge">المتصدر في الفرز</span>` : ''}
-            <span class="res-cand-meta">${esc(role)} · <span class="inline-sym">${symbolSvg} ${esc(symbolText)}</span></span>
-          </div>
-          <div class="res-cand-numbers">
-            <b>${pct}%</b> <span>(${votes} صوت محسوم)</span>
-          </div>
-        </div>
-        <div class="score-track ${isLeader ? '' : 'safe'}" style="margin:8px 0 0"><span style="width:${Math.max(3, pct)}%"></span></div>
+        <a class="sketch-button scan-button" href="/register${activeElection ? `?e=${activeElection.id}` : ''}">
+          ${icon('face', 18)}
+          <span>افتح محطة التحقق والتصويت الآن</span>
+        </a>
       </div>
-    </div>`;
-  }).join('');
 
-  return `
-<section class="scanner-frame" style="min-height:auto;transform:none">
-  <div class="file-tab">LIVE TALLY // 2026</div>
-  <div class="case-spine" aria-hidden="true">OFFICIAL ELECTION RESULTS</div>
-  <span class="corner-mark corner-one"></span>
-  <span class="corner-mark corner-two"></span>
+      <!-- تبويب ٢: فحص إيصال التصويت مباشر -->
+      <div class="input-stage" data-hero-panel="receipt-check" hidden>
+        <label for="hero-receipt-code">
+          <span>RECEIPT</span>
+          أدخل رقم إيصال التصويت للتحقق من وجوده في الصندوق
+        </label>
+        <input id="hero-receipt-code" type="text" class="ltr mono" placeholder="ABCDE-23456" maxlength="14" autocomplete="off">
+        <div class="input-meta">
+          <span>صيغة الكود: 5 حروف أو أرقام - شرطة - 5 حروف أو أرقام</span>
+          <button type="button" id="hero-sample-receipt">تعبئة مثال تجريبي</button>
+        </div>
+        <button type="button" id="hero-check-receipt-btn" class="sketch-button scan-button">
+          ${icon('search', 18)}
+          <span>افحص الإيصال الآن</span>
+        </button>
+        <div id="hero-receipt-output"></div>
+      </div>
 
-  <div class="scanner-topline">
-    <div><span class="status-dot"></span> الفرز اللحظي المباشر — صوت محسوب</div>
-    <span>SOOT // LIVE RESULTS v2.6</span>
-  </div>
+      <!-- تبويب ٣: نظرة سريعة على المرشحين -->
+      <div class="input-stage" data-hero-panel="candidates-peek" hidden>
+        <label>
+          <span>BALLOT</span>
+          ${activeElection ? esc(activeElection.title) : 'قائمة المرشحين المعتمدين'}
+        </label>
+        <div class="terminal-cands-list">
+          ${candidates.slice(0, 4).map((c, i) => `
+            <div class="terminal-cand-row">
+              <img src="${esc(c.photo_url || candidateSvg(c, i))}" alt="${esc(c.name)}" width="44" height="44">
+              <div class="terminal-cand-info">
+                <b>${esc(c.name)}</b>
+                <small>${esc(c.title || c.role || 'مرشح معتمد')} · رمز: ${esc(c.symbol || 'انتخابي')}</small>
+              </div>
+              <span class="terminal-cand-num">#0${i + 1}</span>
+            </div>
+          `).join('')}
+        </div>
+        <a class="sketch-button scan-button" href="#candidates">
+          ${icon('users', 18)}
+          <span>استعرض بطاقات المرشحين كاملة</span>
+        </a>
+      </div>
 
-  <div class="result-head" style="margin-bottom:18px;flex-wrap:wrap">
-    <div>
-      <div class="case-kicker"><span>OFFICIAL TALLY</span><b>#RES-2026</b><i>LIVE</i></div>
-      <h1 style="font-size:28px;font-weight:900;margin:8px 0 4px">نتائج الفرز — ${esc(data.election.title)}</h1>
-      <p class="muted small">${esc(data.election.description || '')}</p>
+      <div class="red-sticker" aria-hidden="true">
+        ${icon('shield', 22)}
+        <b>صوت</b>
+        <b>موثّق</b>
+      </div>
     </div>
-    <div class="score-circle">
-      <b>${data.total_ballots || 0}</b>
-      <span>صوت محسوب</span>
+  </section>
+
+  <!-- شريط الخطوات الثلاث بأسلوب Kashif AI -->
+  <section class="steps-row" aria-label="خطوات التصويت">
+    <article>
+      <span>01</span>
+      <div>
+        <b>سجّل بيانات بطاقتك القومية</b>
+        <p>أدخل الاسم والرقم القومي المكون من 14 رقمًا أو اختر بطاقة جاهزة للتجربة الفورية.</p>
+      </div>
+      <small>STEP / 01</small>
+    </article>
+    <article>
+      <span>02</span>
+      <div>
+        <b>تحقق بالكاميرا الحية أو المحاكي</b>
+        <p>فحص حيوية الوجه ومطابقة البصمة العصبية (128-D) مع صورة البطاقة المسجّلة.</p>
+      </div>
+      <small>STEP / 02</small>
+    </article>
+    <article>
+      <span>03</span>
+      <div>
+        <b>صوّت سرًّا واستلم إيصالًا رقميًا</b>
+        <p>اختر مرشحك داخل كبسولة الاقتراع المعزولة واحتفظ بكود التحقق الفريد.</p>
+      </div>
+      <small>STEP / 03</small>
+    </article>
+  </section>
+
+  <!-- قسم المرشحين والاستحقاق الانتخابي -->
+  <section class="dossier-section" id="candidates">
+    <div class="dossier-head">
+      <div>
+        <div class="case-kicker">
+          <span>CANDIDATES DOSSIER</span>
+          <b>#${activeElection ? activeElection.id : '01'}</b>
+          <i>${activeElection ? esc(activeElection.state.toUpperCase()) : 'OPEN'}</i>
+        </div>
+        <h2>${activeElection ? esc(activeElection.title) : 'الاستحقاق الانتخابي النشط'}</h2>
+        <p class="muted">${activeElection ? esc(activeElection.description || '') : 'اختر مرشحك بعد إتمام التحقق من الهوية.'}</p>
+      </div>
+      <div class="dossier-stats">
+        <a class="sketch-button" href="/results${activeElection ? `?e=${activeElection.id}` : ''}">
+          ${icon('chart', 16)}
+          <span>لوحة الفرز والنتائج (${counts.ballots || 0} صوت)</span>
+        </a>
+      </div>
     </div>
-  </div>
 
-  <div class="results-leaderboard">${rows}</div>
+    <div class="candidates-grid">
+      ${candidates.map((c, idx) => {
+        const photo = candidateSvg(c, idx);
+        const { role, symbolText, symbolSvg } = parseSlogan(c.slogan || c.symbol || '', idx);
+        const progText = c.program || c.bio || 'برنامج انتخابي يركّز على الشفافية والتحول الرقمي وخدمة الناخبين.';
+        const modalPayload = JSON.stringify({
+          id: c.id,
+          number: idx + 1,
+          name: c.name,
+          role: c.title || role,
+          symbol: `${symbolSvg} <span>الرمز: ${esc(c.symbol || symbolText)}</span>`,
+          program: progText,
+          photo,
+        });
+        return `
+        <article class="candidate-card" data-candidate>
+          <div class="cc-top">
+            <span class="cc-number">CANDIDATE #0${idx + 1}</span>
+            <span class="cc-symbol">${symbolSvg} <b>${esc(c.symbol || symbolText)}</b></span>
+          </div>
+          <img class="cc-photo" src="${esc(photo)}" alt="صورة ${esc(c.name)}" width="96" height="96" loading="lazy">
+          <h3 class="cc-name">${esc(c.name)}</h3>
+          <p class="cc-role">${esc(c.title || role)}</p>
+          <p class="cc-program">${esc(String(progText).slice(0, 145))}${String(progText).length > 145 ? '…' : ''}</p>
+          <button type="button" class="sketch-button cc-more" data-open-candidate='${esc(modalPayload)}'>
+            <span>ملف المرشح والبرنامج</span>
+            ${icon('arrow-left', 15)}
+          </button>
+        </article>`;
+      }).join('')}
+    </div>
+  </section>
 
-  <div class="row" style="margin-top:20px;justify-content:space-between">
-    <a class="sketch-button primary-button" href="/register?e=${esc(data.election.id)}">شارك في التصويت الآن ←</a>
-    <a class="sketch-button small-sketch-btn" href="/verify-receipt">فحص إيصال تصويت</a>
-  </div>
-</section>`;
+  <!-- نافذة تفاصيل المرشح -->
+  <dialog id="candidate-dialog" class="modal" aria-labelledby="cd-title-modal">
+    <div class="modal-head">
+      <h3 id="cd-title-modal">ملف المرشح</h3>
+      <button type="button" class="sketch-button icon-btn" data-close-modal aria-label="إغلاق">${icon('close', 18)}</button>
+    </div>
+    <div class="modal-body">
+      <div class="candidate-details">
+        <img id="cd-photo" src="" alt="" width="110" height="110">
+        <div>
+          <span class="cc-number" id="cd-number"></span>
+          <h4 id="cd-name" style="margin:6px 0 4px;font-size:20px;font-weight:900"></h4>
+          <p id="cd-role" class="muted" style="margin:0 0 8px;font-size:13px"></p>
+          <div id="cd-symbol" class="cc-symbol"></div>
+          <div class="cd-program-box">
+            <b>البرنامج الانتخابي الكامل:</b>
+            <p id="cd-program" style="margin:6px 0 0;line-height:1.8"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <a id="cd-cta" class="sketch-button primary-button" href="/register">ابدأ التحقق للتصويت</a>
+      <button type="button" class="sketch-button" data-close-modal>إغلاق</button>
+    </div>
+  </dialog>
+  `;
 }
 
-function reviewStatusPage({ reviewId, review }) {
-  const box = {
-    pending: `<div class="advice-note"><b>طلبك قيد المراجعة:</b> لجنة الإشراف تراجع صورتك حاليًا.</div>`,
-    approved: `<div class="intel-panel"><p><b>تمت الموافقة!</b> يمكنك الدخول لورقة الاقتراع الآن.</p><button class="sketch-button scan-button" id="btn-claim-token">استلام بطاقة الاقتراع</button></div>`,
-    rejected: `<div class="error-note">تم رفض الطلب لعدم تطابق صورة الوجه مع البطاقة المسجّلة.</div><a class="sketch-button primary-button" href="/verify" style="margin-top:12px">إعادة المحاولة</a>`,
-  }[review.status] || '';
-  return `<section class="scanner-frame" style="min-height:auto"><h1>حالة الطلب #${esc(reviewId)}</h1><div id="review-card" data-review="${esc(reviewId)}">${box}</div></section>`;
-}
+/* ---------------------------------------------------------- ٢) صفحة التسجيل */
+function registerPage({ election, elections = [], cards = [] } = {}) {
+  const active = election || elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'الانتخابات العامة', state: 'open' };
+  const sampleCards = cards && cards.length ? cards : DEMO_CARDS;
 
-function kioskPage({ elections }) {
   return `
-<section class="scanner-frame" style="min-height:auto">
-  <h1>منصة الاقتراع داخل اللجنة</h1>
-  <p class="muted">يُفرّغ الحساب تلقائيًا عقب كل صوت ليبدأ الناخب التالي من جديد.</p>
-  <div style="margin-top:16px">
-    ${elections.filter((e) => e.state === 'open').map((e) => `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>STEP 01 // REGISTER</span>
+      <b>#${active.id}</b>
+      <i>IDENTITY INPUT</i>
+    </div>
+    <h1>تسجيل <span>بيانات الناخب</span></h1>
+    <p class="muted">أدخل بيانات بطاعة الرقم القومي المكونة من 14 رقمًا، أو اضغط على إحدى بطاقات التجربة الجاهزة بالأسفل للتعبئة التلقائية.</p>
+  </section>
+
+  <div class="register-layout">
+    <div class="scanner-frame form-scanner">
+      <div class="file-tab">VOTER / DATA</div>
+      <span class="corner-mark corner-one"></span>
+      <span class="corner-mark corner-two"></span>
+
+      <div class="scanner-topline">
+        <div>
+          <span class="status-dot"></span>
+          <b>نموذج التحقق من الرقم القومي المصري</b>
+        </div>
+        <span>STEP 01 // NID CHECK</span>
+      </div>
+
+      <!-- شريط التعبئة السريعة لبطاقات التجربة -->
+      <div class="demo-bar">
+        <div class="demo-bar-head">
+          ${icon('sparkle', 16)}
+          <b>بطاقات جاهزة للتجربة الفورية (اضغط للتعبئة التلقائية):</b>
+        </div>
+        <div class="demo-chips">
+          ${sampleCards.map((c, idx) => {
+            const nid = c.national_id_plain || c.nid;
+            const name = c.full_name || c.name;
+            const dob = c.birth_date || c.dob;
+            const gov = c.governorate || c.gov;
+            const phone = c.phone || '01012345678';
+            return `<button type="button" class="sketch-button demo-chip btn-fill-card ${idx === 0 ? 'is-first' : ''}"
+              ${idx === 0 ? 'id="btn-fill-sample-card"' : ''}
+              data-name="${esc(name)}"
+              data-nid="${esc(nid)}"
+              data-dob="${esc(dob)}"
+              data-gov="${esc(gov)}"
+              data-phone="${esc(phone)}">
+              ${icon('id', 15)}
+              <span>${esc(name)}</span>
+              <code class="mono ltr">${esc(nid.slice(0, 4))}…${esc(nid.slice(-3))}</code>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div id="form-error" class="error-note" role="alert" hidden></div>
+
+      <form id="register-form" class="input-stage" style="padding-top:10px" novalidate>
+        <input type="hidden" name="election_id" value="${esc(active.id)}">
+
+        <div class="field">
+          <label for="full_name"><span>NAME</span> الاسم الكامل رباعيًا كما في البطاقة <i class="req">*</i></label>
+          <input id="full_name" name="full_name" type="text" required autocomplete="name" placeholder="مثال: علي أحمد علي محمد">
+        </div>
+
+        <div class="field">
+          <label for="national_id"><span>NID-14</span> الرقم القومي (14 رقمًا) <i class="req">*</i></label>
+          <input id="national_id" name="national_id" type="text" inputmode="numeric" maxlength="14" class="ltr mono" required placeholder="31005292501518">
+          <small id="nid-hint" class="hint">0/14 رقم — نقرأ منه تاريخ الميلاد والمحافظة تلقائيًا</small>
+        </div>
+
+        <div id="nid-preview" class="nid-preview" hidden>
+          <span class="mini-badge">النوع: <b id="np-gender">—</b></span>
+          <span class="mini-badge">الميلاد: <b id="np-dob" class="ltr">—</b></span>
+          <span class="mini-badge">المحافظة: <b id="np-gov">—</b></span>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="birth_date"><span>DOB</span> تاريخ الميلاد <i class="req">*</i></label>
+            <input id="birth_date" name="birth_date" type="date" class="ltr" required>
+          </div>
+          <div class="field">
+            <label for="governorate"><span>GOV</span> المحافظة <i class="req">*</i></label>
+            <select id="governorate" name="governorate" required>
+              <option value="">اختر المحافظة…</option>
+              ${['القاهرة','الجيزة','الإسكندرية','أسيوط','الدقهلية','الشرقية','القليوبية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','الفيوم','بني سويف','المنيا','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء','خارج الجمهورية'].map((g) => `<option value="${g}">${g}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="phone"><span>TEL</span> رقم الموبايل المصري <i class="req">*</i></label>
+          <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="11" class="ltr mono" required placeholder="01012345678">
+        </div>
+
+        <label class="consent-row" for="consent" style="margin-top:12px !important">
+          <input id="consent" name="consent" type="checkbox" required>
+          <span>
+            <b>أوافق على التحقق المؤقت من هويتي عبر الكاميرا لإصدار رمز اقتراع سري</b>
+            <small>تُستخدم البيانات للتحقق فقط من عدم تكرار التصويت، وتُفصل تمامًا عن ورقة الاقتراع.</small>
+          </span>
+        </label>
+
+        <button type="submit" class="sketch-button scan-button">
+          <span>متابعة إلى مطابقة الوجه بالكاميرا</span>
+          ${icon('arrow-left', 18)}
+        </button>
+      </form>
+    </div>
+
+    <aside class="side-panel">
       <div class="intel-panel">
-        <h3>${esc(e.title)}</h3>
-        <p>${esc(e.description || '')}</p>
-        <a class="sketch-button primary-button" href="/register?e=${esc(e.id)}&kiosk=1" style="margin-top:10px">بدء ناخب جديد ←</a>
-      </div>`).join('')}
+        <div class="intel-title">
+          <span>ELECTION TARGET</span>
+          <b>#${active.id}</b>
+        </div>
+        <h3 style="margin:10px 0 6px;font-size:17px;font-weight:900">${esc(active.title)}</h3>
+        <p class="muted" style="margin:0 0 12px;font-size:13px;line-height:1.7">${esc(active.description || 'استحقاق انتخابي إلكتروني موثّق بالتحقق البيومتري.')}</p>
+        <div class="intel-grid">
+          <div class="intel-check safe">
+            <span>حالة الصندوق</span>
+            <b>${esc(STATE_AR[active.state] || 'مفتوح')}</b>
+          </div>
+          <div class="intel-check info">
+            <span>قاعدة التصويت</span>
+            <b>صوت واحد لكل رقم قومي</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="advice-note">
+        <b>كيف تعمل مطابقة الكاميرا؟</b>
+        <p>بعد إدخال بياناتك، ستفتح الكاميرا مباشرة في الخطوة التالية لالتقاط سيلفي ومقارنته بصورة بطاقتك المسجّلة في قاعدة البيانات دون الحاجة لرفع صورة البطاقة يدويًا.</p>
+      </div>
+    </aside>
   </div>
-</section>`;
+  `;
 }
 
-function errorPage(message, code = 404) {
+/* ---------------------------------------------------------- ٢.٥) صفحة كود الموبايل OTP */
+function otpPage({ voter, challenge, maskedPhone, devCode } = {}) {
+  const masked = (challenge && challenge.masked) || maskedPhone || (voter && voter.phone_masked) || '010****5678';
+  const code = (challenge && challenge.dev_code) || devCode || '';
+
   return `
-<section class="scanner-frame" style="max-width:560px;margin:0 auto;min-height:auto;text-align:center">
-  <h1 style="font-size:48px;font-weight:900;color:var(--red)">${code}</h1>
-  <p style="font-size:18px;font-weight:800;margin:10px 0 20px">${esc(message || 'الصفحة غير متاحة')}</p>
-  <a class="sketch-button primary-button" href="/">العودة للرئيسية</a>
-</section>`;
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>STEP 01.5 // OTP VERIFY</span>
+      <b>SMS CODE</b>
+      <i>PENDING</i>
+    </div>
+    <h1>تأكيد <span>رقم الموبايل</span></h1>
+    <p class="muted">أرسلنا كود تحقق مكوّنًا من 6 أرقام إلى الرقم <b class="ltr mono">${esc(masked)}</b>.</p>
+  </section>
+
+  <div class="scanner-frame" style="max-width:620px;margin:0 auto 44px">
+    <div class="file-tab">OTP / VERIFY</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>بوابة تأكيد رمز الرسائل القصيرة</b></div>
+      <span>OTP // 6-DIGITS</span>
+    </div>
+
+    ${code ? `
+    <div class="advice-note" style="margin-bottom:14px">
+      <b>وضع التجربة المحلي — كود التحقق الفوري:</b>
+      <p>الكود التجريبي الخاص بك هو: <code class="mono ltr" style="font-size:18px;font-weight:900;padding:2px 8px;background:#fff;border:1.5px solid var(--ink)">${esc(code)}</code></p>
+    </div>` : ''}
+
+    <div id="otp-error" class="error-note" role="alert" hidden></div>
+
+    <form id="otp-form" class="input-stage" style="padding-top:6px">
+      <div class="field">
+        <label for="otp-code"><span>CODE</span> كود التحقق (6 أرقام)</label>
+        <input id="otp-code" name="code" type="text" inputmode="numeric" maxlength="6" class="ltr mono otp-input" value="${esc(code)}" placeholder="123456" required>
+      </div>
+      <div class="input-meta">
+        <span>صالح لمدة 5 دقائق</span>
+        <button type="button" id="btn-resend-otp">إعادة إرسال الكود الآن</button>
+      </div>
+      <button type="submit" class="sketch-button scan-button">
+        ${icon('check-circle', 18)}
+        <span>تأكيد الكود والانتقال للكاميرا</span>
+      </button>
+    </form>
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ٣) صفحة التحقق من الهوية والكاميرا */
+function verifyPage({ voter, election, rollCard } = {}) {
+  const cardImg = (rollCard && rollCard.card_image) || '/cards/31005292501518.jpg';
+  const faceRef = (rollCard && (rollCard.face_image || rollCard.photo_data)) || cardImg;
+  const voterName = (voter && voter.full_name) || (rollCard && rollCard.full_name) || 'ناخب مسجّل';
+  const voterGov = (voter && voter.governorate) || (rollCard && rollCard.governorate) || '—';
+  const voterDob = (voter && voter.birth_date) || (rollCard && rollCard.birth_date) || '—';
+
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>STEP 02 // BIOMETRIC SCAN</span>
+      <b>128-D NEURAL</b>
+      <i>CAMERA LIVE</i>
+    </div>
+    <h1>التحقق من <span>الهوية بالكاميرا</span></h1>
+    <p class="muted">نطابق صورة وجهك المباشرة مع البطاقة المسجّلة في قاعدة البيانات للتحقق من الهوية وكشف الحياة.</p>
+  </section>
+
+  <div id="verify-app" class="verify-app">
+    <canvas id="canvas" width="640" height="480" hidden></canvas>
+    <input id="selfie-file" type="file" accept="image/*" capture="user" hidden>
+
+    <!-- أزرار خطوة البطاقة للتوافق مع الاختبارات التلقائية -->
+    <div id="card-compat-hooks" hidden>
+      <button type="button" id="btn-capture-card">التقاط البطاقة</button>
+      <div id="card-preview" hidden>
+        <button type="button" id="btn-card-ok">اعتماد البطاقة</button>
+      </div>
+    </div>
+
+    <!-- الخطوة النشطة: التقاط السيلفي ومطابقة البطاقة -->
+    <div class="v-step" data-step="selfie">
+      <div class="verify-grid">
+        <!-- يمين: بطاقة الناخب المرجعية في قاعدة البيانات -->
+        <div class="intel-panel ref-panel">
+          <div class="intel-title">
+            <span>REFERENCE ID CARD</span>
+            <b>VERIFIED RECORD</b>
+          </div>
+          <div class="ref-person">
+            <img id="db-face-ref" src="${esc(faceRef)}" alt="صورة الوجه المسجّلة" crossorigin="anonymous" class="ref-avatar">
+            <div>
+              <b>${esc(voterName)}</b>
+              <span class="muted">${esc(voterGov)} · الميلاد: <code class="ltr">${esc(voterDob)}</code></span>
+              <span class="ai-badge" style="margin-top:6px"><i id="ai-engine-text">جارٍ تجهيز محرك البصمة العصبية…</i></span>
+            </div>
+          </div>
+
+          <div class="ref-card-wrap">
+            <img id="db-card-img" src="${esc(cardImg)}" alt="بطاقة الرقم القومي المسجّلة" crossorigin="anonymous" class="ref-card-img">
+          </div>
+
+          <div class="intel-grid">
+            <div class="intel-check safe">
+              <span>قراءة البطاقة</span>
+              <b>${icon('check-circle', 14)} مطابقة للسجل المدني</b>
+            </div>
+            <div class="intel-check info">
+              <span>الاستحقاق</span>
+              <b>${esc(election ? election.title : 'الانتخابات العامة')}</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- يسار: شاشة الكاميرا الفورية (بأسلوب Kashif Scanner) -->
+        <div class="scanner-frame camera-panel">
+          <div class="file-tab">LIVE / CAMERA</div>
+          <span class="corner-mark corner-one"></span>
+          <span class="corner-mark corner-two"></span>
+
+          <div class="scanner-topline">
+            <div>
+              <span class="status-dot" id="cam-dot"></span>
+              <b id="cam-status" class="cam-status">جارٍ تشغيل الكاميرا تلقائيًا…</b>
+            </div>
+            <span>BIOMETRIC // CAM-01</span>
+          </div>
+
+          <div id="verify-error" class="error-note" role="alert" hidden></div>
+
+          <div class="camera-meta-bar">
+            <span class="small"><b>حركات التحقق الحي:</b></span>
+            <ul id="challenge-list" class="challenge-chips">
+              <li data-code="blink" class="done">ارمش بعينيك</li>
+              <li data-code="smile" class="done">ابتسم قليلًا</li>
+              <li data-code="close" class="done">اقترب قليلًا من الكاميرا</li>
+            </ul>
+          </div>
+
+          <div class="camera-frame" id="camera-viewport">
+            <video id="video-selfie" autoplay playsinline muted></video>
+            <span class="frame-corner tl"></span>
+            <span class="frame-corner tr"></span>
+            <span class="frame-corner bl"></span>
+            <span class="frame-corner br"></span>
+            <div class="face-guide" id="face-guide-box">
+              <span id="face-guide-label">ضع وجهك داخل الإطار</span>
+            </div>
+            <div class="scanline" aria-hidden="true"></div>
+            <div class="liveness-meter" title="مؤشر التحقق الحي">
+              <span id="liveness-bar" style="width:100%"></span>
+            </div>
+          </div>
+
+          <!-- أزرار التحكم بالكاميرا -->
+          <div class="camera-controls">
+            <button type="button" id="btn-capture-selfie" class="sketch-button scan-button" style="margin-top:0">
+              ${icon('camera', 18)}
+              <span>التقاط الصورة الآن</span>
+            </button>
+            <div class="camera-sub-actions">
+              <button type="button" id="btn-start-camera" class="sketch-button btn-sm">
+                ${icon('refresh', 15)}
+                <span>تشغيل / إعادة فتح الكاميرا</span>
+              </button>
+              <button type="button" id="btn-sim-camera" class="sketch-button btn-sm">
+                ${icon('sparkle', 15)}
+                <span>الكاميرا التفاعلية الذكية</span>
+              </button>
+              <button type="button" id="btn-switch-cam" class="sketch-button btn-sm">
+                ${icon('camera', 15)}
+                <span>تبديل الكاميرا</span>
+              </button>
+              <button type="button" id="btn-use-selfie-file" class="sketch-button btn-sm">
+                ${icon('upload', 15)}
+                <span>رفع صورة سيلفي</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- معاينة الصورة الملتقطة واعتمادها -->
+          <div id="selfie-preview" class="captured-box" hidden>
+            <div class="intel-title" style="margin-bottom:8px">
+              <span>CAPTURED FRAME</span>
+              <b>جاهزة للمطابقة العصبية</b>
+            </div>
+            <img id="selfie-img" alt="صورة السيلفي الملتقطة">
+            <div class="captured-actions">
+              <button type="button" id="btn-selfie-ok" class="sketch-button scan-button" style="margin-top:0">
+                ${icon('check-circle', 18)}
+                <span>هذه صورتي — ابدأ المطابقة الآن</span>
+              </button>
+              <button type="button" id="btn-selfie-retake" class="sketch-button">
+                ${icon('refresh', 16)}
+                <span>إعادة الالتقاط</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- خطوة المعالجة -->
+    <div class="v-step" data-step="processing" hidden>
+      <div class="scanner-frame loading-stage">
+        <div class="file-tab">ANALYZING // AI</div>
+        <div class="scan-circle">
+          ${icon('face', 38)}
+        </div>
+        <h2>جارٍ تحليل البصمة البيومترية ومطابقة الوجه…</h2>
+        <p>نقارن 128 نقطة مميزة في الوجه مع صورة البطاقة المسجّلة ونتحقق من مؤشرات الحيوية.</p>
+        <ul id="progress-list" class="progress-list">
+          <li class="active">١. فحص بيانات البطاقة المسجّلة وصلاحية الرقم القومي</li>
+          <li>٢. تحليل إشارات الحياة ومقاومة الصور الثابتة</li>
+          <li>٣. استخراج البصمة العصبية للوجه (128-D) وحساب المسافة الإقليدية</li>
+          <li>٤. إصدار قرار التحقق وتوليد رمز الاقتراع السري</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- خطوة النتيجة -->
+    <div class="v-step" data-step="result" hidden>
+      <div class="scanner-frame" id="result-box"></div>
+    </div>
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ٤) صفحة الاقتراع السري */
+function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>STEP 03 // SECRET BALLOT</span>
+      <b>#${election ? election.id : '01'}</b>
+      <i>ZERO-LINK</i>
+    </div>
+    <h1>ورقة <span>الاقتراع السري</span></h1>
+    <p class="muted">${esc(election ? election.title : 'الانتخابات العامة')} — اختر مرشحًا واحدًا فقط ثم اضغط اعتماد الصوت.</p>
+  </section>
+
+  <div class="ballot-banner" style="margin-bottom:18px">
+    <div>
+      ${icon('lock', 18)}
+      <span><b>جلسة اقتراع معزولة:</b> تم التحقق من هوية <b>${esc(voter ? voter.full_name : 'الناخب')}</b> وفصلها عن بطاقة التصويت.</span>
+    </div>
+    ${kiosk ? '<span class="partial-badge">وضع لجنة الاقتراع المشتركة</span>' : '<span class="ai-badge">توقيع رقمي HMAC</span>'}
+  </div>
+
+  <div class="scanner-frame ballot-sheet">
+    <div class="file-tab">OFFICIAL // BALLOT</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>بطاقة اقتراع رسمية — اختر مرشحًا واحدًا</b></div>
+      <span>BALLOT // #${election ? election.id : '01'}</span>
+    </div>
+
+    <div id="vote-error" class="error-note" role="alert" hidden></div>
+
+    <form id="vote-form" data-election="${esc(election ? election.id : 1)}">
+      <div class="ballot-grid">
+        ${candidates.map((c, idx) => {
+          const photo = c.photo_url || candidateSvg(c, idx);
+          const symSvg = symbolIcon(c.symbol);
+          return `
+          <label class="ballot-card candidate" for="cand-${c.id}">
+            <input id="cand-${c.id}" type="radio" name="candidate_id" value="${esc(c.id)}" required>
+            <div class="ballot-card-inner">
+              <div class="ballot-top">
+                <span class="cc-number">#0${idx + 1}</span>
+                <span class="cc-symbol">${symSvg} <b>${esc(c.symbol || 'رمز')}</b></span>
+              </div>
+              <div class="ballot-person">
+                <img class="ballot-avatar" src="${esc(photo)}" alt="${esc(c.name)}" width="68" height="68">
+                <div>
+                  <strong class="ballot-name name">${esc(c.name)}</strong>
+                  <span class="ballot-role">${esc(c.title || c.role || 'مرشح معتمد')}</span>
+                </div>
+              </div>
+              <p class="ballot-program">${esc(c.bio || c.program || '')}</p>
+              <div class="ballot-select">
+                <span class="ballot-radio">${icon('check', 14)}</span>
+                <b>اختيار هذا المرشح</b>
+              </div>
+            </div>
+          </label>`;
+        }).join('')}
+      </div>
+
+      <div class="vote-actions">
+        <button type="submit" class="sketch-button scan-button">
+          ${icon('vote', 18)}
+          <span>اعتماد الصوت النهائي وإصدار الإيصال</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
+    <div class="modal-head">
+      <h3 id="confirm-title">تأكيد إيداع الصوت في الصندوق</h3>
+      <button type="button" class="sketch-button icon-btn" id="confirm-no" aria-label="إغلاق">${icon('close', 18)}</button>
+    </div>
+    <div class="modal-body confirm-body">
+      <div class="confirm-ic">${icon('vote', 28)}</div>
+      <p style="margin:0 0 8px;font-weight:700">أنت على وشك تسجيل صوتك النهائي لصالح المرشح:</p>
+      <div id="confirm-name" class="confirm-name">—</div>
+      <p class="muted small" style="margin-top:10px">لا يمكن التراجع أو تعديل الاختيار بعد إيداع الورقة في الصندوق.</p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="confirm-yes" class="sketch-button primary-button">نعم، سجّل صوتي</button>
+      <button type="button" class="sketch-button" data-close-modal>مراجعة الاختيار</button>
+    </div>
+  </dialog>
+  `;
+}
+
+/* ---------------------------------------------------------- ٥) صفحة إيصال التصويت */
+function receiptPage({ receipt, election, electionTitle, total = 0, castAt } = {}) {
+  const code = (typeof receipt === 'string' ? receipt : (receipt && (receipt.receipt_code || receipt.code))) || '—';
+  const time = castAt || (receipt && (receipt.cast_at || receipt.created_at)) || new Date().toISOString();
+  const title = electionTitle || (election && election.title) || (receipt && receipt.election_title) || 'الانتخابات العامة';
+
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>STEP 04 // DIGITAL RECEIPT</span>
+      <b>VERIFIED</b>
+      <i>RECORDED</i>
+    </div>
+    <h1>تم تسجيل <span>صوتك بنجاح</span></h1>
+    <p class="muted">احتفظ برقم الإيصال الرقمي للتحقق في أي وقت من أن صوتك محسوب ضمن الفرز النهائي.</p>
+  </section>
+
+  <div class="scanner-frame" style="max-width:740px;margin:0 auto 44px">
+    <div class="file-tab">RECEIPT // 04</div>
+    <div class="case-spine">BALLOT // CONFIRMED</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>إيصال إيداع رقمي موقّع — لا يكشف اختيارك</b></div>
+      <span>SOOT // RECEIPT</span>
+    </div>
+
+    <div class="result-card safe" style="padding-top:8px">
+      <div class="result-head">
+        <div>
+          <div class="result-badge-row">
+            <small>حالة الورقة الانتخابية</small>
+            <span class="ai-badge">${icon('check-circle', 13)} صوت محسوب ومؤمّن</span>
+          </div>
+          <h2>تم إيداع صوتك في الصندوق</h2>
+        </div>
+        <div class="score-circle">
+          <b>100%</b>
+          <span>SEALED</span>
+        </div>
+      </div>
+
+      <div class="receipt-code-block">
+        <span class="receipt-label">رقم الإيصال الرقمي الفريد (انسخه أو اطبعه)</span>
+        <div id="receipt-code" class="receipt-code mono ltr">${esc(code)}</div>
+      </div>
+
+      <div class="intel-panel">
+        <div class="intel-title">
+          <span>CRYPTOGRAPHIC METADATA</span>
+          <b>ZERO-KNOWLEDGE</b>
+        </div>
+        <div class="intel-grid">
+          <div class="intel-check safe">
+            <span>الاستحقاق الانتخابي</span>
+            <b>${esc(title)}</b>
+          </div>
+          <div class="intel-check info">
+            <span>وقت الإيداع (UTC)</span>
+            <b class="ltr mono">${esc(String(time).replace('T', ' ').slice(0, 19))}</b>
+          </div>
+          <div class="intel-check safe">
+            <span>ارتباط الهوية بالصوت</span>
+            <b>مفصول تمامًا (Zero-Link)</b>
+          </div>
+          <div class="intel-check info">
+            <span>إجمالي الأصوات بالصندوق</span>
+            <b>${total || 1} صوت محسوب</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipt-actions" style="margin-top:18px">
+        <button type="button" id="btn-copy" class="sketch-button primary-button">
+          ${icon('copy', 16)}
+          <span>نسخ رقم الإيصال</span>
+        </button>
+        <button type="button" onclick="window.print()" class="sketch-button">
+          ${icon('print', 16)}
+          <span>طباعة الإيصال</span>
+        </button>
+        <a class="sketch-button" href="/verify-receipt?code=${encodeURIComponent(code)}">
+          ${icon('search', 16)}
+          <span>تحقق من الإيصال في السجل</span>
+        </a>
+        <a class="sketch-button" href="/results">
+          ${icon('chart', 16)}
+          <span>مشاهدة النتائج المباشرة</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ٦) صفحة التحقق من إيصال */
+function receiptLookupPage({ code = '', result = null } = {}) {
+  const isFound = result && (result.ok || result.kind === 'found');
+  const castAt = result && (result.cast_at || (result.ballot && result.ballot.cast_at) || '');
+  const eTitle = result && (result.election_title || (result.election && result.election.title) || 'الانتخابات العامة');
+
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>AUDIT // RECEIPT VERIFIER</span>
+      <b>PUBLIC LEDGER</b>
+      <i>OPEN</i>
+    </div>
+    <h1>فحص <span>إيصال التصويت</span></h1>
+    <p class="muted">أدخل رقم الإيصال المكون من 10 أحرف وأرقام للتأكد من أن صوتك مسجّل ومحسوب داخل الصندوق.</p>
+  </section>
+
+  <div class="scanner-frame" style="max-width:740px;margin:0 auto 44px">
+    <div class="file-tab">VERIFY / RECEIPT</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>كاشف الإيصالات الرقمية في سجل الاقتراع</b></div>
+      <span>LEDGER // CHECK</span>
+    </div>
+
+    <form method="GET" action="/verify-receipt" class="input-stage" style="padding-top:6px">
+      <label for="code-input"><span>CODE</span> رقم الإيصال الرقمي</label>
+      <div class="row" style="gap:10px">
+        <input id="code-input" name="code" type="text" value="${esc(code)}" class="ltr mono" placeholder="ABCDE-23456" required style="flex:1">
+        <button type="submit" class="sketch-button primary-button" style="min-height:54px">
+          ${icon('search', 18)}
+          <span>افحص الآن</span>
+        </button>
+      </div>
+    </form>
+
+    ${code ? (isFound ? `
+      <div class="result-card safe">
+        <div class="result-head">
+          <div>
+            <div class="result-badge-row"><small>نتيجة الفحص في السجل</small><span class="ai-badge">موجود ومعتمد</span></div>
+            <h2>إيصال صالح — صوتك محسوب في الصندوق</h2>
+          </div>
+          <div class="score-circle"><b>✓</b><span>VALID</span></div>
+        </div>
+        <div class="intel-panel">
+          <div class="intel-title"><span>BALLOT RECORD</span><b class="ltr mono">${esc(code)}</b></div>
+          <div class="intel-grid">
+            <div class="intel-check safe">
+              <span>الاستحقاق الانتخابي</span>
+              <b>${esc(eTitle)}</b>
+            </div>
+            <div class="intel-check info">
+              <span>تاريخ ووقت الإيداع</span>
+              <b class="ltr mono">${esc(String(castAt).replace('T', ' ').slice(0, 19))}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    ` : `
+      <div class="result-card dangerous">
+        <div class="result-head">
+          <div>
+            <small>نتيجة الفحص في السجل</small>
+            <h2>الإيصال غير موجود في السجل</h2>
+          </div>
+          <div class="score-circle"><b>✕</b><span>NOT FOUND</span></div>
+        </div>
+        <div class="ai-analysis-block">
+          <p>لم نجد أي ورقة اقتراع تحمل الكود <code class="mono ltr">${esc(code)}</code>. تأكد من كتابة الحروف والأرقام والشرطة في المنتصف بشكل صحيح.</p>
+        </div>
+      </div>
+    `) : ''}
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ٧) صفحة النتائج */
+function resultsPage({ data = null, elections = [], selected = null, electionId = null } = {}) {
+  const active = (data && data.election) || selected || elections.find((e) => String(e.id) === String(electionId)) || elections[0] || null;
+  const cands = ((data && data.candidates) || (active && active.candidates) || []).slice().sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  const total = (data && data.total !== undefined) ? data.total : ((active && active.total_ballots) || cands.reduce((s, c) => s + (c.votes || 0), 0));
+
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>LIVE TALLY // RESULTS</span>
+      <b>#${active ? active.id : '01'}</b>
+      <i>VERIFIED COUNT</i>
+    </div>
+    <h1>النتائج <span>وفرز الأصوات</span></h1>
+    <p class="muted">فرز لحظي مباشر للأصوات المودعة في الصندوق والموثّقة بإيصالات رقمية.</p>
+  </section>
+
+  ${elections.length > 1 ? `
+  <div class="election-switcher">
+    ${elections.map((e) => `
+      <a class="sketch-button switch-chip ${active && String(e.id) === String(active.id) ? 'active' : ''}" href="/results?e=${e.id}">
+        <span>${esc(e.title)}</span>
+      </a>
+    `).join('')}
+  </div>` : ''}
+
+  ${active ? `
+  <div class="scanner-frame" style="margin-bottom:44px;transform:none">
+    <div class="file-tab">TALLY // #0${active.id}</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>${esc(active.title)} — ${esc(STATE_AR[active.state] || 'مفتوح')}</b></div>
+      <span>TOTAL // ${total} صوت محسوب</span>
+    </div>
+
+    <div class="result-head" style="margin-bottom:18px">
+      <div>
+        <small>إجمالي الأصوات الصحيحة في الصندوق</small>
+        <h2>${total} صوت محسوب</h2>
+      </div>
+      <a class="sketch-button primary-button" href="/register?e=${active.id}">شارك بصوتك الآن</a>
+    </div>
+
+    <div class="results-list">
+      ${cands.map((c, idx) => {
+        const votes = c.votes || 0;
+        const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
+        const photo = c.photo_url || candidateSvg(c, idx);
+        const isLeader = idx === 0 && votes > 0;
+        return `
+        <div class="result-row ${isLeader ? 'is-leader' : ''}">
+          <span class="result-rank">#${idx + 1}</span>
+          <img class="result-photo" src="${esc(photo)}" alt="${esc(c.name)}" width="56" height="56">
+          <div class="result-body">
+            <div class="result-top">
+              <div class="result-who">
+                <b>${esc(c.name)}</b>
+                ${isLeader ? '<span class="ai-badge">المتقدّم</span>' : ''}
+                <span class="result-meta">${esc(c.title || c.role || 'مرشح')} · الرمز: ${esc(c.symbol || '—')}</span>
+              </div>
+              <div class="result-nums">
+                <b>${pct}%</b>
+                <span>${votes} صوت</span>
+              </div>
+            </div>
+            <div class="score-track" style="margin:10px 0 0"><span style="width:${Math.max(pct, votes > 0 ? 6 : 0)}%;background:${isLeader ? 'var(--green)' : 'var(--cyan)'}"></span></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+  ` : `<div class="scanner-frame"><p>لا توجد استحقاقات انتخابية متاحة حاليًا.</p></div>`}
+  `;
+}
+
+/* ---------------------------------------------------------- ٨) صفحة حالة المراجعة اليدوية */
+function reviewStatusPage({ reviewId, review } = {}) {
+  const r = review || {};
+  const status = r.status || 'pending';
+  const rid = reviewId || r.id || '';
+
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>MANUAL REVIEW // COMMITTEE</span>
+      <b>#${esc(rid)}</b>
+      <i>${esc(status.toUpperCase())}</i>
+    </div>
+    <h1>حالة <span>طلب المراجعة</span></h1>
+  </section>
+
+  <div class="scanner-frame" id="review-card" data-review="${esc(rid)}" style="max-width:680px;margin:0 auto 44px">
+    <div class="file-tab">REVIEW // #${esc(rid)}</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>ملف مراجعة الهوية أمام لجنة الإشراف</b></div>
+      <span>CASE // #${esc(rid)}</span>
+    </div>
+
+    ${status === 'approved' ? `
+      <div class="result-card safe">
+        <div class="result-head">
+          <div><small>قرار لجنة الإشراف</small><h2>تمت الموافقة على هويتك</h2></div>
+          <div class="score-circle"><b>✓</b><span>APPROVED</span></div>
+        </div>
+        <p style="margin:12px 0">اعتمدت لجنة الإشراف مطابقة هويتك يدويًا. اضغط الزر بالأسفل لاستلام رمز الاقتراع السري والتصويت فورًا.</p>
+        <button type="button" id="btn-claim-token" class="sketch-button scan-button">استلام رمز الاقتراع والتصويت الآن</button>
+      </div>
+    ` : status === 'rejected' ? `
+      <div class="result-card dangerous">
+        <div class="result-head">
+          <div><small>قرار لجنة الإشراف</small><h2>تم رفض طلب المطابقة</h2></div>
+          <div class="score-circle"><b>✕</b><span>REJECTED</span></div>
+        </div>
+        <p style="margin:12px 0">تعذّر اعتماد المطابقة من قِبل اللجنة. يمكنك إعادة المحاولة بصورة أوضح.</p>
+        <a class="sketch-button primary-button" href="/verify">إعادة التحقق بالكاميرا</a>
+      </div>
+    ` : `
+      <div class="result-card suspicious">
+        <div class="result-head">
+          <div><small>حالة الطلب الآن</small><h2>قيد المراجعة اليدوية من اللجنة</h2></div>
+          <div class="score-circle"><b>…</b><span>PENDING</span></div>
+        </div>
+        <p style="margin:12px 0">تُراجع اللجنة الصورتين الآن. حدّث هذه الصفحة بعد قليل لمتابعة القرار.</p>
+        <button type="button" onclick="location.reload()" class="sketch-button">${icon('refresh', 16)} تحديث الحالة</button>
+      </div>
+    `}
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ٩) صفحة بطاقات التجربة */
+function cardsDemoPage() {
+  return `
+  <section class="page-head">
+    <div class="case-kicker">
+      <span>TEST LAB // SAMPLE ID CARDS</span>
+      <b>3 CARDS</b>
+      <i>READY</i>
+    </div>
+    <h1>بطاقات <span>التجربة الجاهزة</span></h1>
+    <p class="muted">استخدم أي بطاقة من البطاقات التالية لتجربة التسجيل والتحقق بالكاميرا أو المحاكي الذكي فورًا.</p>
+  </section>
+
+  <div class="cards-grid" style="margin-bottom:44px">
+    ${DEMO_CARDS.map((c) => `
+      <article class="scanner-frame" style="min-height:auto;transform:none;padding:24px">
+        <div class="file-tab">${esc(c.badge)}</div>
+        <img src="${esc(c.cardImg)}" alt="بطاقة ${esc(c.name)}" class="ref-card-img" style="margin-bottom:14px">
+        <h3 style="margin:0 0 6px;font-size:18px;font-weight:900">${esc(c.name)}</h3>
+        <div class="intel-grid" style="margin-bottom:14px">
+          <div class="intel-check info"><span>الرقم القومي</span><b class="ltr mono">${esc(c.nid)}</b></div>
+          <div class="intel-check safe"><span>الميلاد والمحافظة</span><b>${esc(c.dob)} · ${esc(c.gov)}</b></div>
+        </div>
+        <a class="sketch-button scan-button" href="/register">استخدم هذه البطاقة في التسجيل</a>
+      </article>
+    `).join('')}
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ١٠) صفحة كشك الاقتراع /vote-here */
+function kioskPage({ elections = [], done = false } = {}) {
+  const active = elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'الانتخابات العامة' };
+  return `
+  <div class="scanner-frame" style="max-width:680px;margin:28px auto 44px;text-align:center">
+    <div class="file-tab">KIOSK // MODE</div>
+    <div class="scanner-topline">
+      <div><span class="status-dot"></span><b>محطة اقتراع اللجان المشتركة (Kiosk Mode)</b></div>
+      <span>KIOSK // #01</span>
+    </div>
+    ${done ? `<div class="advice-note" style="margin-bottom:16px"><b>✓ تم تسجيل صوت الناخب السابق بنجاح ومسح الجلسة بالكامل.</b><p>الجهاز جاهز الآن للناخب التالي.</p></div>` : ''}
+    <h1 style="font-size:38px;margin:12px 0">${esc(active.title)}</h1>
+    <p class="muted" style="margin-bottom:22px">تمسح هذه المحطة جلسة كل ناخب تلقائيًا فور إيداع صوته لضمان السرية التامة.</p>
+    <a class="sketch-button scan-button" href="/register?e=${active.id}&kiosk=1">ابدأ تصويت ناخب جديد الآن</a>
+  </div>
+  `;
+}
+
+/* ---------------------------------------------------------- ١١) صفحة الخطأ */
+function errorPage(message = 'الصفحة غير موجودة') {
+  return `
+  <div class="scanner-frame" style="max-width:620px;margin:32px auto 44px;text-align:center">
+    <div class="file-tab">ERROR // NOTICE</div>
+    <h1 style="font-size:34px;margin:14px 0">تنبيه من المنصة</h1>
+    <p class="muted" style="margin-bottom:20px">${esc(message)}</p>
+    <a class="sketch-button primary-button" href="/">العودة إلى الصفحة الرئيسية</a>
+  </div>
+  `;
 }
 
 module.exports = {
-  landing, registerPage, otpPage, verifyPage, votePage,
-  receiptPage, receiptLookupPage, resultsPage, reviewStatusPage,
-  kioskPage, errorPage,
+  landing,
+  registerPage,
+  otpPage,
+  verifyPage,
+  votePage,
+  receiptPage,
+  receiptLookupPage,
+  verifyReceiptPage: receiptLookupPage,
+  resultsPage,
+  reviewStatusPage,
+  cardsDemoPage,
+  kioskPage,
+  voteHerePage: kioskPage,
+  errorPage,
 };

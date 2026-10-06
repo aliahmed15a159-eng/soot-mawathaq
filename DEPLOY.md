@@ -1,4 +1,4 @@
-# نشر منصة «صوت موثّق» على GitHub و Vercel
+# نشر منصة «صوت» على GitHub و Vercel
 
 المشروع مجهّز بالكامل بملف `vercel.json` ومدخل Serverless (`api/index.js`) ومستودع Git جاهز للرفع المباشر.
 

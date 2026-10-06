@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>العرض التقديمي — صوت موثّق | Biometric Ballot Lab</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preload" href="/assets/cairo-sub.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Cairo';
+      src: url('/assets/cairo-sub.woff2') format('woff2');
+      font-weight: 400 900;
+      font-display: swap;
+    }
+    :root {
+      --ink: #10283f;
+      --paper: #f7f4ea;
+      --muted: #68727b;
+      --red: #ff4453;
+      --yellow: #e6bd5d;
+      --cyan: #58d5cc;
+      --green: #43bf86;
+      --navy: #0c2237;
+      --font-cairo: 'Cairo', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Courier New', ui-monospace, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(90deg, transparent 68px, rgba(255,68,83,.17) 69px, rgba(255,68,83,.17) 70px, transparent 71px),
+        linear-gradient(rgba(16,40,63,.045) 1px, transparent 1px),
+        radial-gradient(rgba(16,40,63,.12) .7px, transparent .7px);
+      background-size: 100% 100%, 100% 29px, 16px 16px;
+      color: var(--ink);
+      font-family: var(--font-cairo);
+      overflow-x: hidden;
+    }
+
+    /* شريط التحكم العلوي */
+    .deck-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 24px;
+      background: rgba(247, 244, 234, 0.94);
+      backdrop-filter: blur(6px);
+      border-bottom: 3px solid var(--navy);
+      flex-wrap: wrap;
+    }
+    .deck-brand {
+      display: inline-flex;
+      align-items: stretch;
+      height: 44px;
+      color: var(--ink);
+      text-decoration: none;
+      border: 3px solid var(--ink);
+      background: #fff;
+      box-shadow: 4px 4px 0 var(--cyan);
+      transform: rotate(-1deg);
+    }
+    .deck-brand > b {
+      width: 44px;
+      display: grid;
+      place-items: center;
+      background: var(--navy);
+      color: #fff;
+      font: 900 17px var(--font-mono);
+      border-left: 3px solid var(--ink);
+    }
+    .deck-brand > span {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2px 10px;
+    }
+    .deck-brand strong { font-size: 15px; line-height: 1; font-weight: 900; }
+    .deck-brand strong::first-letter { color: var(--red); }
+    .deck-brand small { font: 700 7px var(--font-mono); color: var(--muted); margin-top: 3px; }
+
+    .deck-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sketch-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 2.5px solid var(--ink);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 900;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--ink);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .sketch-btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+    .sketch-btn.primary { background: var(--red); color: #fff; box-shadow: 4px 4px 0 var(--navy); }
+    .sketch-btn.navy { background: var(--navy); color: #fff; box-shadow: 4px 4px 0 var(--cyan); }
+    .sketch-btn.yellow { background: var(--yellow); color: var(--navy); }
+
+    .slide-counter {
+      padding: 6px 12px;
+      border: 2.5px solid var(--ink);
+      background: var(--yellow);
+      font: 900 13px var(--font-mono);
+      direction: ltr;
+    }
+
+    /* مسرح الشرائح */
+    .deck-stage {
+      width: min(1180px, calc(100% - 32px));
+      margin: 24px auto 18px;
+    }
+
+    .slide {
+      display: none;
+      position: relative;
+      min-height: 610px;
+      padding: 34px 40px 38px;
+      background: linear-gradient(145deg, #f2f0e8, #fffdf6);
+      border: 4px solid var(--navy);
+      border-radius: 4px 10px 6px 8px;
+      box-shadow: 11px 12px 0 var(--navy), 17px 18px 0 rgba(88,213,204,.75);
+      animation: slideIn .28s ease-out both;
+    }
+    .slide.active { display: flex; flex-direction: column; justify-content: space-between; }
+    .slide::before {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 12px;
+      border: 1.5px dashed rgba(16,40,63,.3);
+    }
+    .slide > * { position: relative; z-index: 1; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .file-tab {
+      position: absolute !important;
+      z-index: 3 !important;
+      left: 28px;
+      top: -28px;
+      padding: 6px 16px;
+      border: 3px solid var(--navy);
+      border-bottom: 0;
+      background: var(--yellow);
+      color: var(--navy);
+      font: 900 10px var(--font-mono);
+      letter-spacing: .08em;
+      transform: rotate(-1deg);
+    }
+
+    .slide-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -8px -12px 22px;
+      padding: 9px 16px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .slide-topline .dot-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid #fff;
+    }
+    .slide-topline code {
+      font: 800 10px var(--font-mono);
+      color: var(--cyan);
+      letter-spacing: .06em;
+    }
+
+    .case-kicker {
+      width: max-content;
+      display: inline-flex;
+      align-items: center;
+      border: 2px solid var(--ink);
+      background: #fff;
+      font: 800 10px var(--font-mono);
+      transform: rotate(-1deg);
+      margin-bottom: 10px;
+    }
+    .case-kicker span, .case-kicker b, .case-kicker i { padding: 5px 9px; font-style: normal; }
+    .case-kicker b { border-inline: 2px solid var(--ink); background: var(--navy); color: #fff; }
+    .case-kicker i { color: #087451; }
+
+    .slide h1 {
+      margin: 8px 0 14px;
+      font-size: clamp(36px, 4.8vw, 62px);
+      line-height: 1.08;
+      font-weight: 900;
+    }
+    .slide h2 {
+      margin: 4px 0 14px;
+      font-size: clamp(26px, 3.3vw, 40px);
+      line-height: 1.15;
+      font-weight: 900;
+    }
+    .slide h1 span, .slide h2 span {
+      color: var(--red);
+      position: relative;
+    }
+    .slide h1 span::after, .slide h2 span::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -5px;
+      width: 105%;
+      height: 6px;
+      border-top: 4px solid var(--red);
+      border-radius: 50%;
+    }
+    .lead {
+      font-size: 17px;
+      line-height: 1.85;
+      font-weight: 700;
+      color: #243b53;
+      margin: 0 0 18px;
+      max-width: 900px;
+    }
+
+    /* شبكات البطاقات داخل الشرائح */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    .box {
+      padding: 16px 18px;
+      border: 2.5px solid var(--ink);
+      background: #fff;
+      box-shadow: 5px 5px 0 var(--navy);
+    }
+    .box.cyan { background: #eef8f6; box-shadow: 5px 5px 0 var(--cyan); }
+    .box.yellow { background: #fff8cc; box-shadow: 5px 5px 0 var(--yellow); }
+    .box.red { background: #ffe8ea; box-shadow: 5px 5px 0 var(--red); }
+    .box.navy { background: var(--navy); color: #fff; box-shadow: 5px 5px 0 var(--cyan); }
+
+    .box-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1.5px solid var(--ink);
+      background: var(--yellow);
+      color: var(--navy);
+      font: 900 10px var(--font-mono);
+      margin-bottom: 8px;
+    }
+    .box h3 { margin: 4px 0 8px; font-size: 18px; font-weight: 900; }
+    .box p { margin: 0; font-size: 13.5px; line-height: 1.7; font-weight: 600; }
+    .box ul { margin: 8px 0 0; padding-right: 18px; font-size: 13.5px; line-height: 1.8; font-weight: 700; }
+
+    .code-block {
+      direction: ltr;
+      text-align: left;
+      padding: 14px 16px;
+      background: var(--navy);
+      color: #e2f1f8;
+      border: 2.5px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--cyan);
+      font: 700 13px/1.65 var(--font-mono);
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+    .code-block .comment { color: var(--yellow); }
+    .code-block .cmd { color: var(--cyan); }
+
+    .step-badge {
+      width: 40px;
+      height: 40px;
+      display: inline-grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      background: var(--yellow);
+      color: var(--navy);
+      font: 900 15px var(--font-mono);
+      transform: rotate(-3deg);
+      margin-bottom: 8px;
+    }
+
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 22px;
+      padding-top: 12px;
+      border-top: 2px dashed rgba(16,40,63,.28);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+    .slide-footer b { font-family: var(--font-mono); color: var(--navy); }
+
+    /* شريط الشرائح المصغّر بالأسفل */
+    .slide-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 14px auto 34px;
+      width: min(1180px, calc(100% - 32px));
+    }
+    .dot-btn {
+      padding: 6px 11px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      font: 900 11px var(--font-cairo);
+      cursor: pointer;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+    .dot-btn.active {
+      background: var(--navy);
+      color: #fff;
+      box-shadow: 3px 3px 0 var(--cyan);
+    }
+
+    table.slide-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 2.5px solid var(--ink);
+      font-size: 13px;
+    }
+    table.slide-table th, table.slide-table td {
+      padding: 9px 12px;
+      border: 1.5px solid var(--ink);
+      text-align: right;
+      font-weight: 700;
+    }
+    table.slide-table th {
+      background: var(--navy);
+      color: #fff;
+      font-weight: 900;
+    }
+    .ltr { direction: ltr; unicode-bidi: isolate; font-family: var(--font-mono); }
+
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .slide { padding: 24px 18px; min-height: auto; }
+    }
+
+    @media print {
+      .deck-topbar, .slide-dots { display: none !important; }
+      .deck-stage { width: 100%; margin: 0; }
+      .slide {
+        display: flex !important;
+        page-break-after: always;
+        break-after: page;
+        box-shadow: none;
+        margin-bottom: 20px;
+        min-height: 92vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- شريط التحكم العلوي للعرض التقديمي -->
+  <header class="deck-topbar">
+    <a class="deck-brand" href="/">
+      <b>صـ</b>
+      <span>
+        <strong>صوت موثّق</strong>
+        <small>PRESENTATION DECK // 12 SLIDES</small>
+      </span>
+    </a>
+
+    <div class="deck-controls">
+      <button type="button" class="sketch-btn" id="btn-prev" title="الشريحة السابقة (السهم الأيمن)">→ السابقة</button>
+      <span class="slide-counter" id="slide-counter">01 / 12</span>
+      <button type="button" class="sketch-btn primary" id="btn-next" title="الشريحة التالية (السهم الأيسر أو مسافة)">التالية ←</button>
+      <button type="button" class="sketch-btn yellow" id="btn-fullscreen">ملء الشاشة ⛶</button>
+      <button type="button" class="sketch-btn" onclick="window.print()">طباعة / PDF 🖨️</button>
+      <a class="sketch-btn navy" href="/soot-mawathaq-presentation.pptx" download>تحميل PowerPoint (.pptx) ⬇</a>
+      <a class="sketch-btn" href="/">العودة للموقع 🏠</a>
+    </div>
+  </header>
+
+  <main class="deck-stage" id="deck-stage">
+
+    <!-- ==================== الشريحة 1: الغلاف ==================== -->
+    <section class="slide active" data-slide="1">
+      <div class="file-tab">SLIDE 01 // COVER</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>العرض التقديمي الشامل لمنصة «صوت موثّق»</b></div>
+          <code>SOOT // BIOMETRIC BALLOT LAB // 2026</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>PROJECT DOSSIER</span>
+          <b>#EG-2026</b>
+          <i>VERIFIED ELECTRONIC VOTING</i>
+        </div>
+
+        <h1>صوت موثّق<br><span>من هويتك .. إلى صوتك</span></h1>
+        <p class="lead">
+          منصة تصويت إلكتروني موثّقة بالتحقق البيومتري الحي من الوجه والبطاقة القومية،
+          تفصل بشكل جذري وكامل بين <b>مسار التحقق من الهوية</b> و<b>مسار ورقة الاقتراع السري</b>،
+          مع إيصال رقمي مشفّر قابل للتحقق العلني.
+        </p>
+
+        <div class="grid-3" style="margin-top:24px">
+          <div class="box cyan">
+            <span class="box-tag">BIOMETRIC AI</span>
+            <h3>بصمة وجه عصبية 128-D</h3>
+            <p>مطابقة حية لوجه الناخب عبر الكاميرا مع صورة بطاقة الرقم القومي المسجّلة وكشف الحياة.</p>
+          </div>
+          <div class="box yellow">
+            <span class="box-tag">ZERO-LINK PRIVACY</span>
+            <h3>سرية اقتراع مطلقة</h3>
+            <p>فصل معماري كامل بين جدول الناخبين وجدول الأصوات بحيث يستحيل ربط الصوت بصاحبه.</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">INSTANT RUN</span>
+            <h3>تشغيل فوري بدون تعقيد</h3>
+            <p>يعمل بملف خادم Node.js قياسي بدون مكتبات خارجية في وضع التجربة أو مع Supabase PostgreSQL.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>إعداد وتطوير: مشروع صوت موثّق للتصويت الإلكتروني</span>
+        <b>SLIDE 01 / 12 — OVERVIEW</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 2: المشكلة والهدف ==================== -->
+    <section class="slide" data-slide="2">
+      <div class="file-tab">SLIDE 02 // PROBLEM &amp; GOAL</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>المعضلة الأساسية في التصويت الإلكتروني وكيف نحلها</b></div>
+          <code>CHALLENGE // SECURITY VS PRIVACY</code>
+        </div>
+
+        <div class="case-kicker"><span>THE DILEMMA</span><b>WHY SOOT?</b><i>CORE PROBLEM</i></div>
+        <h2>كيف نضمن <span>هوية حقيقية</span> مع <span>سرية مطلقة</span>؟</h2>
+        <p class="lead">
+          تواجه أنظمة التصويت الرقمي التقليدية معضلة مزدوجة: إذا شدّدت الرقابة على الهوية كشفت من صوّت لمن، وإذا أخفت الهوية سمحت بالتصويت المكرر أو انتحال الشخصية.
+        </p>
+
+        <div class="grid-2">
+          <div class="box red">
+            <span class="box-tag">CHALLENGE 01 // الهوية</span>
+            <h3>مخاطر التزوير وانتحال الشخصية</h3>
+            <ul>
+              <li>استخدام أرقام قومية وهمية أو غير متوافقة مع تاريخ الميلاد والمحافظة.</li>
+              <li>محاولة التصويت بصورة شخص آخر أو رفع صورة ثابتة أمام الكاميرا.</li>
+              <li>محاولة التصويت أكثر من مرة بنفس الرقم القومي.</li>
+            </ul>
+          </div>
+          <div class="box cyan">
+            <span class="box-tag">CHALLENGE 02 // الخصوصية</span>
+            <h3>مخاطر كشف سرية الاختيار الانتخابي</h3>
+            <ul>
+              <li>تخزين `voter_id` بجانب `candidate_id` في نفس الجدول يكشف اختيار الناخب لمدير القاعدة.</li>
+              <li>غياب وسيلة يتأكد بها الناخب من أن صوته حُسب فعلاً دون كشف اختياره.</li>
+              <li>الحاجة إلى سجل تدقيق أمني شفاف لا ينتهك خصوصية المقترعين.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>الهدف: صوت واحد لكل هوية حقيقية + استحالة ربط الهوية بالاختيار الانتخابي</span>
+        <b>SLIDE 02 / 12 — THE PROBLEM</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 3: الركائز الأربع للحل ==================== -->
+    <section class="slide" data-slide="3">
+      <div class="file-tab">SLIDE 03 // CORE PILLARS</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>الركائز الأربع لمنصة «صوت موثّق»</b></div>
+          <code>ARCHITECTURE // 4 PILLARS</code>
+        </div>
+
+        <div class="case-kicker"><span>SOLUTION</span><b>4 PILLARS</b><i>END-TO-END TRUST</i></div>
+        <h2>الحل الهندسي في <span>أربع ركائز متكاملة</span></h2>
+
+        <div class="grid-4" style="margin-top:18px">
+          <div class="box">
+            <span class="step-badge">01</span>
+            <h3>فحص الرقم القومي والاسم العربي</h3>
+            <p>تحليل ذكي للـ 14 رقمًا (القرن، الميلاد، المحافظة، النوع) ومطابقة الأسماء العربية المركبة بدقة تزيد عن 95%.</p>
+          </div>
+          <div class="box cyan">
+            <span class="step-badge">02</span>
+            <h3>تحقق بيومتري حي بالكاميرا</h3>
+            <p>استخراج 128 نقطة مميزة للوجه عبر الشبكات العصبية ومقارنتها بصورة البطاقة مع اختبار حركات الحياة.</p>
+          </div>
+          <div class="box yellow">
+            <span class="step-badge">03</span>
+            <h3>رمز اقتراع معزول يُحرق فورًا</h3>
+            <p>إصدار رمز سري مؤقت (One-Time Token) يُستهلك ذريًا عند التصويت دون كتابة هوية الناخب في جدول الأصوات.</p>
+          </div>
+          <div class="box">
+            <span class="step-badge">04</span>
+            <h3>إيصال رقمي وسجل تدقيق</h3>
+            <p>يحصل كل مقترع على كود إيصال فريد (`XXXXX-XXXXX`) للتحقق العلني من احتساب صوته في أي وقت.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>كل ركيزة تعمل كطبقة حماية مستقلة تسلّم التي تليها بأقل قدر من البيانات</span>
+        <b>SLIDE 03 / 12 — SOLUTION PILLARS</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 4: رحلة الناخب ==================== -->
+    <section class="slide" data-slide="4">
+      <div class="file-tab">SLIDE 04 // VOTER JOURNEY</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>طريقة عمل الموقع — رحلة الناخب من البداية للنهاية</b></div>
+          <code>WORKFLOW // 4 STEPS</code>
+        </div>
+
+        <div class="case-kicker"><span>USER FLOW</span><b>STEP BY STEP</b><i>HOW IT WORKS</i></div>
+        <h2>رحلة الناخب عبر <span>٤ محطات متسلسلة</span></h2>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="box">
+            <span class="box-tag">STEP 01 // /register (+ /otp)</span>
+            <h3>١. تسجيل البيانات وفحص الرقم القومي</h3>
+            <p>إدخال الاسم رباعيًا والرقم القومي (أو اختيار بطاقة تجربة جاهزة بضغطة زر). يستخرج النظام تاريخ الميلاد والمحافظة تلقائيًا، ويتحقق من كود الموبايل إذا كان مفعّلًا.</p>
+          </div>
+          <div class="box cyan">
+            <span class="box-tag">STEP 02 // /verify</span>
+            <h3>٢. مطابقة الوجه بالكاميرا الحية</h3>
+            <p>يعرض النظام بطاقة الناخب المرجعية ويفتح الكاميرا مباشرة. يلتقط الناخب سيلفي، فتتم مطابقة البصمة العصبية (128-D) وفحص الحيوية وإصدار القرار فورًا.</p>
+          </div>
+          <div class="box yellow">
+            <span class="box-tag">STEP 03 // /vote</span>
+            <h3>٣. كبسولة الاقتراع السري المعزولة</h3>
+            <p>عرض المرشحين بتصميم متساوٍ تمامًا. يختار الناخب مرشحه ويؤكد القرار في نافذة التأكيد، فيُحرق رمز الاقتراع ويُودع الصوت في الصندوق.</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">STEP 04 // /receipt &amp; /verify-receipt</span>
+            <h3>٤. استلام وفحص الإيصال الرقمي</h3>
+            <p>يظهر رقم الإيصال الفريد مع إمكانية نسخه أو طباعته، وفحصه في صفحة التحقق من الإيصالات أو متابعة لوحة النتائج المباشرة (`/results`).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>زمن الرحلة الكاملة للناخب: أقل من 60 ثانية</span>
+        <b>SLIDE 04 / 12 — VOTER JOURNEY</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 5: الرقم القومي والمطابقة العربية ==================== -->
+    <section class="slide" data-slide="5">
+      <div class="file-tab">SLIDE 05 // NID &amp; ARABIC NLP</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>التحقق الذكي من الرقم القومي المصري ومطابقة الأسماء العربية</b></div>
+          <code>LIB/SECURITY.JS + LIB/ARABIC.JS</code>
+        </div>
+
+        <div class="case-kicker"><span>IDENTITY PARSER</span><b>14 DIGITS</b><i>ARABIC MATCHING</i></div>
+        <h2>تشريح <span>الرقم القومي المصري</span> ومطابقة الاسم</h2>
+
+        <div class="code-block">
+          <span class="comment">// مثال الرقم القومي التجريبي الأساسي: 31005292501518</span><br>
+          [3]        → القرن الحادي والعشرون (2000–2099) | [2] للقرن العشرين (1900–1999)<br>
+          [10 05 29] → تاريخ الميلاد: 2010-05-29 (يُستخرج ويُطابق تلقائيًا)<br>
+          [25]       → كود المحافظة: 25 = أسيوط (01 القاهرة · 21 الجيزة · 02 الإسكندرية...)<br>
+          [015]      → المسلسل المدني للمولود<br>
+          [1]        → النوع: فردي = ذكر | زوجي = أنثى &nbsp;&nbsp;|&nbsp;&nbsp; [8] → رقم التحقق
+        </div>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="box cyan">
+            <span class="box-tag">ARABIC NORMALIZATION</span>
+            <h3>محرك مطابقة الأسماء العربية المركّبة</h3>
+            <p>يعالج الاختلافات الإملائية الشائعة في الكتابة العربية تلقائيًا:</p>
+            <ul>
+              <li>توحيد الهمزات والياء والتاء المربوطة (`أ/إ/آ ← ا`، `ى ← ي`، `ة ← ه`).</li>
+              <li>دمج ومطابقة الأسماء المركبة: <b>«عبد الرحمن» ↔ «عبدالرحمن» = 95.3%</b>.</li>
+              <li>رفض الأسماء المختلفة تمامًا حتى لو تشابه الاسم الأول.</li>
+            </ul>
+          </div>
+          <div class="box">
+            <span class="box-tag">CRYPTOGRAPHIC HASH</span>
+            <h3>تشفير الرقم القومي (HMAC-SHA256)</h3>
+            <p>لا يُحفظ الرقم القومي كنص صريح في سجل الناخبين، بل يُشتق منه معرّف مشفّر مع ملح سري (`IDENTITY_SALT`):</p>
+            <div class="code-block" style="margin-top:10px;font-size:12px">
+              identity_hash = SHA256(IDENTITY_SALT + ":" + national_id)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>يرفض النظام فورًا أي رقم قومي غير متوافق مع تاريخ الميلاد أو كود المحافظة</span>
+        <b>SLIDE 05 / 12 — NATIONAL ID &amp; ARABIC ENGINE</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 6: الكاميرا والذكاء الاصطناعي ==================== -->
+    <section class="slide" data-slide="6">
+      <div class="file-tab">SLIDE 06 // CAMERA &amp; AI ENGINE</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>كيف تعمل الكاميرا ومطابقة بصمة الوجه العصبية (128-D)؟</b></div>
+          <code>PUBLIC/APP.JS + LIB/VERIFICATION.JS</code>
+        </div>
+
+        <div class="case-kicker"><span>BIOMETRIC ENGINE</span><b>128-D NEURAL</b><i>SMART CAMERA</i></div>
+        <h2>منظومة الكاميرا <span>ومطابقة الوجه العصبية</span></h2>
+
+        <div class="grid-3" style="margin-top:14px">
+          <div class="box cyan">
+            <span class="box-tag">128-D DESCRIPTOR</span>
+            <h3>البصمة العصبية للوجه</h3>
+            <p>تعمل مكتبة `face-api` وأوزان الشبكات العصبية محليًا من `/models` لاستخراج متجه من <b>128 رقمًا عشريًا</b> يمثل هندسة ملامح الوجه بدقة، ومقارنته بصورة البطاقة عبر المسافة الإقليدية.</p>
+          </div>
+          <div class="box yellow">
+            <span class="box-tag">PROGRESSIVE CAMERA</span>
+            <h3>التدرّج الذكي لفتح الكاميرا</h3>
+            <p>يبدأ بطلب الكاميرا الأمامية بدقة مثالية `640×480`، ثم يتدرج تلقائيًا لقيود مرنة أو البحث عبر `enumerateDevices`، مع ترويسة `Permissions-Policy: camera=*` لدعم جميع المتصفحات.</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">SMART SIMULATOR</span>
+            <h3>المحاكي التفاعلي الذكي</h3>
+            <p>في حال عدم وجود كاميرا فعلية على الجهاز أو حظر الإذن، يُفعّل النظام تلقائيًا بث فيديو حي (`canvas.captureStream`) لصورة الناخب بحركة طبيعية لإتمام التجربة بسلاسة.</p>
+          </div>
+        </div>
+
+        <div class="box navy" style="margin-top:16px">
+          <span class="box-tag">ANTI-SPOOFING &amp; QUALITY GATES</span>
+          <h3 style="color:#fff;margin-bottom:6px">طبقات الحماية من التحايل على الكاميرا</h3>
+          <p style="color:#dfeaf1">
+            ١. <b>كشف الحياة (Liveness):</b> ٣ حركات عشوائية (رمش العين، الابتسامة، الاقتراب، الالتفات) ·
+            ٢. <b>فحص جودة الإضاءة والحدة:</b> قياس السطوع والتباين ومعامل لابلاس ·
+            ٣. <b>منع إعادة الاستخدام:</b> رفض فوري إذا تطابقت صورة السيلفي حرفيًا مع ملف البطاقة.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>جميع أوزان الذكاء الاصطناعي مضمّنة محليًا في /public/models وتعمل بدون إنترنت خارجي</span>
+        <b>SLIDE 06 / 12 — CAMERA &amp; NEURAL FACE MATCH</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 7: محرك القرار الثلاثي ==================== -->
+    <section class="slide" data-slide="7">
+      <div class="file-tab">SLIDE 07 // 3-WAY DECISION</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>محرك القرار الثلاثي في التحقق من الهوية</b></div>
+          <code>DECIDE_VERIFICATION // THRESHOLDS</code>
+        </div>
+
+        <div class="case-kicker"><span>DECISION MATRIX</span><b>3 OUTCOMES</b><i>FAIR &amp; ACCURATE</i></div>
+        <h2>كيف يتخذ النظام <span>قرار المطابقة؟</span></h2>
+        <p class="lead">
+          بدلًا من القرار الثنائي الجامد الذي قد يحرم ناخبًا حقيقيًا بسبب إضاءة متوسطة، يطبّق «صوت موثّق» مصفوفة قرار ثلاثية قابلة للضبط من ملف الإعدادات:
+        </p>
+
+        <div class="grid-3">
+          <div class="box cyan">
+            <span class="box-tag">APPROVED // ≥ 72%</span>
+            <h3>١. قبول فوري وآلي</h3>
+            <p>عندما تكون درجة المطابقة العصبية والإدراكية <b>72% فأكثر</b> مع نجاح فحص الحياة وجودة الصورة:</p>
+            <ul>
+              <li>تُعتمد هوية الناخب فورًا.</li>
+              <li>يصدر رمز اقتراع سري صالح لمدة 15 دقيقة.</li>
+              <li>ينتقل مباشرة لصفحة `/vote`.</li>
+            </ul>
+          </div>
+
+          <div class="box yellow">
+            <span class="box-tag">MANUAL REVIEW // 50% – 72%</span>
+            <h3>٢. تحويل للمراجعة البشرية</h3>
+            <p>عندما تقع النتيجة في <b>المنطقة الرمادية (بين 50% و72%)</b>:</p>
+            <ul>
+              <li>يُحفظ الطلب مؤقتًا للجنة الإشراف.</li>
+              <li>يتابع الناخب حالة طلبه في `/review-status`.</li>
+              <li>فور موافقة اللجنة يستلم رمز الاقتراع ويصوّت.</li>
+            </ul>
+          </div>
+
+          <div class="box red">
+            <span class="box-tag">REJECTED // &lt; 50%</span>
+            <h3>٣. رفض مع إمكانية الإعادة</h3>
+            <p>عندما تقل درجة التشابه عن <b>50%</b> أو يفشل فحص الوجه:</p>
+            <ul>
+              <li>يُرفض إصدار رمز الاقتراع.</li>
+              <li>تظهر أسباب الرفض بوضوح للناخب.</li>
+              <li>يمكنه إعادة الالتقاط في إضاءة أفضل.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>تُحذف صور المراجعة المؤقتة تلقائيًا بعد انتهاء فترة الاحتفاظ (24 ساعة افتراضيًا)</span>
+        <b>SLIDE 07 / 12 — DECISION ENGINE</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 8: المعمارية الأمنية وعزل الصوت ==================== -->
+    <section class="slide" data-slide="8">
+      <div class="file-tab">SLIDE 08 // ZERO-LINK SECURITY</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>المعمارية الأمنية — كيف نفصل الهوية عن الصوت تمامًا؟</b></div>
+          <code>ZERO-LINK BALLOT ARCHITECTURE</code>
+        </div>
+
+        <div class="case-kicker"><span>CRYPTOGRAPHIC ISOLATION</span><b>SPLIT DB</b><i>SECRET BALLOT</i></div>
+        <h2>فصل مسار الهوية عن <span>مسار الاقتراع</span></h2>
+
+        <div class="grid-2" style="margin-top:12px">
+          <div class="box">
+            <span class="box-tag">PATH A // جداول الهوية والتحقق</span>
+            <h3>`voters` + `vote_tokens`</h3>
+            <ul>
+              <li>يعرف: <b>من الذي تحقّق من هويته</b> وهل استلم رمز اقتراع أم لا.</li>
+              <li>يحفظ بصمة الرقم القومي المشفّرة (`identity_hash`).</li>
+              <li>يحفظ بصمة رمز الاقتراع (`token_hash`) وتاريخ استهلاكه (`used_at`).</li>
+              <li><b>لا يحتوي على أي معلومة عن المرشح المختار!</b></li>
+            </ul>
+          </div>
+
+          <div class="box cyan">
+            <span class="box-tag">PATH B // جدول صندوق الأصوات</span>
+            <h3>`ballots` (صندوق الاقتراع المعزول)</h3>
+            <ul>
+              <li>يحتوي فقط على: `election_id`، `candidate_id`، `receipt_code`، `cast_at`.</li>
+              <li><b>لا يوجد به أي عمود لـ `voter_id` أو `token_hash` أو الرقم القومي!</b></li>
+              <li>يصدر كود إيصال عشوائي مثل `LMVD7-6TJD4` يثبت وجود الورقة في الصندوق دون كشف لمن صوّتت.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="box yellow" style="margin-top:16px">
+          <b>النتيجة الأمنية الحاسمة:</b>
+          حتى لو تمكن شخص من الوصول الكامل لقاعدة البيانات، فسيعرف من الذي شارك في الانتخابات، وسيعرف عدد أصوات كل مرشح، لكن <b>يستحيل رياضيًا وهندسيًا</b> معرفة أي ناخب اختار أي مرشح!
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>جلسات موقّعة بـ HMAC-SHA256 + دعم SameSite=None/Partitioned ورمز احتياطي _st</span>
+        <b>SLIDE 08 / 12 — SECURITY ARCHITECTURE</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 9: طريقة تشغيل الموقع ==================== -->
+    <section class="slide" data-slide="9">
+      <div class="file-tab">SLIDE 09 // HOW TO RUN</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>طريقة تشغيل الموقع (التشغيل السريع وربط قاعدة البيانات)</b></div>
+          <code>SETUP // DEMO &amp; SUPABASE</code>
+        </div>
+
+        <div class="case-kicker"><span>INSTALLATION</span><b>30 SECONDS</b><i>ZERO DEPENDENCIES</i></div>
+        <h2>طريقة تشغيل الموقع <span>خطوة بخطوة</span></h2>
+
+        <div class="grid-2">
+          <div class="box">
+            <span class="box-tag">MODE 1 // التشغيل السريع الفوري (Demo Mode)</span>
+            <h3>بدون أي إعدادات أو مفاتيح خارجية</h3>
+            <div class="code-block">
+              <span class="comment"># 1. تشغيل الخادم مباشرة</span><br>
+              <span class="cmd">node server.js</span><br><br>
+              <span class="comment"># 2. افتح المتصفح على:</span><br>
+              http://localhost:3000<br>
+              http://localhost:3000/admin <span class="comment"># المفتاح: per-aa-admin</span>
+            </div>
+            <p style="margin-top:8px">ينشئ تلقائيًا قاعدة محلية `data/demo-db.json` مع انتخابة نشطة و4 مرشحين و3 بطاقات رقم قومي جاهزة للتجربة بضغطة زر.</p>
+          </div>
+
+          <div class="box cyan">
+            <span class="box-tag">MODE 2 // التشغيل مع Supabase PostgreSQL</span>
+            <h3>ربط قاعدة البيانات السحابية الحقيقية</h3>
+            <div class="code-block">
+              <span class="comment"># 1. نفّذ supabase/schema.sql في SQL Editor</span><br>
+              <span class="comment"># 2. انسخ ملف الإعدادات وأضف المفاتيح</span><br>
+              <span class="cmd">cp .env.example .env</span><br>
+              SUPABASE_URL=https://xxx.supabase.co<br>
+              SUPABASE_SERVICE_ROLE_KEY=eyJ...<br>
+              SESSION_SECRET=secret-key-here
+            </div>
+            <p style="margin-top:8px">يتحول النظام تلقائيًا للعمل على PostgreSQL بدون تغيير سطر كود واحد، وجاهز للنشر الفوري على <b>Vercel</b>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>بطاقة التجربة الجاهزة: علي أحمد علي محمد — الرقم القومي: 31005292501518</span>
+        <b>SLIDE 09 / 12 — HOW TO RUN</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 10: لوحة الإشراف واستوديو البطاقات ==================== -->
+    <section class="slide" data-slide="10">
+      <div class="file-tab">SLIDE 10 // ADMIN &amp; ID STUDIO</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>لوحة لجنة الإشراف واستوديو توليد البطاقات القومية</b></div>
+          <code>/ADMIN // 5 CONTROL PANELS</code>
+        </div>
+
+        <div class="case-kicker"><span>COMMITTEE COMMAND</span><b>/ADMIN</b><i>ID CARD STUDIO</i></div>
+        <h2>مركز القيادة <span>واستوديو البطاقات</span></h2>
+
+        <div class="grid-3" style="margin-top:12px">
+          <div class="box yellow">
+            <span class="box-tag">TAB 01 // الانتخابات والمرشحون</span>
+            <h3>إدارة الاستحقاقات</h3>
+            <p>إنشاء استحقاقات جديدة، فتح أو غلق الاقتراع لحظيًا، وإضافة المرشحين مع صورهم ورموزهم الانتخابية وبرامجهم.</p>
+          </div>
+          <div class="box cyan">
+            <span class="box-tag">TAB 02 // استوديو البطاقات القومية</span>
+            <h3>توليد بطاقة لأي شخص فورًا</h3>
+            <p>ارفع صورتك الشخصية وأدخل اسمك وتاريخ ميلادك، فيقوم المتصفح برسم بطاقة رقم قومي مصرية كاملة واستخراج بصمة وجهك وحفظها لتجربتها بالكاميرا فورًا!</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">TABS 03–05 // الرقابة والكشوف</span>
+            <h3>المراجعة والكشوف والتدقيق</h3>
+            <p>البتّ في طلبات المراجعة اليدوية، استيراد كشوف الناخبين بصيغة CSV، ومراقبة سجل التدقيق الأمني (`audit_log`) لحظة بلحظة.</p>
+          </div>
+        </div>
+
+        <div class="box" style="margin-top:16px">
+          <b>بيانات الدخول الافتراضية للوحة الإشراف (`/admin`):</b>
+          المفتاح السري للجنة في وضع التجربة هو <code class="ltr" style="background:var(--yellow);padding:2px 8px;border:1.5px solid var(--ink)">per-aa-admin</code> (يمكن تغييره من متغير البيئة `ADMIN_KEY`).
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>لوحة الإشراف تعرض أيضًا حالة مزوّدي التحقق (Face Match / OCR / OTP / Voter Roll)</span>
+        <b>SLIDE 10 / 12 — SUPERVISION DASHBOARD</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 11: الهيكل البرمجي ومسارات الـ API ==================== -->
+    <section class="slide" data-slide="11">
+      <div class="file-tab">SLIDE 11 // CODE STRUCTURE &amp; API</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>الهيكل البرمجي للملفات وأهم مسارات الـ API</b></div>
+          <code>ARCHITECTURE // CLEAN MODULES</code>
+        </div>
+
+        <div class="case-kicker"><span>CODEBASE</span><b>MODULAR JS</b><i>REST API</i></div>
+        <h2>الهيكل البرمجي <span>ومسارات الـ API</span></h2>
+
+        <div class="grid-2">
+          <div>
+            <table class="slide-table">
+              <thead><tr><th>الملف / المجلد</th><th>الوظيفة التقنية</th></tr></thead>
+              <tbody>
+                <tr><td class="ltr">server.js</td><td>خادم HTTP وتوجيه المسارات والترويسات الأمنية</td></tr>
+                <tr><td class="ltr">lib/api.js</td><td>منطق الأعمال (التسجيل، التحقق، التصويت، الإشراف)</td></tr>
+                <tr><td class="ltr">lib/verification.js</td><td>خوارزميات مطابقة الوجه وكشف الحياة والقرار</td></tr>
+                <tr><td class="ltr">lib/security.js</td><td>تحليل الرقم القومي، HMAC-SHA256، والـ Rate Limit</td></tr>
+                <tr><td class="ltr">lib/session.js</td><td>الجلسات الموقّعة ودعم الكوكيز والرمز الاحتياطي</td></tr>
+                <tr><td class="ltr">views/*.js</td><td>قوالب الواجهات بأسلوب Kashif AI Dossier</td></tr>
+                <tr><td class="ltr">public/app.js</td><td>الكاميرا، المحاكي الحي، وبصمة الوجه العصبية</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <table class="slide-table">
+              <thead><tr><th>المسار (Endpoint)</th><th>الوظيفة</th></tr></thead>
+              <tbody>
+                <tr><td class="ltr">POST /api/register</td><td>تسجيل الناخب وفحص الرقم القومي</td></tr>
+                <tr><td class="ltr">POST /api/verify/start</td><td>بدء الكاميرا وتوليد تحدي الحركة</td></tr>
+                <tr><td class="ltr">POST /api/verify/complete</td><td>مطابقة بصمة الوجه وإصدار رمز الاقتراع</td></tr>
+                <tr><td class="ltr">POST /api/vote</td><td>إيداع الصوت السري وحرق الرمز وإصدار الإيصال</td></tr>
+                <tr><td class="ltr">POST /api/receipt/check</td><td>التحقق من صلاحية رقم إيصال في الصندوق</td></tr>
+                <tr><td class="ltr">POST /api/admin/cards</td><td>إصدار بطاقة قومية جديدة ببصمة وجه</td></tr>
+                <tr><td class="ltr">GET /healthz</td><td>فحص حالة الخادم ووضع قاعدة البيانات</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>مبني بالكامل بـ Node.js القياسي بدون تبعيات خارجية ثقيلة — سريع، آمن، وسهل الصيانة</span>
+        <b>SLIDE 11 / 12 — ARCHITECTURE &amp; API</b>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 12: الاختبارات والخلاصة ==================== -->
+    <section class="slide" data-slide="12">
+      <div class="file-tab">SLIDE 12 // TESTING &amp; SUMMARY</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>الاختبارات الآلية الشاملة وخلاصة المشروع</b></div>
+          <code>QUALITY ASSURANCE // 52/52 PASSING</code>
+        </div>
+
+        <div class="case-kicker"><span>VERIFIED QUALITY</span><b>52 TESTS PASS</b><i>READY FOR DEMO</i></div>
+        <h2>اختبارات آلية شاملة <span>بنسبة نجاح 100%</span></h2>
+
+        <div class="grid-2" style="margin-top:12px">
+          <div class="box cyan">
+            <span class="box-tag">SMOKE TEST // 25/25 PASS</span>
+            <h3>`node tools/smoke-test.js`</h3>
+            <ul>
+              <li>فحص التسجيل ورفض الأرقام القومية أو التواريخ غير المتطابقة.</li>
+              <li>توليد تحدي الحياة ومطابقة الوجه وإصدار رمز الاقتراع المشفّر.</li>
+              <li>إيداع الصوت والتأكد من خلوه من أي بيانات شخصية.</li>
+              <li>منع التصويت المكرر وفحص الإيصال والنتائج ولوحة الإدارة.</li>
+            </ul>
+          </div>
+
+          <div class="box yellow">
+            <span class="box-tag">PHASE 2 CHECK // 27/27 PASS</span>
+            <h3>`node tools/phase2-check.js`</h3>
+            <ul>
+              <li>اختبار خوارزمية المطابقة العربية للأسماء المركبة وقراءة البطاقة.</li>
+              <li>رحلة كاملة مع تفعيل كود الموبايل (`OTP_MODE=console`).</li>
+              <li>استيراد كشوف الناخبين (`CSV`) واختبار الوضع الصارم (`strict`).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="box navy" style="margin-top:16px;text-align:center">
+          <h3 style="color:#fff;margin:0 0 8px;font-size:22px">صوت موثّق — من هويتك .. إلى صوتك</h3>
+          <p style="color:#dfeaf1;margin:0 0 12px">نظام متكامل يثبت أن التحقق البيومتري الصارم وسرية الاقتراع المطلقة يمكن أن يجتمعا في منصة عربية عصرية واحدة.</p>
+          <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+            <a class="sketch-btn primary" href="/register">جرّب التصويت العملي الآن ←</a>
+            <a class="sketch-btn yellow" href="/admin">افتح لوحة الإشراف واستوديو البطاقات</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>شكرًا للمتابعة — يمكن تحميل هذا العرض بصيغة PowerPoint (.pptx) أو طباعته كـ PDF</span>
+        <b>SLIDE 12 / 12 — CONCLUSION</b>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- أزرار التنقل السريع بين الشرائح -->
+  <nav class="slide-dots" id="slide-dots" aria-label="اختر الشريحة"></nav>
+
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const counter = document.getElementById('slide-counter');
+      const dotsWrap = document.getElementById('slide-dots');
+      let current = 0;
+
+      const titles = [
+        '١. الغلاف',
+        '٢. المشكلة والهدف',
+        '٣. الركائز الأربع',
+        '٤. رحلة الناخب',
+        '٥. الرقم القومي',
+        '٦. الكاميرا والذكاء الاصطناعي',
+        '٧. محرك القرار',
+        '٨. عزل الهوية عن الصوت',
+        '٩. طريقة التشغيل',
+        '١٠. لوحة الإشراف',
+        '١١. البنية والـ API',
+        '١٢. الاختبارات والخلاصة',
+      ];
+
+      slides.forEach((_, idx) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dot-btn' + (idx === 0 ? ' active' : '');
+        b.textContent = titles[idx] || (idx + 1);
+        b.addEventListener('click', () => goTo(idx));
+        dotsWrap.appendChild(b);
+      });
+
+      function goTo(idx) {
+        current = (idx + slides.length) % slides.length;
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        Array.from(dotsWrap.children).forEach((d, i) => d.classList.toggle('active', i === current));
+        counter.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+        history.replaceState(null, '', '#slide-' + (current + 1));
+      }
+
+      document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+      document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'PageDown') {
+          e.preventDefault();
+          goTo(current + 1);
+        } else if (e.key === 'ArrowRight' || e.key === 'PageUp') {
+          e.preventDefault();
+          goTo(current - 1);
+        }
+      });
+
+      document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+        } else {
+          document.exitFullscreen?.();
+        }
+      });
+
+      const hashMatch = /^#slide-(\d+)$/.exec(location.hash);
+      if (hashMatch) {
+        const n = parseInt(hashMatch[1], 10) - 1;
+        if (n >= 0 && n < slides.length) goTo(n);
+      }
+    })();
+  </script>
+</body>
+</html>
