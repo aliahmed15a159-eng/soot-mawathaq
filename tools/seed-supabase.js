@@ -42,6 +42,10 @@ const LEGACY_STUDENT_CANDIDATE_NAMES = [
   'يوسف شاكر الحديدي',
   'حبيبة مراد سلامة',
   'كريم نشأت البدرى',
+  'د. طارق عبد الرحمن المنشاوي',
+  'المستشار كامل محمود الجندي',
+  'د. سلمى حسن الشافعي',
+  'م. عمرو نبيل السيوفي',
 ];
 
 if (config.databaseMode !== 'supabase') {
@@ -74,8 +78,8 @@ async function api(method, resource, body, query = '') {
   let elections = await api('GET', 'elections', null, '?select=*');
   if (!elections.length) {
     elections = await api('POST', 'elections', [{
-      title: 'انتخابات اتحاد طلاب كلية الحاسبات والمعلومات',
-      description: 'انتخاب رئيس الاتحاد — دورة 2026/2027',
+      title: 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية - دورة 2026/2027',
+      description: 'مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري لاختيار ممثلي اتحاد طلاب مدارس الجمهورية — دورة 2026 / 2027',
       type: 'single', state: 'open',
     }]);
     console.log('✓ أُنشئت انتخابة تجريبية');
@@ -88,7 +92,7 @@ async function api(method, resource, body, query = '') {
   const legacyRows = existing.filter((candidate) => LEGACY_STUDENT_CANDIDATE_NAMES.includes(candidate.name));
   if (legacyRows.length) {
     await Promise.all(legacyRows.map((candidate) => {
-      const legacyIndex = LEGACY_STUDENT_CANDIDATE_NAMES.indexOf(candidate.name);
+      const legacyIndex = LEGACY_STUDENT_CANDIDATE_NAMES.indexOf(candidate.name) % DEFAULT_STUDENT_CANDIDATES.length;
       const replacement = DEFAULT_STUDENT_CANDIDATES[legacyIndex];
       return api('PATCH', 'candidates', replacement, `?id=eq.${candidate.id}`);
     }));
