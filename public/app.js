@@ -1,8 +1,7 @@
 /* =============================================================================
-   صوت موثّق — منطق المتصفح (بأسلوب Kashif AI + حل جذري للكاميرا)
+   صوت موثّق — منطق المتصفح (بأسلوب Kashif AI)
    • حفظ الجلسة عبر الكوكيز + رمز احتياطي (_st) لبيئات الـ iframe
-   • الكاميرا: تدرّج ذكي في قيود getUserMedia + معالجة آمنة لـ play()
-   • محاكي كاميرا حي (Live Canvas MediaStream) يعمل تلقائياً عند غياب الكاميرا الفعلية
+   • الكاميرا: محاولات متدرجة لفتح كاميرا الجهاز ومعالجة آمنة لـ play()
    • مطابقة الوجه العصبية (128-D) من الموديلات المحلية (/models)
    ========================================================================== */
 (() => {
@@ -265,8 +264,6 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     let stream = null;
-    let simInterval = null;
-    let isSimStream = false;
     let facing = 'user';
     let deviceIdx = 0;
     let challenge = [];
@@ -287,15 +284,11 @@
     }
 
     function stopCurrentStream() {
-      if (simInterval) {
-        clearInterval(simInterval);
-        simInterval = null;
-      }
       if (stream) {
         try { stream.getTracks().forEach((t) => t.stop()); } catch {}
         stream = null;
       }
-      isSimStream = false;
+      if (videoSelfie) videoSelfie.srcObject = null;
     }
 
     async function attachStreamToVideo(mediaStream) {
@@ -332,121 +325,28 @@
       return true;
     }
 
-    /* ---------- محاكي الكاميرا التفاعلي الحي (يعمل تلقائياً عند تعذر الكاميرا الفعلية) ---------- */
-    const simCanvas = document.createElement('canvas');
-    simCanvas.width = 640;
-    simCanvas.height = 480;
-    const simCtx = simCanvas.getContext('2d', { willReadFrequently: true });
-    let simRefImg = null;
-
-    function loadRefPortraitForSim() {
-      return new Promise((resolve) => {
-        if (simRefImg && simRefImg.complete && simRefImg.naturalWidth > 0) return resolve(simRefImg);
-        const refEl = $('#db-face-ref') || $('.ref-avatar');
-        const src = (refEl && refEl.getAttribute('src')) || '/cards/31005292501518-face.jpg';
-        const im = new Image();
-        im.crossOrigin = 'anonymous';
-        im.onload = () => { simRefImg = im; resolve(im); };
-        im.onerror = () => resolve(null);
-        im.src = src;
-      });
-    }
-
-    async function startSimulatedCamera(reasonMsg = '') {
-      stopCurrentStream();
+    /* ---------- فتح كاميرا الجهاز الفعلية ---------- */
+    async function startCamera() {
       const errBox = $('#verify-error');
       if (errBox) errBox.hidden = true;
-      await loadRefPortraitForSim();
 
-      let t = 0;
-      const renderSimFrame = () => {
-        t += 1;
-        // خلفية غرفة التصوير
-        const grad = simCtx.createLinearGradient(0, 0, 0, 480);
-        grad.addColorStop(0, '#18324a');
-        grad.addColorStop(1, '#0c2237');
-        simCtx.fillStyle = grad;
-        simCtx.fillRect(0, 0, 640, 480);
-
-        // حركة تنفس وإمالة طبيعية طفيفة لإثبات الحيوية واستخراج البصمة
-        const dx = Math.sin(t / 14) * 8;
-        const dy = Math.cos(t / 19) * 5;
-        const scale = 1 + Math.sin(t / 23) * 0.018;
-
-        if (simRefImg && simRefImg.naturalWidth > 0) {
-          const drawW = 340 * scale;
-          const drawH = 380 * scale;
-          const cx = (640 - drawW) / 2 + dx;
-          const cy = (480 - drawH) / 2 + dy;
-          simCtx.save();
-          simCtx.beginPath();
-          simCtx.roundRect ? simCtx.roundRect(cx, cy, drawW, drawH, 28) : simCtx.rect(cx, cy, drawW, drawH);
-          simCtx.clip();
-          simCtx.drawImage(simRefImg, cx, cy, drawW, drawH);
-          simCtx.restore();
-        } else {
-          // رسم وجه احتياطي إذا لم تتوفر صورة
-          const cx = 320 + dx;
-          const cy = 235 + dy;
-          simCtx.fillStyle = '#e7c9a4';
-          simCtx.beginPath();
-          simCtx.ellipse(cx, cy, 110 * scale, 142 * scale, 0, 0, Math.PI * 2);
-          simCtx.fill();
-          simCtx.fillStyle = '#2d2016';
-          simCtx.beginPath();
-          simCtx.ellipse(cx - 42, cy - 28, 13, 8, 0, 0, Math.PI * 2);
-          simCtx.ellipse(cx + 42, cy - 28, 13, 8, 0, 0, Math.PI * 2);
-          simCtx.fill();
+      const showCameraError = (detail) => {
+        const message = 'تعذّر فتح الكاميرا — اسمح بالوصول للكاميرا ثم أعد المحاولة';
+        if (errBox) {
+          errBox.textContent = message;
+          errBox.hidden = false;
         }
-
-        // حبيبات استشعار كاميرا خفيفة لواقعية البث الحي
-        for (let i = 0; i < 120; i++) {
-          const px = (Math.random() * 640) | 0;
-          const py = (Math.random() * 480) | 0;
-          simCtx.fillStyle = (i & 1) ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
-          simCtx.fillRect(px, py, 2, 2);
-        }
+        setCamStatus(message, 'err');
+        if (detail) console.warn('[camera] تعذّر فتح الكاميرا:', detail);
+        return false;
       };
-
-      renderSimFrame();
-      simInterval = setInterval(renderSimFrame, 45);
-      isSimStream = true;
-
-      if (typeof simCanvas.captureStream === 'function') {
-        stream = simCanvas.captureStream(24);
-        await attachStreamToVideo(stream);
-      }
-
-      const guideBox = $('#face-guide-box');
-      const guideLabel = $('#face-guide-label');
-      if (guideBox) guideBox.classList.add('face-locked');
-      if (guideLabel) guideLabel.textContent = 'الوجه مرصود بوضوح — اضغط التقاط الآن';
-
-      setCamStatus(
-        reasonMsg
-          ? 'الكاميرا التفاعلية الذكية نشطة — اضغط «التقاط الصورة الآن»'
-          : 'الكاميرا التفاعلية الذكية تعمل — ضع وجهك واضغط التقاط',
-        'live'
-      );
-      markLivenessComplete();
-      return true;
-    }
-
-    /* ---------- فتح الكاميرا الحقيقية مع تدرج ذكي + انتقال تلقائي للمحاكي ---------- */
-    async function startCamera(preferReal = true) {
-      const errBox = $('#verify-error');
-      if (errBox) errBox.hidden = true;
-
-      if (!preferReal) {
-        return startSimulatedCamera();
-      }
-
-      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-        return startSimulatedCamera('الكاميرا غير مدعومة في هذا المتصفح');
-      }
 
       stopCurrentStream();
       setCamStatus('جارٍ تشغيل الكاميرا…', '');
+
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return showCameraError();
+      }
 
       const attempts = [
         { video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
@@ -454,7 +354,7 @@
         { video: true, audio: false },
       ];
 
-      // إضافة أي كاميرا متاحة عبر enumerateDevices كمحاولة إضافية
+      // تجربة الكاميرات المتاحة عند الحاجة إلى اختيار جهاز بعينه.
       try {
         if (navigator.mediaDevices.enumerateDevices) {
           const devs = await navigator.mediaDevices.enumerateDevices();
@@ -469,20 +369,18 @@
       let lastErr = null;
       for (const constraints of attempts) {
         try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-          stream = mediaStream;
-          isSimStream = false;
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
           await attachStreamToVideo(stream);
+          if (!videoSelfie || !videoSelfie.videoWidth) throw new Error('لم يبدأ بث الكاميرا');
           setCamStatus('الكاميرا تعمل — ضع وجهك داخل الإطار ثم اضغط التقاط', 'live');
           return true;
         } catch (err) {
           lastErr = err;
+          stopCurrentStream();
         }
       }
 
-      // في حال رفض الإذن أو عدم وجود كاميرا فعلية أو حظر الـ iframe، نشغّل الكاميرا التفاعلية الحية فوراً!
-      console.warn('[camera] تعذّر فتح الكاميرا الفعلية، تفعيل الكاميرا التفاعلية الذكية:', lastErr?.name || lastErr?.message);
-      return startSimulatedCamera(lastErr?.message || 'لا توجد كاميرا متاحة');
+      return showCameraError(lastErr?.name || lastErr?.message);
     }
 
     /* ---------- محرك مطابقة الوجه (بصمة عصبية 128-D من /models المحلي أولاً) ---------- */
@@ -578,11 +476,6 @@
       const guideBox = $('#face-guide-box');
       const guideLabel = $('#face-guide-label');
       liveReticleTimer = setInterval(async () => {
-        if (isSimStream) {
-          if (guideBox) guideBox.classList.add('face-locked');
-          if (guideLabel) guideLabel.textContent = 'الوجه مرصود بوضوح — اضغط التقاط الآن';
-          return;
-        }
         if (!modelsLoaded || !videoSelfie || !videoSelfie.videoWidth || videoSelfie.paused) return;
         try {
           const opts = new window.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.28 });
@@ -622,15 +515,6 @@
         } catch {}
       }
       if (!selfieDesc || selfieDesc.length !== 128) {
-        if (isSimStream && cachedRefDescriptors.length) {
-          return {
-            aiReady: true,
-            faceDetected: true,
-            refDescriptor: cachedRefDescriptors[0],
-            selfieDescriptor: cachedRefDescriptors[0],
-            neuralDistance: 0.12,
-          };
-        }
         return { aiReady: true, faceDetected: false, neuralDistance: 1.5 };
       }
 
@@ -676,7 +560,7 @@
     }
 
     function grabFrame(videoEl, targetW = 640) {
-      const source = (isSimStream && (!videoEl || !videoEl.videoWidth)) ? simCanvas : videoEl;
+      const source = videoEl;
       const vw = source.videoWidth || source.width || 640;
       const vh = source.videoHeight || source.height || 480;
       const scale = Math.min(1, targetW / vw);
@@ -827,47 +711,16 @@
       ];
       const listEl = $('#challenge-list');
       if (listEl) listEl.innerHTML = challenge.map((c) => `<li data-code="${c.code}">${c.label}</li>`).join('');
-      if (isSimStream) markLivenessComplete();
       return true;
-    }
-
-    function markLivenessComplete() {
-      const defaultLm = {
-        blink: { yaw: 0, eye: 0.06, faceWidth: 0.3, mouth: 0.01 },
-        left: { yaw: -0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
-        right: { yaw: 0.2, eye: 0.2, faceWidth: 0.3, mouth: 0.01 },
-        close: { yaw: 0, eye: 0.2, faceWidth: 0.34, mouth: 0.01 },
-        smile: { yaw: 0, eye: 0.2, faceWidth: 0.3, mouth: 0.08 },
-      };
-      const chList = (challenge && challenge.length) ? challenge : [
-        { code: 'blink', label: 'ارمش بعينيك' },
-        { code: 'smile', label: 'ابتسم قليلًا' },
-        { code: 'close', label: 'اقترب قليلًا من الكاميرا' },
-      ];
-      if (!livenessEvents || livenessEvents.length < chList.length) {
-        livenessEvents = chList.map((c, i) => ({
-          code: c.code, at: 900 + i * 1400, landmarks: defaultLm[c.code] || defaultLm.smile,
-        }));
-      }
-      frames = Math.max(frames, 44);
-      $$('#challenge-list li').forEach((li) => li.classList.add('done'));
-      if ($('#liveness-bar')) $('#liveness-bar').style.width = '100%';
     }
 
     // تشغيل الكاميرا مباشرة عند ضغط المستخدم بدون انتظار طلبات الشبكة (مهم جداً لمتصفحات الموبايل وSafari)
     $('#btn-start-camera')?.addEventListener('click', async () => {
       show('selfie');
-      const camPromise = startCamera(true);
+      const camPromise = startCamera();
       await initSelfieChallenge();
       const started = await camPromise;
       if (started) beginLivenessMonitor();
-    });
-
-    $('#btn-sim-camera')?.addEventListener('click', async () => {
-      show('selfie');
-      await initSelfieChallenge();
-      await startSimulatedCamera();
-      beginLivenessMonitor();
     });
 
     // توافق مع اختبارات browser-flow.js
@@ -879,7 +732,7 @@
     });
 
     // تشغيل تلقائي متوازٍ للكاميرا والموديل والتحدي فور فتح الصفحة
-    startCamera(true).then((started) => {
+    startCamera().then((started) => {
       if (started) beginLivenessMonitor();
     });
     ensureFaceModels();
@@ -888,7 +741,7 @@
     $('#btn-switch-cam')?.addEventListener('click', async () => {
       facing = facing === 'user' ? 'environment' : 'user';
       deviceIdx += 1;
-      await startCamera(true);
+      await startCamera();
     });
 
     function check(code, condition, metrics) {
@@ -913,16 +766,18 @@
         check('left', yaw < -0.14, m); check('right', yaw > 0.14, m);
         check('close', faceWidth > 0.27, m);
         check('smile', m.mouth > 0.02, m);
-        const pct = isSimStream ? 100 : Math.min(100, Math.round((livenessEvents.length / Math.max(1, challenge.length)) * 100));
+        const pct = Math.min(100, Math.round((livenessEvents.length / Math.max(1, challenge.length)) * 100));
         if ($('#liveness-bar')) $('#liveness-bar').style.width = `${pct}%`;
       });
     }
 
     $('#btn-capture-selfie')?.addEventListener('click', async () => {
-      if (!stream) {
-        await startCamera(true);
+      if (!stream || !videoSelfie?.videoWidth) {
+        const started = await startCamera();
+        if (!started) return;
         await new Promise((r) => setTimeout(r, 250));
       }
+      if (!videoSelfie?.videoWidth) return;
       setCamStatus('تم التقاط الصورة بنجاح — راجعها ثم اضغط بدء المطابقة', 'live');
       const c = grabFrame(videoSelfie, 720);
       const img = imageData(c);
@@ -941,7 +796,6 @@
           height: c.height,
         },
       };
-      markLivenessComplete();
       $('#selfie-img').src = selfieData.dataUrl;
       $('#selfie-preview').hidden = false;
       $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -969,7 +823,6 @@
       }, 500);
 
       await initSelfieChallenge();
-      markLivenessComplete();
       const aiResult = await computeNeuralComparison();
       const payload = {
         card_meta: cardData ? { quality: cardData.meta.quality, contrast: cardData.meta.contrast, sharpness: cardData.meta.sharpness, hash: cardData.meta.hash, hashSamples: cardData.meta.samples, uploaded: !!cardData.meta.uploaded } : null,
@@ -1083,7 +936,7 @@
             </div>
             <div class="score-track"><span style="width:${Math.max(10, pct)}%"></span></div>
             <div class="ai-analysis-block">
-              <p>لم تتطابق البصمة بالدرجة الكافية أو أن الإضاءة ضعيفة — جرّب مرة أخرى أو استخدم الكاميرا التفاعلية الذكية.</p>
+              <p>لم تتطابق البصمة بالدرجة الكافية أو أن الإضاءة ضعيفة — حسّن الإضاءة والتقط صورة جديدة بالكاميرا ثم أعد المحاولة.</p>
             </div>
             <div class="signal-list">${(data.reasons || []).map((r) => `<div><span>• ${r}</span></div>`).join('')}</div>
             <table class="score-table"><thead><tr><th>الفحص</th><th>النتيجة</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table>

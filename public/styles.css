@@ -1688,8 +1688,9 @@ footer b {
 @media (max-width: 960px) {
   .site-nav { display: none; }
   .nav-burger { display: inline-flex; }
-  .hero { grid-template-columns: 1fr; padding-top: 25px; }
-  .hero-copy { text-align: center; }
+  .hero { grid-template-columns: minmax(0, 1fr); min-height: 0; padding-top: 25px; }
+  .hero-copy { min-width: 0; width: 100%; text-align: center; }
+  .eyebrow { width: auto; max-width: 100%; display: inline-flex; }
   .case-kicker, .eyebrow, .hero-action-row, .trust-note, .investigator-signature { margin-right: auto; margin-left: auto; }
   .hero-copy > p { margin-inline: auto; }
   .hero-action-row { justify-content: center; }
@@ -1711,8 +1712,12 @@ footer b {
   .sketch-logo strong { font-size: 15px; }
   .header-button { display: none; }
   .hero { gap: 36px; padding-bottom: 48px; }
-  .hero h1 { font-size: 48px; }
+  .hero h1 { font-size: 42px; }
   .hero-copy > p { font-size: 14px; }
+  .eyebrow { gap: 5px; padding: 5px 9px; font-size: 10px; }
+  .hero-action-row { width: 100%; }
+  .primary-button { width: 100%; }
+  .hand-arrow { display: none; }
   .scanner-frame { padding: 25px 18px 30px; box-shadow: 7px 8px 0 var(--navy), 11px 12px 0 rgba(88,213,204,.75); }
   .scanner-frame::before { inset: 8px; }
   .scanner-topline > span { display: none; }
