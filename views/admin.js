@@ -1,4 +1,4 @@
-const { icon, esc, candidateSvg, symbolIcon } = require('./layout');
+const { icon, esc, candidateSvg, parseSlogan } = require('./layout');
 
 const STATE_AR = { open: 'مفتوح', closed: 'مغلق', upcoming: 'قريبًا' };
 const AUDIT_AR = {
@@ -179,7 +179,7 @@ function adminDashboard({
         <form id="form-election" class="input-stage" style="padding-top:6px">
           <div class="field">
             <label><span>TITLE</span> عنوان الاستحقاق الانتخابي</label>
-            <input name="title" type="text" required placeholder="مثال: انتخابات اتحاد الطلاب ٢٠٢٦">
+            <input name="title" type="text" required placeholder="مثال: انتخابات اتحاد طلاب المدرسة ٢٠٢٦/٢٠٢٧">
           </div>
           <div class="field">
             <label><span>DESC</span> وصف مختصر</label>
@@ -209,12 +209,12 @@ function adminDashboard({
             </div>
             <div class="field">
               <label><span>SYMBOL</span> الرمز الانتخابي</label>
-              <input name="symbol" type="text" required placeholder="الميزان / النجمة / الكتاب">
+              <input name="symbol" type="text" required placeholder="الكتاب / الشمس / الشعلة / النخلة">
             </div>
           </div>
           <div class="field">
             <label><span>ROLE</span> الصفة / المسمى</label>
-            <input name="title" type="text" placeholder="أستاذ جامعي / مهندس / طبيب">
+            <input name="title" type="text" placeholder="رئيس الاتحاد / أمين اللجنة الثقافية / أمين اللجنة الرياضية">
           </div>
           <div class="field">
             <label><span>BIO</span> البرنامج الانتخابي المختصر</label>
@@ -246,18 +246,21 @@ function adminDashboard({
             </div>
           </div>
           <div class="admin-cands-grid">
-            ${cands.map((c, idx) => `
+            ${cands.map((c, idx) => {
+              const { role, symbolText } = parseSlogan(c.slogan || c.symbol || '', idx);
+              return `
               <div class="admin-cand-card">
                 <div class="admin-cand-head">
                   <img class="admin-cand-avatar" src="${esc(c.photo_url || candidateSvg(c, idx))}" alt="${esc(c.name)}">
                   <div class="admin-cand-meta">
                     <strong>${esc(c.name)}</strong>
-                    <span class="muted small">${esc(c.title || '')} · رمز: ${esc(c.symbol || '—')}</span>
+                    <span class="muted small">${esc(c.title || c.role || role)} · رمز: ${esc(c.symbol || symbolText || '—')}</span>
                   </div>
                   <span class="cc-number">${c.votes || 0} صوت</span>
                 </div>
               </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>`;
       }).join('')}

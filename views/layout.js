@@ -109,10 +109,11 @@ const SPRITE = `
 </svg>`;
 
 function parseSlogan(slogan = '', idx = 0) {
-  const clean = String(slogan || '').replace(/[⚖️🦅☀️🌴🖊️🔥]/g, '').trim();
+  const clean = String(slogan || '').replace(/[⚖️🦅☀️🌴🖊️🔥📘]/g, '').trim();
   const parts = clean.split('·').map((s) => s.trim()).filter(Boolean);
   const role = parts[0] || clean || 'مرشح معتمد';
-  const rawSym = parts.slice(1).join(' · ') || ['رمز: القلم', 'رمز: الصقر', 'رمز: الشعلة', 'رمز: النخلة'][idx % 4];
+  const hasDirectSymbol = /قلم|كتاب|صقر|نسر|شمس|نخل|شعلة|نار|ميزان|عدل/.test(clean);
+  const rawSym = parts.slice(1).join(' · ') || (hasDirectSymbol ? clean : ['رمز: القلم', 'رمز: الصقر', 'رمز: الشعلة', 'رمز: النخلة'][idx % 4]);
   let symId = 'sym-pen';
   if (/قلم|كتاب/.test(rawSym)) symId = 'sym-pen';
   else if (/شعلة|نار|أمل/.test(rawSym)) symId = 'sym-flame';
@@ -187,7 +188,7 @@ function layout({ title, body, step = 0, active = 0, showStepper = false, wide =
     <div class="poc-inner">
       <span class="poc-badge">PROTOTYPE // POC</span>
       <b>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</b>
-      <span class="poc-ctx">انتخابات اتحاد طلاب مدارس الجمهورية (2026/2027)</span>
+      <span class="poc-ctx">انتخابات اتحاد طلاب المدارس — محاكاة 2026/2027</span>
       <a href="/presentation" class="poc-link">عرض التحكيم والتفاصيل التقنية ←</a>
     </div>
   </aside>

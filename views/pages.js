@@ -6,78 +6,7 @@ const STATE_AR = {
   upcoming: 'يبدأ قريبًا',
 };
 
-const DEFAULT_STUDENT_CANDIDATES = Object.freeze([
-  Object.freeze({
-    id: 1,
-    name: 'الطالب / أحمد كريم الشناوي',
-    title: 'مرشح رئيس اتحاد الطلاب',
-    role: 'مرشح رئيس اتحاد الطلاب',
-    symbol: 'القلم 🖊️',
-    slogan: 'مرشح رئيس اتحاد الطلاب · رمز: القلم 🖊️',
-    photo_url: '/candidates/c1.jpg',
-    program: 'برنامج التحول الرقمي المدرسي ورعاية المبتكرين: إطلاق منصة رقمية لإدارة الأندية الطلابية، وتوفير معامل ابتكار مفتوحة ومسابقات هاكاثون تكنولوجية، وتأمين رعاية رسمية لمشاريع الطلاب الابتكارية.',
-    sort: 1,
-  }),
-  Object.freeze({
-    id: 2,
-    name: 'الطالب / يوسف حازم القاضي',
-    title: 'مرشح نائب رئيس الاتحاد',
-    role: 'مرشح نائب رئيس الاتحاد',
-    symbol: 'الصقر 🦅',
-    slogan: 'مرشح نائب رئيس الاتحاد · رمز: الصقر 🦅',
-    photo_url: '/candidates/c2.jpg',
-    program: 'برنامج الدعم الأكاديمي وبنك المعرفة الطلابي: تأسيس مجموعات تقوية تفاعلية مجانية يديرها الطلاب المتفوقون، وتوفير بنك أسئلة رقمي تفاعلي، وبرامج تدريبية للاستعداد لاختبارات القدرات والمنح الدولية.',
-    sort: 2,
-  }),
-  Object.freeze({
-    id: 3,
-    name: 'الطالب / عبد الرحمن سامح فوزي',
-    title: 'أمين لجنة الأنشطة والرياضة',
-    role: 'أمين لجنة الأنشطة والرياضة',
-    symbol: 'الشعلة 🔥',
-    slogan: 'أمين لجنة الأنشطة والرياضة · رمز: الشعلة 🔥',
-    photo_url: '/candidates/c3.jpg',
-    program: 'برنامج تطوير الأنشطة الرياضية والمخيمات الكشفية: إحياء دوري المدارس لكرة القدم والشطرنج، وتوسيع معسكرات القيادة الطلابية والعمل التطوعي البيئي، وإبرام شراكات مع الأندية ومراكز الشباب.',
-    sort: 3,
-  }),
-  Object.freeze({
-    id: 4,
-    name: 'الطالب / زياد طارق الدسوقي',
-    title: 'أمين لجنة الخدمات والشمول الطلابي',
-    role: 'أمين لجنة الخدمات والشمول الطلابي',
-    symbol: 'النخلة 🌴',
-    slogan: 'أمين لجنة الخدمات والشمول الطلابي · رمز: النخلة 🌴',
-    photo_url: '/candidates/c4.jpg',
-    program: 'برنامج الشمول الرقمي ودمج الطلاب ذوي الهمم: تهيئة كافة الأنشطة والمرافق المدرسية لدمج الطلاب ذوي القدرات الخاصة، وإطلاق صندوق مقترحات رقمي صوتي مباشر لتوصيل أصوات الطلاب للإدارات.',
-    sort: 4,
-  }),
-]);
-
-const LEGACY_STUDENT_CANDIDATE_NAMES = new Set([
-  'منة الله عبد الرحمن',
-  'يوسف شاكر الحديدي',
-  'حبيبة مراد سلامة',
-  'كريم نشأت البدرى',
-]);
-
-function candidatesOrDefaults(candidates, electionId) {
-  const rows = Array.isArray(candidates) ? candidates : [];
-  const mergeCandidate = (candidate, current = {}) => ({
-    ...current,
-    ...candidate,
-    id: current.id !== undefined && current.id !== null ? current.id : candidate.id,
-    election_id: current.election_id !== undefined && current.election_id !== null ? current.election_id : electionId,
-  });
-  const hasLegacyNames = rows.some((candidate) => LEGACY_STUDENT_CANDIDATE_NAMES.has(String(candidate && candidate.name || '').trim()));
-  if (rows.length && !hasLegacyNames) {
-    return rows.map((current) => {
-      const candidate = DEFAULT_STUDENT_CANDIDATES.find((item) => item.name === current.name);
-      return candidate ? mergeCandidate(candidate, current) : current;
-    });
-  }
-
-  return DEFAULT_STUDENT_CANDIDATES.map((candidate, index) => mergeCandidate(candidate, rows[index]));
-}
+const { DEMO_SCHOOL_ELECTION, DEFAULT_STUDENT_CANDIDATES, candidatesOrDefaults } = require('../lib/default-candidates');
 
 const DEMO_CARDS = [
   {
@@ -136,7 +65,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
       </div>
       <h1 class="hero-title"><span class="title-line1">من هويتك ..</span><br><span class="title-line2">إلى صوتك</span></h1>
       <p>
-        نموذج أولي تجريبي (Proof of Concept) لمنظومة اقتراع إلكتروني سري موثّق لانتخابات اتحاد طلاب مدارس الجمهورية.
+        نموذج أولي تجريبي (Proof of Concept) لمنظومة اقتراع إلكتروني سري موثّق لانتخابات اتحاد طلاب المدارس.
         نفحص تطابق البصمة البيومترية العصبية (128-D) مع كشف الحياة لحظيًا عبر الكاميرا، ثم نعزل هويتك تمامًا ونصنع رمز اقتراع سريًا مشفرًا.
       </p>
       <div class="hero-action-row">
@@ -336,6 +265,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
         </div>
         <h2>${activeElection ? esc(activeElection.title) : 'الاستحقاق الانتخابي النشط'}</h2>
         <p class="muted">${activeElection ? esc(activeElection.description || '') : 'اختر مرشحك بعد إتمام التحقق من الهوية.'}</p>
+        <p class="muted small" role="note">الأسماء والبرامج المعروضة افتراضية لأغراض المحاكاة، ويجب استبدالها بالقائمة المعتمدة لكل مدرسة قبل أي اقتراع فعلي.</p>
       </div>
       <div class="dossier-stats">
         <a class="sketch-button" href="/results${activeElection ? `?e=${activeElection.id}` : ''}">
@@ -409,7 +339,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
 
 /* ---------------------------------------------------------- ٢) صفحة التسجيل */
 function registerPage({ election, elections = [], cards = [] } = {}) {
-  const active = election || elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية - دورة 2026/2027', state: 'open' };
+  const active = election || elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: DEMO_SCHOOL_ELECTION.title, state: 'open' };
   const sampleCards = cards && cards.length ? cards : DEMO_CARDS;
 
   return `
@@ -659,7 +589,7 @@ function verifyPage({ voter, election, rollCard } = {}) {
             </div>
             <div class="intel-check info">
               <span>الاستحقاق</span>
-              <b>${esc(election ? election.title : 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية')}</b>
+              <b>${esc(election ? election.title : DEMO_SCHOOL_ELECTION.title)}</b>
             </div>
           </div>
         </div>
@@ -785,7 +715,7 @@ function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
       <i>ZERO-LINK</i>
     </div>
     <h1>ورقة <span>الاقتراع السري</span></h1>
-    <p class="muted">${esc(election ? election.title : 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية')} — اختر مرشحًا واحدًا فقط ثم اضغط اعتماد الصوت.</p>
+    <p class="muted">${esc(election ? election.title : DEMO_SCHOOL_ELECTION.title)} — اختر مرشحًا واحدًا فقط ثم اضغط اعتماد الصوت.</p>
   </section>
 
   <div class="ballot-banner" style="margin-bottom:18px">
@@ -867,7 +797,7 @@ function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
 function receiptPage({ receipt, election, electionTitle, total = 0, castAt } = {}) {
   const code = (typeof receipt === 'string' ? receipt : (receipt && (receipt.receipt_code || receipt.code))) || '—';
   const time = castAt || (receipt && (receipt.cast_at || receipt.created_at)) || new Date().toISOString();
-  const title = electionTitle || (election && election.title) || (receipt && receipt.election_title) || 'انتخابات اتحاد طلاب مدارس الجمهورية';
+  const title = electionTitle || (election && election.title) || (receipt && receipt.election_title) || DEMO_SCHOOL_ELECTION.title;
 
   return `
   <section class="page-head">
@@ -960,7 +890,7 @@ function receiptPage({ receipt, election, electionTitle, total = 0, castAt } = {
 function receiptLookupPage({ code = '', result = null } = {}) {
   const isFound = result && (result.ok || result.kind === 'found');
   const castAt = result && (result.cast_at || (result.ballot && result.ballot.cast_at) || '');
-  const eTitle = result && (result.election_title || (result.election && result.election.title) || 'انتخابات اتحاد طلاب مدارس الجمهورية');
+  const eTitle = result && (result.election_title || (result.election && result.election.title) || DEMO_SCHOOL_ELECTION.title);
 
   return `
   <section class="page-head">
@@ -1194,7 +1124,7 @@ function cardsDemoPage() {
 
 /* ---------------------------------------------------------- ١٠) صفحة كشك الاقتراع /vote-here */
 function kioskPage({ elections = [], done = false } = {}) {
-  const active = elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية' };
+  const active = elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: DEMO_SCHOOL_ELECTION.title };
   return `
   <div class="scanner-frame" style="max-width:680px;margin:28px auto 44px;text-align:center">
     <div class="file-tab">KIOSK // MODE</div>

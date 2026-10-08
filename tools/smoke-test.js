@@ -62,6 +62,10 @@ RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
 
   const home = await req('GET', '/');
   check('الصفحة الرئيسية تُعرض', home.status === 200 && /صوت/.test(home.data.raw) && /من هويتك/.test(home.data.raw));
+  check('الاستحقاق الافتراضي لانتخابات اتحاد طلاب المدارس', home.status === 200 && /انتخابات اتحاد طلاب المدارس/.test(home.data.raw));
+  check('أسماء المرشحين الافتراضية الجديدة تظهر', home.status === 200 && [
+    'آدم شريف عبد الله', 'سليم أحمد بركات', 'كريم خالد فؤاد', 'أحمد منصور',
+  ].every((name) => home.data.raw.includes(name)));
 
   // ---------------------------------------------------------------- تسجيل
   const reg = await req('POST', '/api/register', {
@@ -181,9 +185,18 @@ RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
   check('إنشاء انتخابة جديدة', newElection.data.ok, newElection.data.error || `رقم ${newElection.data.election && newElection.data.election.id}`);
 
   const newCand = await req('POST', '/api/admin/candidates', {
-    election_id: newElection.data.election.id, name: 'مروان الشريف', slogan: 'خبير التنظيم', program: 'تطوير الخدمات',
+    election_id: newElection.data.election.id,
+    name: 'الطالب / مازن سامي',
+    title: 'مرشح أمين اللجنة الثقافية والعلمية',
+    symbol: 'الكتاب 📘',
+    bio: 'نادي قراءة ومعرض علوم مدرسي',
   });
   check('إضافة مرشح', newCand.data.ok, newCand.data.error);
+  check('حفظ الصفة والرمز والبرنامج من نموذج المرشح',
+    newCand.data.ok
+      && newCand.data.candidate.slogan.includes('مرشح أمين اللجنة الثقافية والعلمية')
+      && newCand.data.candidate.slogan.includes('رمز: الكتاب 📘')
+      && newCand.data.candidate.program === 'نادي قراءة ومعرض علوم مدرسي');
 
   const closeIt = await req('POST', `/api/admin/elections/${newElection.data.election.id}/state`, { state: 'closed' });
   check('غلق الاقتراع', closeIt.data.ok && closeIt.data.election.state === 'closed');

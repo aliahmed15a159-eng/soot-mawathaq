@@ -1,48 +1,16 @@
 'use strict';
 /**
- * تعبئة Supabase ببيانات تجريبية (انتخابة + مرشحين) — اختياري،
- * ملاحظة: ملف supabase/schema.sql نفسه يزرع البيانات الافتراضية عند أول تنفيذ.
+ * تعبئة Supabase ببيانات محاكاة لانتخابات اتحاد طلاب المدارس.
+ * يحافظ على أي استحقاق أو مرشحين مخصّصين، ولا يعيد تسمية مرشحين لهم أصوات مسجّلة.
  * التشغيل: node tools/seed-supabase.js
  */
 const { config } = require('../lib/config');
-
-const DEFAULT_STUDENT_CANDIDATES = Object.freeze([
-  Object.freeze({
-    name: 'الطالب / أحمد كريم الشناوي',
-    slogan: 'مرشح رئيس اتحاد الطلاب · رمز: القلم 🖊️',
-    photo_url: '/candidates/c1.jpg',
-    program: 'برنامج التحول الرقمي المدرسي ورعاية المبتكرين: إطلاق منصة رقمية لإدارة الأندية الطلابية، وتوفير معامل ابتكار مفتوحة ومسابقات هاكاثون تكنولوجية، وتأمين رعاية رسمية لمشاريع الطلاب الابتكارية.',
-    sort: 1,
-  }),
-  Object.freeze({
-    name: 'الطالب / يوسف حازم القاضي',
-    slogan: 'مرشح نائب رئيس الاتحاد · رمز: الصقر 🦅',
-    photo_url: '/candidates/c2.jpg',
-    program: 'برنامج الدعم الأكاديمي وبنك المعرفة الطلابي: تأسيس مجموعات تقوية تفاعلية مجانية يديرها الطلاب المتفوقون، وتوفير بنك أسئلة رقمي تفاعلي، وبرامج تدريبية للاستعداد لاختبارات القدرات والمنح الدولية.',
-    sort: 2,
-  }),
-  Object.freeze({
-    name: 'الطالب / عبد الرحمن سامح فوزي',
-    slogan: 'أمين لجنة الأنشطة والرياضة · رمز: الشعلة 🔥',
-    photo_url: '/candidates/c3.jpg',
-    program: 'برنامج تطوير الأنشطة الرياضية والمخيمات الكشفية: إحياء دوري المدارس لكرة القدم والشطرنج، وتوسيع معسكرات القيادة الطلابية والعمل التطوعي البيئي، وإبرام شراكات مع الأندية ومراكز الشباب.',
-    sort: 3,
-  }),
-  Object.freeze({
-    name: 'الطالب / زياد طارق الدسوقي',
-    slogan: 'أمين لجنة الخدمات والشمول الطلابي · رمز: النخلة 🌴',
-    photo_url: '/candidates/c4.jpg',
-    program: 'برنامج الشمول الرقمي ودمج الطلاب ذوي الهمم: تهيئة كافة الأنشطة والمرافق المدرسية لدمج الطلاب ذوي القدرات الخاصة، وإطلاق صندوق مقترحات رقمي صوتي مباشر لتوصيل أصوات الطلاب للإدارات.',
-    sort: 4,
-  }),
-]);
-
-const LEGACY_STUDENT_CANDIDATE_NAMES = [
-  'منة الله عبد الرحمن',
-  'يوسف شاكر الحديدي',
-  'حبيبة مراد سلامة',
-  'كريم نشأت البدرى',
-];
+const {
+  DEMO_SCHOOL_ELECTION,
+  DEFAULT_STUDENT_CANDIDATES,
+  LEGACY_STUDENT_CANDIDATE_NAMES,
+  LEGACY_SCHOOL_ELECTION_TITLES,
+} = require('../lib/default-candidates');
 
 if (config.databaseMode !== 'supabase') {
   console.error('✗ مفاتيح Supabase غير مضبوطة في .env — لا شيء لتنفيذه.');
@@ -67,38 +35,85 @@ async function api(method, resource, body, query = '') {
   return data;
 }
 
+function candidateRow(candidate, electionId) {
+  return {
+    ...(electionId ? { election_id: electionId } : {}),
+    name: candidate.name,
+    slogan: candidate.slogan,
+    program: candidate.program,
+    photo_url: candidate.photo_url,
+    sort: candidate.sort,
+  };
+}
+
 (async () => {
-  console.log('→ التحقق من الجداول…');
+  console.log('→ التحقق من جداول Supabase…');
   await api('GET', 'elections', null, '?select=id&limit=1');
 
-  let elections = await api('GET', 'elections', null, '?select=*');
-  if (!elections.length) {
-    elections = await api('POST', 'elections', [{
-      title: 'انتخابات اتحاد طلاب كلية الحاسبات والمعلومات',
-      description: 'انتخاب رئيس الاتحاد — دورة 2026/2027',
-      type: 'single', state: 'open',
-    }]);
-    console.log('✓ أُنشئت انتخابة تجريبية');
-  } else {
-    console.log(`✓ يوجد ${elections.length} انتخابة بالفعل`);
+  const elections = await api('GET', 'elections', null, '?select=*&order=id.asc') || [];
+  let election = elections.find((row) => row.title === DEMO_SCHOOL_ELECTION.title) || null;
+
+  if (!election) {
+    const previousDemo = elections.find((row) => LEGACY_SCHOOL_ELECTION_TITLES.includes(row.title));
+    if (previousDemo) {
+      const ballots = await api('GET', 'ballots', null, `?election_id=eq.${previousDemo.id}&select=id&limit=1`) || [];
+      if (!ballots.length) {
+        const patched = await api('PATCH', 'elections', {
+          ...DEMO_SCHOOL_ELECTION,
+        }, `?id=eq.${previousDemo.id}`);
+        election = patched && patched[0] ? patched[0] : { ...previousDemo, ...DEMO_SCHOOL_ELECTION };
+        console.log('✓ حُدّث استحقاق المحاكاة القديم إلى انتخابات اتحاد طلاب المدارس');
+      }
+    }
   }
 
-  const election = elections[0];
-  const existing = await api('GET', 'candidates', null, `?election_id=eq.${election.id}&select=*&order=sort.asc`);
-  const legacyRows = existing.filter((candidate) => LEGACY_STUDENT_CANDIDATE_NAMES.includes(candidate.name));
-  if (legacyRows.length) {
-    await Promise.all(legacyRows.map((candidate) => {
-      const legacyIndex = LEGACY_STUDENT_CANDIDATE_NAMES.indexOf(candidate.name);
-      const replacement = DEFAULT_STUDENT_CANDIDATES[legacyIndex];
-      return api('PATCH', 'candidates', replacement, `?id=eq.${candidate.id}`);
-    }));
-    console.log(`✓ حُدّث ${legacyRows.length} مرشح قديم إلى بيانات المرشحين الطلاب`);
-  } else if (existing.length) {
-    console.log(`✓ يوجد ${existing.length} مرشح حديث بالفعل — تم التخطي`);
-  } else {
-    const rows = DEFAULT_STUDENT_CANDIDATES.map((candidate) => ({ ...candidate, election_id: election.id }));
-    await api('POST', 'candidates', rows);
-    console.log('✓ أُضيف 4 مرشحين طلاب');
+  if (!election) {
+    const created = await api('POST', 'elections', [{
+      ...DEMO_SCHOOL_ELECTION,
+      state: 'open',
+    }]);
+    election = created && created[0];
+    if (!election) throw new Error('تعذّر إنشاء استحقاق انتخابات المدارس.');
+    console.log('✓ أُنشئ استحقاق انتخابات اتحاد طلاب المدارس');
   }
-  console.log('\nتم ✓ — المنصة جاهزة للاستخدام مع قاعدة بيانات Supabase.');
-})();
+
+  const existing = await api(
+    'GET',
+    'candidates',
+    null,
+    `?election_id=eq.${election.id}&select=*&order=sort.asc`,
+  ) || [];
+  const ballots = await api('GET', 'ballots', null, `?election_id=eq.${election.id}&select=id&limit=1`) || [];
+  const currentNames = new Set(DEFAULT_STUDENT_CANDIDATES.map((candidate) => candidate.name));
+  const isKnownDemoList = existing.every((candidate) => (
+    LEGACY_STUDENT_CANDIDATE_NAMES.has(String(candidate.name || '').trim()) || currentNames.has(candidate.name)
+  ));
+
+  if (!existing.length) {
+    await api('POST', 'candidates', DEFAULT_STUDENT_CANDIDATES.map((candidate) => candidateRow(candidate, election.id)));
+    console.log('✓ أُضيفت بيانات 4 مرشحين افتراضيين');
+  } else if (!ballots.length && isKnownDemoList) {
+    const usedSorts = new Set();
+    await Promise.all(existing.map((row, index) => {
+      const sort = Number(row.sort) || index + 1;
+      const replacement = DEFAULT_STUDENT_CANDIDATES.find((candidate) => candidate.sort === sort);
+      if (!replacement) return Promise.resolve();
+      usedSorts.add(replacement.sort);
+      return api('PATCH', 'candidates', candidateRow(replacement), `?id=eq.${row.id}`);
+    }));
+    const missing = DEFAULT_STUDENT_CANDIDATES
+      .filter((candidate) => !usedSorts.has(candidate.sort))
+      .map((candidate) => candidateRow(candidate, election.id));
+    if (missing.length) await api('POST', 'candidates', missing);
+    console.log('✓ حُدّثت بيانات المرشحين الافتراضيين');
+  } else if (ballots.length) {
+    console.log('ℹ توجد أصوات مسجّلة؛ لم تُغيّر بيانات مرشحي هذا الاستحقاق حفاظًا على النتائج.');
+  } else {
+    console.log(`ℹ يوجد ${existing.length} مرشح مخصّص؛ تم الحفاظ على القائمة كما هي.`);
+  }
+
+  console.log('\nتم ✓ — الاستحقاق تجريبي، وأسماء وبرامج المرشحين افتراضية.');
+})().catch((error) => {
+  console.error(`✗ فشل تجهيز بيانات الانتخابات: ${error.message}`);
+  process.exitCode = 1;
+});
