@@ -885,44 +885,6 @@
     ensureFaceModels();
     initSelfieChallenge();
 
-    $('#btn-intro-upload')?.addEventListener('click', () => $('#selfie-file')?.click());
-    $('#btn-use-selfie-file')?.addEventListener('click', () => $('#selfie-file')?.click());
-    $('#selfie-file')?.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const ok = await initSelfieChallenge();
-      if (!ok) return;
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = Math.min(800, img.width);
-        canvas.height = Math.round(img.height * canvas.width / img.width);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const data = imageData(canvas);
-        const q = qualityMetrics(data.data, canvas.width, canvas.height);
-        const ph = perceptualHash(data.data, canvas.width, canvas.height);
-        selfieData = {
-          dataUrl: dataUrlFromCanvas(canvas, 0.86),
-          meta: {
-            quality: Math.max(0.78, q.quality),
-            contrast: Math.max(0.68, q.contrast),
-            sharpness: Math.max(0.58, q.sharpness),
-            hash: ph.hash,
-            faceHash: multiRegionFaceHashes(canvas),
-            hashSamples: ph.samples,
-            width: canvas.width,
-            height: canvas.height,
-            uploaded: true,
-          },
-        };
-        markLivenessComplete();
-        show('selfie');
-        $('#selfie-img').src = selfieData.dataUrl;
-        $('#selfie-preview').hidden = false;
-        $('#selfie-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      };
-      img.src = URL.createObjectURL(file);
-    });
-
     $('#btn-switch-cam')?.addEventListener('click', async () => {
       facing = facing === 'user' ? 'environment' : 'user';
       deviceIdx += 1;

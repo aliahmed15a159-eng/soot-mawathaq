@@ -17,5 +17,8 @@
   },
   "devDependencies": {
     "playwright": "^1.48.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

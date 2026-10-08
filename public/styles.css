@@ -5,9 +5,11 @@
 
 @font-face {
   font-family: 'Cairo';
-  src: url('/assets/cairo-sub.woff2') format('woff2');
-  font-weight: 400 900;
+  src: url('/assets/cairo.ttf') format('truetype'),
+       url('/assets/cairo-sub.woff2') format('woff2');
+  font-weight: 300 900;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FFF9-FFFB;
 }
 
 :root {
@@ -20,7 +22,7 @@
   --cyan: #58d5cc;
   --green: #43bf86;
   --navy: #0c2237;
-  --font-cairo: 'Cairo', system-ui, -apple-system, sans-serif;
+  --font-cairo: 'Cairo', system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
   --font-mono: 'Courier New', ui-monospace, monospace;
 }
 
@@ -28,13 +30,65 @@
 .scrollbar-thin { scrollbar-width: thin; }
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-stable { scrollbar-gutter: stable; }
-html { scroll-behavior: smooth; overflow-x: clip; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-cairo);
+  font-feature-settings: "liga" 1, "calt" 1;
   overflow-x: clip;
+}
+
+/* شريط التنبيه بالسياق التجريبي (PoC Top Strip) */
+.poc-top-strip {
+  background: var(--navy);
+  color: #fff;
+  border-bottom: 2.5px solid var(--ink);
+  padding: 8px 16px;
+  font-size: 13px;
+  position: relative;
+  z-index: 60;
+}
+.poc-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.poc-badge {
+  background: var(--yellow);
+  color: var(--navy);
+  font: 900 11px var(--font-mono);
+  padding: 2px 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  letter-spacing: .04em;
+}
+.poc-ctx {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 12px;
+}
+.poc-link {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 800;
+  font-size: 12px;
+  transition: color .15s ease;
+}
+.poc-link:hover {
+  color: var(--yellow);
 }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -272,8 +326,7 @@ select:focus-visible,
   margin: 22px 0 22px;
   font-family: var(--font-cairo);
   font-size: clamp(48px, 6vw, 82px);
-  line-height: 1.05;
-  letter-spacing: -1px;
+  line-height: 1.15;
   font-weight: 900;
   transform: rotate(-1deg);
 }
@@ -1634,7 +1687,7 @@ footer b {
   .sketch-logo strong { font-size: 15px; }
   .header-button { display: none; }
   .hero { gap: 36px; padding-bottom: 48px; }
-  .hero h1 { font-size: 48px; letter-spacing: -2px; }
+  .hero h1 { font-size: 48px; }
   .hero-copy > p { font-size: 14px; }
   .scanner-frame { padding: 25px 18px 30px; box-shadow: 7px 8px 0 var(--navy), 11px 12px 0 rgba(88,213,204,.75); }
   .scanner-frame::before { inset: 8px; }

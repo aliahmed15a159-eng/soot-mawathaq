@@ -86,6 +86,13 @@ const SPRITE = `
     <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
     </symbol>
+    <symbol id="sym-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+    </symbol>
+    <symbol id="sym-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.38 0 2.5-1.12 2.5-2.5 0-.61-.22-1.17-.59-1.61L12 8l-.91 4.89A2.49 2.49 0 0 0 8.5 14.5z"/>
+      <path d="M12 2c-4 4.5-8 9-8 13a8 8 0 0 0 16 0c0-4-4-8.5-8-13z"/>
+    </symbol>
     <symbol id="sym-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3v18"/><path d="M5 7h14"/><path d="m5 7-3 6h6l-3-6Z"/><path d="m19 7-3 6h6l-3-6Z"/><path d="M8 21h8"/>
     </symbol>
@@ -102,18 +109,21 @@ const SPRITE = `
 </svg>`;
 
 function parseSlogan(slogan = '', idx = 0) {
-  const clean = String(slogan || '').replace(/[⚖️🦅☀️🌴]/g, '').trim();
+  const clean = String(slogan || '').replace(/[⚖️🦅☀️🌴🖊️🔥]/g, '').trim();
   const parts = clean.split('·').map((s) => s.trim()).filter(Boolean);
   const role = parts[0] || clean || 'مرشح معتمد';
-  const rawSym = parts.slice(1).join(' · ') || ['رمز: الميزان', 'رمز: الصقر', 'رمز: الشمس', 'رمز: النخلة'][idx % 4];
-  let symId = 'sym-scale';
-  if (/صقر|نسر/.test(rawSym)) symId = 'sym-falcon';
+  const rawSym = parts.slice(1).join(' · ') || ['رمز: القلم', 'رمز: الصقر', 'رمز: الشعلة', 'رمز: النخلة'][idx % 4];
+  let symId = 'sym-pen';
+  if (/قلم|كتاب/.test(rawSym)) symId = 'sym-pen';
+  else if (/شعلة|نار|أمل/.test(rawSym)) symId = 'sym-flame';
+  else if (/صقر|نسر/.test(rawSym)) symId = 'sym-falcon';
   else if (/شمس/.test(rawSym)) symId = 'sym-sun';
   else if (/نخل/.test(rawSym)) symId = 'sym-palm';
+  else if (/ميزان|عدل/.test(rawSym)) symId = 'sym-scale';
   const symLabel = rawSym.replace(/^رمز\s*:?\s*/, '').trim();
   return {
     role,
-    symbolText: symLabel || 'الميزان',
+    symbolText: symLabel || 'القلم',
     symbolSvg: `<svg class="sym-ic" width="15" height="15" aria-hidden="true"><use href="#${symId}"/></svg>`,
   };
 }
@@ -154,7 +164,7 @@ function stepper(active = 1) {
 }
 
 function layout({ title, body, step = 0, active = 0, showStepper = false, wide = false, nav = '' }) {
-  const pageTitle = title ? `${esc(title)} — صوت | منصة التصويت الموثّق` : 'صوت | من هويتك .. إلى صوتك';
+  const pageTitle = title ? `${esc(title)} — صوت موثّق | مختبر الاقتراع البيومتري السري` : 'صوت موثّق | من هويتك .. إلى صوتك';
   const stepNum = step || (showStepper ? active : 0);
   const bodyHasStepper = typeof body === 'string' && body.includes('class="stepper"');
   return `<!doctype html>
@@ -165,20 +175,30 @@ function layout({ title, body, step = 0, active = 0, showStepper = false, wide =
   <meta name="theme-color" content="#f7f4ea">
   <title>${pageTitle}</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="preload" href="/assets/cairo-sub.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="antialiased">
   ${SPRITE}
   <a class="skip-link" href="#main-content">تخطَّ إلى المحتوى الرئيسي</a>
+  <aside class="poc-top-strip" role="note" aria-label="سياق النموذج التجريبي">
+    <div class="poc-inner">
+      <span class="poc-badge">PROTOTYPE // POC</span>
+      <b>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</b>
+      <span class="poc-ctx">انتخابات اتحاد طلاب مدارس الجمهورية (2026/2027)</span>
+      <a href="/presentation" class="poc-link">عرض التحكيم والتفاصيل التقنية ←</a>
+    </div>
+  </aside>
   <main class="paper-page" id="top">
     <div class="page-shell ${wide ? 'wide' : ''}">
       <header class="site-header">
-        <a class="sketch-logo" href="/" aria-label="صوت — الصفحة الرئيسية">
+        <a class="sketch-logo" href="/" aria-label="صوت موثّق — الصفحة الرئيسية">
           <b>صـ</b>
           <span>
             <strong>صوت موثّق</strong>
-            <small>BIOMETRIC BALLOT LAB</small>
+            <small>BIOMETRIC BALLOT LAB // POC</small>
           </span>
         </a>
         <nav class="site-nav" aria-label="التنقل الرئيسي">
@@ -216,8 +236,8 @@ function layout({ title, body, step = 0, active = 0, showStepper = false, wide =
       </div>
 
       <footer>
-        <p>صوت موثّق — مختبر التحقق البيومتري والاقتراع السري المشفّر. جميع الأصوات مفصولة تمامًا عن الهوية الشخصية ومحمية بتوقيع رقمي.</p>
-        <b>SOOT // VERIFIED BALLOT LAB // EGYPT</b>
+        <p>صوت موثّق — مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري. جميع الأصوات معزولة تمامًا عن الهوية ومحمية بتوقيع رقمي تشفيري (Zero-Link Architecture).</p>
+        <b>SOOT // STUDENT UNION PROTOTYPE // EGYPT 2026-2027</b>
       </footer>
     </div>
   </main>
