@@ -1209,7 +1209,7 @@
       </div>
 
       <div class="slide-footer">
-        <div>فريق العمل: <b>مشروع «صوت موثّق» — منصة الاقتراع البيومتري السري</b></div>
+        <div><b>إعداد وتطوير: م / علي أحمد (Ali Ahmed) — مبتكر مشروع «صوت موثّق» ✨</b></div>
         <div>جاهزون للإجابة على جميع استفسارات السادة المحكمين 💬</div>
         <div>الشريحة <b>11 من 11</b></div>
       </div>
@@ -1255,10 +1255,6 @@
           dot.classList.toggle('active', Number(dot.dataset.goto) === current);
         });
 
-        const activeSlide = slides.find((s) => Number(s.dataset.slide) === current);
-        if (activeSlide) {
-          activeSlide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
       }
 
       btnPrev?.addEventListener('click', () => goTo(current - 1));
@@ -1279,19 +1275,6 @@
         else if (e.key === 'End') { e.preventDefault(); goTo(total); }
         else if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
       });
-
-      // التنقل باللمس والسحب (Swipe) للأجهزة اللوحية والموبايل
-      let touchStartX = 0;
-      window.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-      }, { passive: true });
-      window.addEventListener('touchend', (e) => {
-        const diff = e.changedTouches[0].screenX - touchStartX;
-        if (Math.abs(diff) > 60) {
-          if (diff > 0) goTo(current - 1); // سحب يمين
-          else goTo(current + 1); // سحب يسار
-        }
-      }, { passive: true });
 
       function toggleFullscreen() {
         if (!document.fullscreenElement) {

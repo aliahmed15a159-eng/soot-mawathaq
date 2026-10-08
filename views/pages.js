@@ -6,6 +6,79 @@ const STATE_AR = {
   upcoming: 'يبدأ قريبًا',
 };
 
+const DEFAULT_STUDENT_CANDIDATES = Object.freeze([
+  Object.freeze({
+    id: 1,
+    name: 'الطالب / أحمد كريم الشناوي',
+    title: 'مرشح رئيس اتحاد الطلاب',
+    role: 'مرشح رئيس اتحاد الطلاب',
+    symbol: 'القلم 🖊️',
+    slogan: 'مرشح رئيس اتحاد الطلاب · رمز: القلم 🖊️',
+    photo_url: '/candidates/c1.jpg',
+    program: 'برنامج التحول الرقمي المدرسي ورعاية المبتكرين: إطلاق منصة رقمية لإدارة الأندية الطلابية، وتوفير معامل ابتكار مفتوحة ومسابقات هاكاثون تكنولوجية، وتأمين رعاية رسمية لمشاريع الطلاب الابتكارية.',
+    sort: 1,
+  }),
+  Object.freeze({
+    id: 2,
+    name: 'الطالب / يوسف حازم القاضي',
+    title: 'مرشح نائب رئيس الاتحاد',
+    role: 'مرشح نائب رئيس الاتحاد',
+    symbol: 'الصقر 🦅',
+    slogan: 'مرشح نائب رئيس الاتحاد · رمز: الصقر 🦅',
+    photo_url: '/candidates/c2.jpg',
+    program: 'برنامج الدعم الأكاديمي وبنك المعرفة الطلابي: تأسيس مجموعات تقوية تفاعلية مجانية يديرها الطلاب المتفوقون، وتوفير بنك أسئلة رقمي تفاعلي، وبرامج تدريبية للاستعداد لاختبارات القدرات والمنح الدولية.',
+    sort: 2,
+  }),
+  Object.freeze({
+    id: 3,
+    name: 'الطالب / عبد الرحمن سامح فوزي',
+    title: 'أمين لجنة الأنشطة والرياضة',
+    role: 'أمين لجنة الأنشطة والرياضة',
+    symbol: 'الشعلة 🔥',
+    slogan: 'أمين لجنة الأنشطة والرياضة · رمز: الشعلة 🔥',
+    photo_url: '/candidates/c3.jpg',
+    program: 'برنامج تطوير الأنشطة الرياضية والمخيمات الكشفية: إحياء دوري المدارس لكرة القدم والشطرنج، وتوسيع معسكرات القيادة الطلابية والعمل التطوعي البيئي، وإبرام شراكات مع الأندية ومراكز الشباب.',
+    sort: 3,
+  }),
+  Object.freeze({
+    id: 4,
+    name: 'الطالب / زياد طارق الدسوقي',
+    title: 'أمين لجنة الخدمات والشمول الطلابي',
+    role: 'أمين لجنة الخدمات والشمول الطلابي',
+    symbol: 'النخلة 🌴',
+    slogan: 'أمين لجنة الخدمات والشمول الطلابي · رمز: النخلة 🌴',
+    photo_url: '/candidates/c4.jpg',
+    program: 'برنامج الشمول الرقمي ودمج الطلاب ذوي الهمم: تهيئة كافة الأنشطة والمرافق المدرسية لدمج الطلاب ذوي القدرات الخاصة، وإطلاق صندوق مقترحات رقمي صوتي مباشر لتوصيل أصوات الطلاب للإدارات.',
+    sort: 4,
+  }),
+]);
+
+const LEGACY_STUDENT_CANDIDATE_NAMES = new Set([
+  'منة الله عبد الرحمن',
+  'يوسف شاكر الحديدي',
+  'حبيبة مراد سلامة',
+  'كريم نشأت البدرى',
+]);
+
+function candidatesOrDefaults(candidates, electionId) {
+  const rows = Array.isArray(candidates) ? candidates : [];
+  const mergeCandidate = (candidate, current = {}) => ({
+    ...current,
+    ...candidate,
+    id: current.id !== undefined && current.id !== null ? current.id : candidate.id,
+    election_id: current.election_id !== undefined && current.election_id !== null ? current.election_id : electionId,
+  });
+  const hasLegacyNames = rows.some((candidate) => LEGACY_STUDENT_CANDIDATE_NAMES.has(String(candidate && candidate.name || '').trim()));
+  if (rows.length && !hasLegacyNames) {
+    return rows.map((current) => {
+      const candidate = DEFAULT_STUDENT_CANDIDATES.find((item) => item.name === current.name);
+      return candidate ? mergeCandidate(candidate, current) : current;
+    });
+  }
+
+  return DEFAULT_STUDENT_CANDIDATES.map((candidate, index) => mergeCandidate(candidate, rows[index]));
+}
+
 const DEMO_CARDS = [
   {
     nid: '31005292501518',
@@ -45,7 +118,7 @@ const DEMO_CARDS = [
 /* ---------------------------------------------------------- ١) الصفحة الرئيسية (بأسلوب Kashif AI) */
 function landing({ elections = [], counts = {}, cards = [] } = {}) {
   const activeElection = elections.find((e) => e.state === 'open') || elections[0] || null;
-  const candidates = activeElection && activeElection.candidates ? activeElection.candidates : [];
+  const candidates = candidatesOrDefaults(activeElection && activeElection.candidates, activeElection && activeElection.id);
   const sampleCards = cards.length ? cards : DEMO_CARDS;
   const firstCard = sampleCards[0] || DEMO_CARDS[0];
 
@@ -61,7 +134,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
         ${icon('sparkle', 14)}
         <span>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</span>
       </div>
-      <h1>من هويتك ..<br><span>إلى صوتك</span></h1>
+      <h1 class="hero-title"><span class="title-line1">من هويتك ..</span><br><span class="title-line2">إلى صوتك</span></h1>
       <p>
         نموذج أولي تجريبي (Proof of Concept) لمنظومة اقتراع إلكتروني سري موثّق لانتخابات اتحاد طلاب مدارس الجمهورية.
         نفحص تطابق البصمة البيومترية العصبية (128-D) مع كشف الحياة لحظيًا عبر الكاميرا، ثم نعزل هويتك تمامًا ونصنع رمز اقتراع سريًا مشفرًا.
@@ -72,12 +145,12 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
       </div>
       <div class="investigator-signature">
         <div class="signature-mark">
-          Soot-Biometric
+          Ali Ahmed
           <span></span>
         </div>
         <div>
-          <b>مختبر صوت للتوثيق الانتخابي الرقمي — نموذج PoC</b>
-          <small>STUDENT UNION ELECTIONS // 128-D FACE MATCH + ZERO-LINK BALLOT</small>
+          <b>تطوير وهندسة: م / علي أحمد (Ali Ahmed) ✨</b>
+          <small>ALI AHMED // DEVELOPER SIGNATURE // SOOT-MAWATHAQ</small>
         </div>
       </div>
       <div class="trust-note">
@@ -703,6 +776,7 @@ function verifyPage({ voter, election, rollCard } = {}) {
 
 /* ---------------------------------------------------------- ٤) صفحة الاقتراع السري */
 function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
+  const ballotCandidates = candidatesOrDefaults(candidates, election && election.id);
   return `
   <section class="page-head">
     <div class="case-kicker">
@@ -733,7 +807,7 @@ function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
 
     <form id="vote-form" data-election="${esc(election ? election.id : 1)}">
       <div class="ballot-grid">
-        ${candidates.map((c, idx) => {
+        ${ballotCandidates.map((c, idx) => {
           const photo = c.photo_url || candidateSvg(c, idx);
           const symSvg = symbolIcon(c.symbol);
           return `
@@ -961,7 +1035,8 @@ function receiptLookupPage({ code = '', result = null } = {}) {
 /* ---------------------------------------------------------- ٧) صفحة النتائج */
 function resultsPage({ data = null, elections = [], selected = null, electionId = null } = {}) {
   const active = (data && data.election) || selected || elections.find((e) => String(e.id) === String(electionId)) || elections[0] || null;
-  const cands = ((data && data.candidates) || (active && active.candidates) || []).slice().sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  const resultCandidates = (data && data.candidates) || (active && active.candidates) || [];
+  const cands = candidatesOrDefaults(resultCandidates, active && active.id).slice().sort((a, b) => (b.votes || 0) - (a.votes || 0));
   const total = (data && data.total !== undefined) ? data.total : ((active && active.total_ballots) || cands.reduce((s, c) => s + (c.votes || 0), 0));
 
   return `
@@ -1148,6 +1223,7 @@ function errorPage(message = 'الصفحة غير موجودة') {
 }
 
 module.exports = {
+  DEFAULT_STUDENT_CANDIDATES,
   landing,
   registerPage,
   otpPage,
