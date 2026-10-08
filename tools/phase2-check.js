@@ -143,9 +143,9 @@ async function journey(client, { name, nid, phone, election = 1 }) {
     const ocr = require('../lib/providers/ocr');
 
     const pairs = [
-      ['مينا عبد المسيح حنا', 'مينا عبدالمسيح حنا'],
+      ['عمر خالد إبراهيم', 'عمر خالد ابراهيم'],
       ['عبد الرحمن محمد السيد', 'عبدالرحمن محمد السيد'],
-      ['سلمى هاني عبد الله', 'سلمي هانى عبدالله'],
+      ['يوسف محمود عبد الرحمن', 'يوسف محمود عبدالرحمن'],
     ];
     let allHigh = true;
     for (const [a, b] of pairs) {
@@ -154,28 +154,28 @@ async function journey(client, { name, nid, phone, election = 1 }) {
       console.log(`   • «${a}» ↔ «${b}» = ${s.toFixed(3)}`);
     }
     check('المطابقة العربية تتقبّل الاختلافات الإملائية الشائعة (≥0.85)', allHigh);
-    check('اسم مختلف تمامًا يُرفض', matcher.scoreName('مينا عبد المسيح حنا', 'أحمد إبراهيم زكي').score < 0.45,
-      matcher.scoreName('مينا عبد المسيح حنا', 'أحمد إبراهيم زكي').score.toFixed(3));
+    check('اسم مختلف تمامًا يُرفض', matcher.scoreName('عمر خالد إبراهيم', 'أحمد إبراهيم زكي').score < 0.45,
+      matcher.scoreName('عمر خالد إبراهيم', 'أحمد إبراهيم زكي').score.toFixed(3));
 
     const cardText = `جمهورية مصر العربية
 بطاقة تحقيق الشخصية
-الاسم: مينا عبد المسيح حنا
-الرقم القومي: 29807152101234
-تاريخ الميلاد: 15/07/1998
-محل الإصدار: الجيزة`;
+الاسم: عمر خالد إبراهيم
+الرقم القومي: 30804150102345
+تاريخ الميلاد: 15/04/2008
+محل الإصدار: القاهرة`;
     const fields = ocr.extractFields(cardText);
     const decision = matcher.decideCardFields({
-      typed: { national_id: '29807152101234', full_name: 'مينا عبد المسيح حنا', birth_date: '1998-07-15', governorate: 'الجيزة' },
+      typed: { national_id: '30804150102345', full_name: 'عمر خالد إبراهيم', birth_date: '2008-04-15', governorate: 'القاهرة' },
       extracted: fields,
     });
-    check('قراءة البطاقة: الرقم القومي مستخرج صحيحًا', fields.national_id === '29807152101234', fields.national_id || '—');
-    check('قراءة البطاقة: الاسم العربي مستخرج', /مينا/.test(fields.full_name || ''), fields.full_name || '—');
-    check('قراءة البطاقة: التاريخ والمحافظة', fields.birth_date === '1998-07-15' && /جيزة|جيزه/.test(fields.governorate || ''),
+    check('قراءة البطاقة: الرقم القومي مستخرج صحيحًا', fields.national_id === '30804150102345', fields.national_id || '—');
+    check('قراءة البطاقة: الاسم العربي مستخرج', /عمر/.test(fields.full_name || ''), fields.full_name || '—');
+    check('قراءة البطاقة: التاريخ والمحافظة', fields.birth_date === '2008-04-15' && /قاهرة|قاهره/.test(fields.governorate || ''),
       `${fields.birth_date} · ${fields.governorate}`);
     check('قرار البطاقة: قبول عند تطابق الحقول', decision.ok && decision.score >= 0.9, `درجة ${decision.score.toFixed(2)}`);
 
     const badDecision = matcher.decideCardFields({
-      typed: { national_id: '29807152101234', full_name: 'مينا عبد المسيح حنا', birth_date: '1998-07-15', governorate: 'الجيزة' },
+      typed: { national_id: '30804150102345', full_name: 'عمر خالد إبراهيم', birth_date: '2008-04-15', governorate: 'القاهرة' },
       extracted: { national_id: '11111111111111', full_name: 'شخص مختلف تماما', birth_date: '1970-01-01', governorate: 'أسوان' },
     });
     check('قرار البطاقة: رفض قاطع لبطاقة شخص آخر', !badDecision.ok && badDecision.hardFail, `درجة ${badDecision.score.toFixed(2)}`);
@@ -196,8 +196,8 @@ async function journey(client, { name, nid, phone, election = 1 }) {
 
     const voter = makeClient(`http://127.0.0.1:${PORT_MAIN}`);
     const reg = await voter.json('/api/register', {
-      full_name: 'مينا عبد المسيح حنا', national_id: '29807152101234', birth_date: '1998-07-15',
-      governorate: 'الجيزة', phone: '01099990001', consent: true, election_id: 1,
+      full_name: 'عمر خالد إبراهيم', national_id: '30804150102345', birth_date: '2008-04-15',
+      governorate: 'القاهرة', phone: '01099990001', consent: true, election_id: 1,
     });
     check('التسجيل يطلب كود موبايل', reg.data.ok && reg.data.otp && reg.data.otp.required, `التوجيه: ${reg.data.redirect}`);
     check('التسجيل يوجّه لصفحة الكود', reg.data.redirect === '/otp');
@@ -233,14 +233,14 @@ async function journey(client, { name, nid, phone, election = 1 }) {
     check('تسجيل الصوت بنجاح وإصدار إيصال', ballot.data.ok && !!(ballot.data.receipt_code || ballot.data.receipt), ballot.data.receipt_code || ballot.data.receipt || ballot.data.error);
 
     const dup = await voter.json('/api/register', {
-      full_name: 'مينا عبد المسيح حنا', national_id: '29807152101234', birth_date: '1998-07-15',
-      governorate: 'الجيزة', phone: '01099990001', consent: true, election_id: 1,
+      full_name: 'عمر خالد إبراهيم', national_id: '30804150102345', birth_date: '2008-04-15',
+      governorate: 'القاهرة', phone: '01099990001', consent: true, election_id: 1,
     });
     check('منع التصويت مرة ثانية بنفس الرقم القومي', !dup.data.ok && dup.data.code === 'already_voted', dup.data.error);
 
     /* ---- كشوف الناخبين عبر واجهة الإدارة ---- */
     const imp = await admin.json('/api/admin/roll', {
-      csv: '29807152101234,مينا عبد المسيح حنا\n29507122501846,سلمى هاني عبد الله',
+      csv: '30804150102345,عمر خالد إبراهيم\n30907152101234,يوسف محمود عبد الرحمن',
     });
     check('استيراد كشف الناخبين', imp.data.ok && imp.data.inserted >= 1, `أُضيف: ${imp.data.inserted}`);
     const stats = await admin.req('GET', '/api/admin/roll');
@@ -254,10 +254,10 @@ async function journey(client, { name, nid, phone, election = 1 }) {
     await waitHealth(PORT_STRICT);
 
     const c1 = makeClient(`http://127.0.0.1:${PORT_STRICT}`);
-    const sNid = '29507122501846';
+    const sNid = '30907152101234';
     const sParsed = sec.parseNationalId(sNid);
     const inRoll = await c1.json('/api/register', {
-      full_name: 'سلمي هانى عبدالله',  // اختلاف إملائي بسيط عن «سلمى هاني عبد الله» في الكشف
+      full_name: 'يوسف محمود عبدالرحمن',  // اختلاف إملائي بسيط عن «يوسف محمود عبد الرحمن» في الكشف
       national_id: sNid, birth_date: sParsed.birthDate, governorate: sParsed.governorate,
       phone: '01099990002', consent: true, election_id: 1,
     });

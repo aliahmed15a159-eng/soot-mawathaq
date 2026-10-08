@@ -41,22 +41,39 @@ const randomHash = (seed) => Array.from({ length: 256 }, (_, i) => (((seed * 31 
 const similarHash = (base, flipEvery = 9) => base.split('').map((b, i) => (i % flipEvery === 0 ? (b === '1' ? '0' : '1') : b)).join('');
 const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwcJC4oIChAKBwcKTwxNDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NP/AABEIAAEAAQMBIgACEQEDEQH/xAAfAAABBQEBAQEBAQAAAAAAAAAAAQIDBAUGBwgJCgv/xAC1EAACAQMDAgQDBQUEBAAAAX0BAgMABBEFEiExQQYTUWEHInEUMoGRoQgjQrHBFVLR8CQzYnKCCQoWFxgZGiUmJygpKjQ1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4eLj5OXm5+jp6vHy8/T19vf4+fr/2gAMAwEAAhEDEQA/AJv/Z';
 
+// رقم قومي عشوائي صالح لكل تشغيل (الجيزة 21) حتى لا تتعارض التشغيلات المتتالية
+const rnd = (n) => Math.floor(Math.random() * n);
+const RUN = {
+  yy: String(70 + rnd(30)).padStart(2, '0'),
+  mm: String(1 + rnd(12)).padStart(2, '0'),
+  dd: String(1 + rnd(28)).padStart(2, '0'),
+  serial: String(1000 + rnd(8999)),
+  gender: 1 + 2 * rnd(5), // فردي = ذكر
+};
+RUN.birth_date = `19${RUN.yy}-${RUN.mm}-${RUN.dd}`;
+// البنية: قرن(1) + سنة(2) + شهر(2) + يوم(2) + كود المحافظة(2) + مسلسل(4) + خانة النوع(1) = 14
+RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
+
 (async () => {
-  console.log(`\n𓂀 اختبار «صوت موثّق» الشامل — ${BASE}\n${'─'.repeat(58)}`);
+  console.log(`\n𓂀 اختبار «صوت» الشامل — ${BASE} (رقم الاختبار: ${RUN.national_id})\n${'─'.repeat(58)}`);
 
   const health = await req('GET', '/healthz');
   check('الخادم يعمل', health.status === 200 && health.data.ok, `وضع: ${health.data.mode}`);
 
   const home = await req('GET', '/');
-  check('الصفحة الرئيسية تُعرض', home.status === 200 && /صوت موثّق/.test(home.data.raw));
+  check('الصفحة الرئيسية تُعرض', home.status === 200 && /صوت/.test(home.data.raw) && /من هويتك/.test(home.data.raw));
+  check('الاستحقاق الافتراضي لانتخابات اتحاد طلاب المدارس', home.status === 200 && /انتخابات اتحاد طلاب المدارس/.test(home.data.raw));
+  check('أسماء المرشحين الافتراضية الجديدة تظهر', home.status === 200 && [
+    'آدم شريف عبد الله', 'سليم أحمد بركات', 'كريم خالد فؤاد', 'أحمد منصور',
+  ].every((name) => home.data.raw.includes(name)));
 
   // ---------------------------------------------------------------- تسجيل
   const reg = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا',
-    national_id: '29807152101234',
-    birth_date: '1998-07-15',
+    full_name: 'عمر خالد إبراهيم',
+    national_id: RUN.national_id,
+    birth_date: RUN.birth_date,
     governorate: 'الجيزة',
-    phone: '01012345678',
+    phone: ['010','011','012','015'][rnd(4)] + String(10000000 + rnd(89999999)),
     consent: true,
     election_id: 1,
   });
@@ -83,14 +100,14 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
   check('رفض رقم قومي غير صحيح', badReg.status === 400 && !badReg.data.ok, badReg.data.error);
 
   const dobMismatch = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا', national_id: '29807152101234',
+    full_name: 'عمر خالد إبراهيم', national_id: RUN.national_id,
     birth_date: '1990-01-01', governorate: 'الجيزة', phone: '01012345678', consent: true,
   });
   check('رفض تاريخ ميلاد لا يطابق الرقم القومي', dobMismatch.status === 400, dobMismatch.data.error);
 
   const noConsent = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا', national_id: '29807152101234',
-    birth_date: '1998-07-15', governorate: 'الجيزة', phone: '01012345678', consent: false,
+    full_name: 'عمر خالد إبراهيم', national_id: RUN.national_id,
+    birth_date: RUN.birth_date, governorate: 'الجيزة', phone: '01012345678', consent: false,
   });
   check('رفض التسجيل بدون موافقة صريحة', noConsent.status === 400, noConsent.data.error);
 
@@ -143,10 +160,10 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
 
   // ---------------------------------------------------------------- الإيصال والنتائج
   const receipt = await req('GET', `/verify-receipt?code=${vote.data.receipt_code}`);
-  check('التحقق من الإيصال', receipt.status === 200 && receipt.data.raw.includes('الإيصال صحيح'));
+  check('التحقق من الإيصال', receipt.status === 200 && receipt.data.raw.includes('إيصال صالح'));
 
   const fakeReceipt = await req('GET', '/verify-receipt?code=ZZZZZ-99999');
-  check('رفض إيصال غير موجود', fakeReceipt.data.raw.includes('مفيش صوت مسجّل'));
+  check('رفض إيصال غير موجود', fakeReceipt.data.raw.includes('الإيصال غير موجود'));
 
   const resultsPage = await req('GET', '/results?e=1');
   check('صفحة النتائج تعرض بيانات', resultsPage.status === 200 && /صوت محسوب|النتائج/.test(resultsPage.data.raw));
@@ -168,9 +185,18 @@ const TINY = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQg
   check('إنشاء انتخابة جديدة', newElection.data.ok, newElection.data.error || `رقم ${newElection.data.election && newElection.data.election.id}`);
 
   const newCand = await req('POST', '/api/admin/candidates', {
-    election_id: newElection.data.election.id, name: 'مروان الشريف', slogan: 'خبير التنظيم', program: 'تطوير الخدمات',
+    election_id: newElection.data.election.id,
+    name: 'الطالب / مازن سامي',
+    title: 'مرشح أمين اللجنة الثقافية والعلمية',
+    symbol: 'الكتاب 📘',
+    bio: 'نادي قراءة ومعرض علوم مدرسي',
   });
   check('إضافة مرشح', newCand.data.ok, newCand.data.error);
+  check('حفظ الصفة والرمز والبرنامج من نموذج المرشح',
+    newCand.data.ok
+      && newCand.data.candidate.slogan.includes('مرشح أمين اللجنة الثقافية والعلمية')
+      && newCand.data.candidate.slogan.includes('رمز: الكتاب 📘')
+      && newCand.data.candidate.program === 'نادي قراءة ومعرض علوم مدرسي');
 
   const closeIt = await req('POST', `/api/admin/elections/${newElection.data.election.id}/state`, { state: 'closed' });
   check('غلق الاقتراع', closeIt.data.ok && closeIt.data.election.state === 'closed');

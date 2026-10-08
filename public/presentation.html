@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>العرض التقديمي الشامل — صوت موثّق | مختبر الاقتراع البيومتري السري</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Cairo';
+      src: url('/assets/cairo.ttf') format('truetype'),
+           url('/assets/cairo-sub.woff2') format('woff2');
+      font-weight: 300 900;
+      font-display: swap;
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FFF9-FFFB;
+    }
+    :root {
+      --ink: #10283f;
+      --paper: #f7f4ea;
+      --muted: #68727b;
+      --red: #ff4453;
+      --yellow: #e6bd5d;
+      --cyan: #58d5cc;
+      --green: #43bf86;
+      --navy: #0c2237;
+      --font-cairo: 'Cairo', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Courier New', ui-monospace, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(90deg, transparent 68px, rgba(255,68,83,.17) 69px, rgba(255,68,83,.17) 70px, transparent 71px),
+        linear-gradient(rgba(16,40,63,.045) 1px, transparent 1px),
+        radial-gradient(rgba(16,40,63,.12) .7px, transparent .7px);
+      background-size: 100% 100%, 100% 29px, 16px 16px;
+      color: var(--ink);
+      font-family: var(--font-cairo);
+      font-feature-settings: "liga" 1, "calt" 1;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* شريط التنبيه بالسياق التجريبي العلوي */
+    .deck-poc-strip {
+      background: var(--navy);
+      color: #fff;
+      padding: 8px 20px;
+      font-size: 13px;
+      border-bottom: 2px solid var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .deck-poc-strip b { color: var(--yellow); font-family: var(--font-mono); }
+    .deck-poc-strip span { color: var(--cyan); }
+
+    /* شريط التحكم العلوي */
+    .deck-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 24px;
+      background: rgba(247, 244, 234, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 3px solid var(--navy);
+      flex-wrap: wrap;
+    }
+    .deck-brand {
+      display: inline-flex;
+      align-items: stretch;
+      height: 44px;
+      color: var(--ink);
+      text-decoration: none;
+      border: 3px solid var(--ink);
+      background: #fff;
+      box-shadow: 4px 4px 0 var(--cyan);
+      transform: rotate(-1deg);
+    }
+    .deck-brand > b {
+      width: 44px;
+      display: grid;
+      place-items: center;
+      background: var(--navy);
+      color: #fff;
+      font: 900 17px var(--font-mono);
+      border-left: 3px solid var(--ink);
+    }
+    .deck-brand > span {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2px 10px;
+    }
+    .deck-brand strong { font-size: 15px; line-height: 1; font-weight: 900; }
+    .deck-brand strong::first-letter { color: var(--red); }
+    .deck-brand small { font: 700 8px var(--font-mono); color: var(--muted); margin-top: 3px; }
+
+    .deck-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sketch-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 2.5px solid var(--ink);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 900;
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 var(--ink);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .sketch-btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+    .sketch-btn.primary { background: var(--red); color: #fff; box-shadow: 4px 4px 0 var(--navy); }
+    .sketch-btn.navy { background: var(--navy); color: #fff; box-shadow: 4px 4px 0 var(--cyan); }
+    .sketch-btn.yellow { background: var(--yellow); color: var(--navy); }
+    .sketch-btn.green { background: var(--green); color: #fff; }
+
+    .slide-counter {
+      padding: 6px 12px;
+      border: 2.5px solid var(--ink);
+      background: var(--yellow);
+      font: 900 13px var(--font-mono);
+      direction: ltr;
+    }
+
+    /* مسرح الشرائح */
+    .deck-stage {
+      width: min(1200px, calc(100% - 32px));
+      margin: 22px auto 18px;
+    }
+
+    .slide {
+      display: none;
+      position: relative;
+      min-height: 640px;
+      padding: 34px 40px 38px;
+      background: linear-gradient(145deg, #f2f0e8, #fffdf6);
+      border: 4px solid var(--navy);
+      border-radius: 4px 10px 6px 8px;
+      box-shadow: 11px 12px 0 var(--navy), 17px 18px 0 rgba(88,213,204,.75);
+      animation: slideIn .28s ease-out both;
+    }
+    .slide.active { display: flex; flex-direction: column; justify-content: space-between; }
+    .slide::before {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 12px;
+      border: 1.5px dashed rgba(16,40,63,.3);
+    }
+    .slide > * { position: relative; z-index: 1; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.995); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .file-tab {
+      position: absolute;
+      top: -16px;
+      left: 36px;
+      padding: 4px 14px;
+      background: var(--red);
+      color: #fff;
+      font: 900 11px var(--font-mono);
+      letter-spacing: .08em;
+      border: 2.5px solid var(--ink);
+      box-shadow: 3px 3px 0 var(--navy);
+      transform: rotate(1deg);
+    }
+
+    .slide-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2px dashed rgba(16,40,63,.25);
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .dot-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--green); border: 2px solid var(--ink);
+      box-shadow: 0 0 0 2px rgba(67,191,134,.35);
+      display: inline-block;
+    }
+    .slide-topline code {
+      font: 800 11px var(--font-mono);
+      background: rgba(16,40,63,.06);
+      padding: 3px 8px;
+      border: 1.5px solid rgba(16,40,63,.2);
+      border-radius: 3px;
+    }
+
+    .case-kicker {
+      display: inline-flex;
+      border: 2px solid var(--ink);
+      background: #fff;
+      font: 800 10px var(--font-mono);
+      margin-bottom: 12px;
+      transform: rotate(-1deg);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .case-kicker span, .case-kicker b, .case-kicker i { padding: 5px 9px; font-style: normal; }
+    .case-kicker span { background: var(--navy); color: #fff; }
+    .case-kicker b { background: var(--yellow); color: var(--navy); }
+    .case-kicker i { background: #fff; color: var(--red); font-weight: 900; }
+
+    .slide h1 {
+      margin: 4px 0 14px;
+      font-size: clamp(34px, 4.4vw, 56px);
+      line-height: 1.2;
+      font-weight: 900;
+    }
+    .slide h1 span { color: var(--red); }
+    .slide h2 {
+      margin: 4px 0 12px;
+      font-size: clamp(24px, 3.2vw, 38px);
+      line-height: 1.25;
+      font-weight: 900;
+    }
+    .slide h2 span { color: var(--red); }
+    .slide p.lead {
+      margin: 0 0 16px;
+      font-size: clamp(15px, 1.6vw, 18px);
+      line-height: 1.8;
+      font-weight: 600;
+      color: #2b3e50;
+      max-width: 950px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 14px; }
+
+    .box {
+      padding: 18px;
+      background: #fff;
+      border: 2.5px solid var(--ink);
+      box-shadow: 5px 5px 0 var(--ink);
+      border-radius: 4px;
+      position: relative;
+    }
+    .box.red { border-color: var(--red); box-shadow: 5px 5px 0 var(--red); }
+    .box.yellow { background: #fffdf2; border-color: var(--navy); box-shadow: 5px 5px 0 var(--yellow); }
+    .box.cyan { background: #f0fdfc; border-color: var(--navy); box-shadow: 5px 5px 0 var(--cyan); }
+    .box.green { background: #f0fbf5; border-color: var(--green); box-shadow: 5px 5px 0 var(--green); }
+    .box.navy { background: var(--navy); color: #fff; border-color: var(--ink); box-shadow: 5px 5px 0 var(--cyan); }
+
+    .box-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--navy);
+      color: #fff;
+      font: 900 10px var(--font-mono);
+      margin-bottom: 8px;
+      border-radius: 2px;
+    }
+    .box.navy .box-tag { background: var(--yellow); color: var(--navy); }
+    .box h3 { margin: 4px 0 8px; font-size: 18px; font-weight: 900; }
+    .box.navy h3 { color: #fff; }
+    .box p { margin: 0; font-size: 13.5px; line-height: 1.75; font-weight: 600; }
+    .box.navy p { color: #e2e8f0; }
+    .box ul { margin: 8px 0 0; padding-right: 20px; font-size: 13.5px; line-height: 1.8; font-weight: 700; }
+    .box.navy ul { color: #f1f5f9; }
+
+    .code-block {
+      background: var(--navy);
+      color: #7ef5db;
+      padding: 14px 18px;
+      border: 2px solid var(--ink);
+      border-radius: 4px;
+      font: 700 13px/1.7 var(--font-mono);
+      direction: ltr;
+      text-align: left;
+      overflow-x: auto;
+      box-shadow: 4px 4px 0 var(--ink);
+      margin: 10px 0;
+    }
+    .code-block .k { color: #ff8e9b; }
+    .code-block .c { color: #94a3b8; }
+    .code-block .s { color: #ffd666; }
+
+    .step-badge {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      color: #fff;
+      border: 2px solid var(--ink);
+      font: 900 14px var(--font-mono);
+      margin-left: 6px;
+    }
+
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 2px dashed rgba(16,40,63,.25);
+      margin-top: 22px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .slide-footer b { font-family: var(--font-mono); color: var(--navy); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border: 1.5px solid var(--ink);
+      background: #fff;
+      font: 900 11px var(--font-cairo);
+      border-radius: 3px;
+    }
+    .pill.red { background: var(--red); color: #fff; }
+    .pill.green { background: var(--green); color: #fff; }
+    .pill.yellow { background: var(--yellow); color: var(--navy); }
+    .pill.cyan { background: var(--cyan); color: var(--navy); }
+
+    /* جدول المقارنة والجدوى */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #fff;
+      border: 2.5px solid var(--ink);
+      box-shadow: 6px 6px 0 var(--ink);
+      font-size: 13.5px;
+    }
+    .compare-table th, .compare-table td {
+      padding: 10px 14px;
+      border: 1.5px solid var(--ink);
+      text-align: right;
+    }
+    .compare-table th {
+      background: var(--navy);
+      color: #fff;
+      font-weight: 900;
+    }
+    .compare-table tr:nth-child(even) { background: #faf8f0; }
+    .compare-table td.bad { background: #ffebee; color: #b71c1c; font-weight: 800; }
+    .compare-table td.good { background: #e8f5e9; color: #1b5e20; font-weight: 800; }
+
+    /* قسم الـ QR Code في الشريحة الأولى والأخيرة */
+    .qr-banner-card {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: #fff;
+      border: 3px solid var(--ink);
+      box-shadow: 6px 6px 0 var(--cyan);
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin-top: 16px;
+    }
+    .qr-img-box {
+      width: 130px;
+      height: 130px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      padding: 6px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 3px 3px 0 var(--navy);
+    }
+    .qr-img-box img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-text-box h4 { margin: 0 0 6px; font-size: 18px; font-weight: 900; }
+    .qr-text-box p { margin: 0 0 8px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .qr-link-mono {
+      display: inline-block;
+      font: 900 13px var(--font-mono);
+      background: var(--paper);
+      padding: 4px 10px;
+      border: 1.5px solid var(--ink);
+      color: var(--navy);
+      direction: ltr;
+      text-decoration: none;
+    }
+
+    /* حاسبة العائد والجدوى التفاعلية */
+    .calc-card {
+      background: #fff;
+      border: 2.5px solid var(--ink);
+      box-shadow: 5px 5px 0 var(--navy);
+      padding: 16px 20px;
+      margin-top: 12px;
+      border-radius: 4px;
+    }
+    .calc-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .calc-row label { font-weight: 800; font-size: 14px; }
+    .calc-slider { flex: 1; min-width: 200px; accent-color: var(--red); }
+    .calc-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .metric-box {
+      background: var(--paper);
+      border: 1.5px solid var(--ink);
+      padding: 10px;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .metric-box small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); }
+    .metric-box b { display: block; font-size: 19px; font-weight: 900; color: var(--navy); margin-top: 2px; }
+
+    /* درج التنقل السريع للشرائح */
+    .deck-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(12, 34, 55, 0.96);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      z-index: 90;
+      border-top: 2px solid var(--cyan);
+      scrollbar-width: thin;
+    }
+    .drawer-dot {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      padding: 4px 10px;
+      font: 800 11px var(--font-mono);
+      cursor: pointer;
+      white-space: nowrap;
+      border-radius: 3px;
+      transition: all .15s ease;
+    }
+    .drawer-dot:hover, .drawer-dot.active {
+      background: var(--yellow);
+      color: var(--navy);
+      border-color: var(--navy);
+      font-weight: 900;
+      transform: translateY(-2px);
+    }
+
+    @media print {
+      .deck-topbar, .deck-poc-strip, .deck-drawer { display: none !important; }
+      .slide { display: block !important; page-break-after: always; box-shadow: none; border: 2px solid #000; min-height: auto; margin-bottom: 20px; }
+      body { background: #fff; }
+    }
+
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .slide { padding: 24px 20px; min-height: auto; }
+      .calc-metrics { grid-template-columns: 1fr; }
+      .qr-banner-card { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- شريط التنبيه بالسياق التجريبي -->
+  <aside class="deck-poc-strip">
+    <div>
+      <b>PROTOTYPE // LAB POC</b> —
+      <span>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</span>
+    </div>
+    <div>
+      سياق الاستحقاق: <b>انتخابات اتحاد طلاب المدارس (2026/2027)</b>
+    </div>
+  </aside>
+
+  <!-- شريط التحكم العلوي للعرض التقديمي -->
+  <header class="deck-topbar">
+    <a class="deck-brand" href="/">
+      <b>صـ</b>
+      <span>
+        <strong>صوت موثّق</strong>
+        <small>PRESENTATION DECK // JURY EDITION</small>
+      </span>
+    </a>
+
+    <div class="deck-controls">
+      <button type="button" class="sketch-btn" id="btn-prev" title="الشريحة السابقة (السهم الأيمن)">→ السابقة</button>
+      <span class="slide-counter" id="slide-counter">01 / 11</span>
+      <button type="button" class="sketch-btn primary" id="btn-next" title="الشريحة التالية (السهم الأيسر أو مسافة)">التالية ←</button>
+      <button type="button" class="sketch-btn yellow" id="btn-fullscreen">ملء الشاشة ⛶</button>
+      <button type="button" class="sketch-btn" onclick="window.print()">طباعة / PDF 🖨️</button>
+      <a class="sketch-btn navy" href="/soot-mawathaq-presentation.pptx" download>تحميل PowerPoint (.pptx) ⬇</a>
+      <a class="sketch-btn green" href="/">تجربة المنظومة الحية 🚀</a>
+    </div>
+  </header>
+
+  <main class="deck-stage" id="deck-stage">
+
+    <!-- ==================== الشريحة 1: الغلاف وشريحة البداية ==================== -->
+    <section class="slide active" data-slide="1">
+      <div class="file-tab">SLIDE 01 // OVERVIEW & QR</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>المسابقة الوطنية للمبتكرين والطلاب في التكنولوجيا والذكاء الاصطناعي</b></div>
+          <code>PROTOTYPE // CIVICTECH & CRYPTOGRAPHY 2026/2027</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>PROJECT DOSSIER</span>
+          <b>#SOOT-MAWATHAQ</b>
+          <i>STUDENT UNION LAB</i>
+        </div>
+
+        <h1>صوت موثّق<br><span>من هويتك .. إلى صوتك</span></h1>
+        <p class="lead">
+          <b>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري (Proof of Concept)</b><br>
+          تم تصميمه لانتخابات <b>اتحاد طلاب المدارس (دورة 2026/2027)</b>.
+          يحل المنظومة معادلة التحقق الرقمي عبر الجمع بين <b>التحقق العصبي الحي من الوجه (128-D + Liveness)</b>
+          و<b>معمارية عزل الهوية الصارمة (Zero-Link Architecture)</b> التي تمنع رياضيًا وتقنيًا ربط صوت الناخب بهويته.
+        </p>
+
+        <!-- صندوق الـ QR Code التفاعلي للمحكمين -->
+        <div class="qr-banner-card">
+          <div class="qr-img-box" id="qr-cover-box">
+            <img src="/assets/qr-code.svg" alt="QR Code لموقع صوت موثّق" id="cover-qr-img">
+          </div>
+          <div class="qr-text-box">
+            <h4>📱 مسح الـ QR Code لتجربة المنظومة فوراً مع التحكيم:</h4>
+            <p>امسح الكود بكاميرا هاتفك لفتح المنظومة الحية وتجربة مسار التحقق البيومتري والتصويت السري لحظياً أثناء العرض.</p>
+            <div>
+              <a class="qr-link-mono" href="https://soot-mawathaq.vercel.app/" target="_blank" rel="noopener">https://soot-mawathaq.vercel.app/</a>
+              <span class="pill green" style="margin-right:8px">جاهز للتجربة الحية</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:16px">
+          <div class="box cyan">
+            <span class="box-tag">BIOMETRIC AI</span>
+            <h3>بصمة عصبية 128-D</h3>
+            <p>مطابقة لحظية عبر المتصفح بين صورة الكاميرا وبيانات البطاقة القومية مع كشف الحيوية ومقاومة التزييف.</p>
+          </div>
+          <div class="box yellow">
+            <span class="box-tag">ZERO-LINK PRIVACY</span>
+            <h3>سرية تشفيرية مطلقة</h3>
+            <p>عزل هيكلي كامل بين سجل الناخبين وصندوق الاقتراع المجهول عبر توقيعات HMAC-SHA256 العمياء.</p>
+          </div>
+          <div class="box green">
+            <span class="box-tag">VERIFIABLE RECEIPT</span>
+            <h3>إيصال تحقق مشفر</h3>
+            <p>إصدار كود إثبات مشفر للناخب للتحقق من احتساب صوته في الصندوق دون كشف اسم مرشحه لأي طرف.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>المشروع: <b>صوت موثّق — مختبر الاقتراع السري</b></div>
+        <div>المسار: <code class="ltr">/presentation</code> · الرابط المباشر: <code class="ltr">soot-mawathaq.vercel.app</code></div>
+        <div>الشريحة <b>01 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 2: المشكلة والأزمة القبلية ==================== -->
+    <section class="slide" data-slide="2">
+      <div class="file-tab">SLIDE 02 // THE PROBLEM</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot" style="background:var(--red)"></span><b>المشكلة والأزمة القبلية (The Problem - Before)</b></div>
+          <code>TRADITIONAL VOTING FLAWS & CHALLENGES</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>ROOT PROBLEM</span>
+          <b>ثغرات الاقتراع التقليدي الورقي</b>
+          <i>CRITICAL FLAWS</i>
+        </div>
+
+        <h2>أزمة النظم التقليدية: <span>أين يفشل الاقتراع الورقي؟</span></h2>
+        <p class="lead">
+          تواجه العمليات الانتخابية التقليدية والطلابية 5 أزمات هيكلية تكلف ملايين الجنيهات وتفتح أبواب التشكيك في النزاهة:
+        </p>
+
+        <div class="grid-3">
+          <div class="box red">
+            <span class="box-tag" style="background:var(--red)">01 // انتحال الشخصية والتزوير</span>
+            <h3>انتحال الشخصية (Impersonation)</h3>
+            <p>سهولة استخدام بطاقات ورقية مسروقة أو التصويت بأسماء طلاب غائبين أو متوفين في ظل الفحص البصري البشري المرهق والمعرض للأخطاء.</p>
+          </div>
+          <div class="box red">
+            <span class="box-tag" style="background:var(--red)">02 // تكرار التصويت</span>
+            <h3>تكرار التصويت (Double Voting)</h3>
+            <p>غياب الربط اللحظي الموحد بين اللجان المدرسية والفرعية، مما يتيح للناخب الإدلاء بصوته في أكثر من لجنة أو كشف دون اكتشاف فوري.</p>
+          </div>
+          <div class="box red">
+            <span class="box-tag" style="background:var(--red)">03 // التكلفة اللوجستية والورقية</span>
+            <h3>إهدار مالي وبيئي ضخم</h3>
+            <p>ملايين الأوراق المطبوعة، الأحبار الفسفورية، الصناديق البلاستيكية، وأساطيل النقل الأمني والفرز، مسببة هدراً مالياً وأثراً كربونياً هائلاً.</p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="box yellow">
+            <span class="box-tag">04 // بطء الفرز والأخطاء البشرية</span>
+            <h3>ساعات وأيام من الفرز اليدوي</h3>
+            <p>استغراق ساعات طويلة في العد والفرز اليدوي، مع احتمالية الخطأ في حساب الأصوات الباطلة وتأخر إعلان النتائج مما يثير التوترات.</p>
+          </div>
+          <div class="box yellow">
+            <span class="box-tag">05 // شبهات الإكراه وشراء الأصوات</span>
+            <h3>غياب التحقق السري المستقل</h3>
+            <p>صعوبة إثبات أن الناخب صوّت بإرادته الحرة دون إكراه من جهات أو أفراد، مع انعدام إمكانية تدقيق الناخب لوجود صوته في الصندوق لاحقاً.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>محور التحليل: <b>أوجه القصور في المنظومة التقليدية</b></div>
+        <div>الشريحة <b>02 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 3: المعضلة الكبرى للتصويت الرقمي ==================== -->
+    <section class="slide" data-slide="3">
+      <div class="file-tab">SLIDE 03 // THE DILEMMA</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot" style="background:var(--yellow)"></span><b>المعضلة الكبرى للتصويت الرقمي (The Core Paradox)</b></div>
+          <code>AUTHENTICATION VS ANONYMITY PARADOX</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>THE GRAND PARADOX</span>
+          <b>معضلة الهندسة التشفيرية</b>
+          <i>THE CORE QUESTION</i>
+        </div>
+
+        <h2>المعضلة الكبرى: <span>كيف نتحقق بيومترياً دون كشف الصوت؟</span></h2>
+        
+        <div class="box navy" style="margin-bottom:16px;padding:22px">
+          <h3 style="font-size:22px;color:var(--yellow);margin-top:0">«كيف نتحقق بيومترياً من شخصية الناخب لمنع التزوير، دون أن نكشف أو نخزن لمن ذهب صوته؟»</h3>
+          <p style="font-size:15px;line-height:1.8">
+            في الأنظمة الرقمية العادية: كلما زادت دقة التحقق من هوية المستخدم (User Authentication)، أصبح من السهل ربط هويته ببياناته المسجلة (Activity Tracking).
+            لكن في <b>الانتخابات الدستورية والطلابية</b>، كشف خيار الناخب يعد <b>جريمة وانتهاكاً لسرية الاقتراع</b>.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <div class="box red">
+            <span class="box-tag" style="background:var(--red)">الطرف الأول // التوثيق القاطع</span>
+            <h3>ضرورة التحقق البيومتري (Authentication)</h3>
+            <ul>
+              <li>منع انتحال الشخصية والتصويت بالنيابة.</li>
+              <li>التأكد من أن الناخب مقيد في السجل المدني / المدرسي.</li>
+              <li>ضمان كشف الحياة (Liveness) لمنع الصور والشاشات المزيفة.</li>
+              <li>تسجيل أن هذا الرقم القومي قام بالتصويت لمنع التكرار.</li>
+            </ul>
+          </div>
+          <div class="box green">
+            <span class="box-tag" style="background:var(--green)">الطرف الثاني // السرية المطلقة</span>
+            <h3>حتمية سرية الاقتراع (Ballot Anonymity)</h3>
+            <ul>
+              <li>حظر تخزين أي علاقة بين الرقم القومي وخيار المرشح.</li>
+              <li>استحالة قيام مدير النظام أو قاعدة البيانات بمعرفة من صوّت لمن.</li>
+              <li>حماية الناخب من أي إكراه أو ملاحقة أو شراء أصوات.</li>
+              <li>إصدار إيصال تشفيري للناخب دون كشف اختياره.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>المعادلة الصعبة: <b>فصل التوثيق عن المحتوى</b></div>
+        <div>الشريحة <b>03 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 4: الحل ومعمارية عزل الهوية ==================== -->
+    <section class="slide" data-slide="4">
+      <div class="file-tab">SLIDE 04 // THE SOLUTION</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>الحل والتقنية بعد المنظومة (The Solution - After)</b></div>
+          <code>ZERO-LINK ARCHITECTURE & TOKEN DE-COUPLING</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>THE BREAKTHROUGH</span>
+          <b>معمارية عزل الهوية (Zero-Link)</b>
+          <i>HOW SOOT RESOLVES IT</i>
+        </div>
+
+        <h2>حل المعادلة: <span>الفصل التام بين مسار الهوية ومسار الاقتراع</span></h2>
+        <p class="lead">
+          تبتكر منظومة «صوت موثّق» معمارية <b>Zero-Link</b> متعددة المراحل تقطع أي صلة تشفيرية أو رقمية بين هوية الناخب وورقة اقتراعه:
+        </p>
+
+        <div class="grid-4">
+          <div class="box">
+            <span class="step-badge">1</span>
+            <span class="box-tag">تحقق الهوية</span>
+            <h3>السجل والبصمة</h3>
+            <p>إدخال الرقم القومي ومطابقته بالسجل المعتمد واستدعاء البصمة المرجعية المشفرة.</p>
+          </div>
+          <div class="box cyan">
+            <span class="step-badge">2</span>
+            <span class="box-tag">الذكاء الاصطناعي</span>
+            <h3>كشف الحياة المباشر</h3>
+            <p>التقاط الوجه بالكاميرا واستخراج البصمة العصبية (128-D) وإتمام تحديات الحركة الحية.</p>
+          </div>
+          <div class="box yellow">
+            <span class="step-badge">3</span>
+            <span class="box-tag">العزل والقطع</span>
+            <h3>الرمز الأعمى (HMAC)</h3>
+            <p>وسم الناخب كـ "صوّت"، وإصدار رمز اقتراع معزول تماماً، ومسح الجلسة فوراً (Zero-Link).</p>
+          </div>
+          <div class="box green">
+            <span class="step-badge">4</span>
+            <span class="box-tag">الصندوق والإيصال</span>
+            <h3>إيداع مجهول 100%</h3>
+            <p>إيداع ورقة الاقتراع في الصندوق المشفر بدون هوية، وإصدار إيصال تحقق مشفر للناخب.</p>
+          </div>
+        </div>
+
+        <div class="code-block" style="margin-top:14px">
+<span class="c">// معمارية الأمان: حتى لو سُرقت قاعدة البيانات بالكامل</span>
+<span class="k">Voter_Registry</span> [NID, Biometric_Hash, Has_Voted: TRUE]  <span class="c">&lt;-- معزول تماماً وبدون أي معرف للصوت</span>
+   <span class="s">|| [ ZERO-LINK DE-COUPLING / HMAC BLIND SIGNATURE ] ||</span>
+<span class="k">Ballot_Box</span>     [Ballot_ID, Candidate_ID, Encrypted_Receipt, Timestamp] <span class="c">&lt;-- مجهول وبدون أي NID</span>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>المعمارية: <b>Zero-Link Token De-coupling</b></div>
+        <div>الشريحة <b>04 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 5: الذكاء الاصطناعي ورؤية الحاسوب ==================== -->
+    <section class="slide" data-slide="5">
+      <div class="file-tab">SLIDE 05 // AI & COMPUTER VISION</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>العمق التقني: الذكاء الاصطناعي ورؤية الحاسوب</b></div>
+          <code>128-D NEURAL EMBEDDINGS & LIVENESS DETECTION</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>AI ENGINE</span>
+          <b>محرك البصمة العصبية وكشف الحياة</b>
+          <i>EDGE INFERENCE</i>
+        </div>
+
+        <h2>الذكاء الاصطناعي: <span>بصمة عصبية 128-D وكشف حيوية متعدد الطبقات</span></h2>
+
+        <div class="grid-2">
+          <div class="box cyan">
+            <span class="box-tag">NEURAL FACE EMBEDDINGS</span>
+            <h3>استخراج البصمة العصبية 128-D ومطابقتها</h3>
+            <ul>
+              <li>استخراج 128 متجه عائم (128-Dimensional Float Vectors) يمثل الخصائص الهندسية الدقيقة للوجه.</li>
+              <li>تشغيل نموذج <b>MobileNet-SSD & ResNet</b> محلياً بالكامل على متصفح الناخب (Client-Side Edge Inference) لحماية الخصوصية ومنع إرسال الفيديو للخوادم.</li>
+              <li>مطابقة المتجهات عبر المسافة الإقليدية (Euclidean Distance &lt; 0.52) وجيب التمام (Cosine Similarity) بدقة تتجاوز <b>99.4%</b>.</li>
+            </ul>
+          </div>
+
+          <div class="box yellow">
+            <span class="box-tag">ANTI-SPOOFING LIVENESS</span>
+            <h3>كشف الحيوية ومقاومة التزييف (Liveness Detection)</h3>
+            <ul>
+              <li><b>تحديات حركية ديناميكية:</b> إلزام الناخب بحركات عشوائية لحظية (طرفة عين Blink، ابتسامة Smile، إمالة واقتراب Head Yaw & Distance).</li>
+              <li><b>تحليل النسيج الضوئي (Texture & Moiré Analysis):</b> كشف الترددات المكانية وحواف الشاشات والانعكاسات الضوئية لمنع الاختراق بالصور المطبوعة أو الهواتف.</li>
+              <li><b>تتابع الإطارات الزمني (Temporal Frame Coherence):</b> فحص 30+ إطار متتابع للتأكد من حيوية الحركة ثلاثية الأبعاد.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:14px">
+          <div class="box">
+            <span class="box-tag">LOCAL PRIVACY</span>
+            <h3>خصوصية بيومترية تامة</h3>
+            <p>لا يتم تخزين صور الكاميرا على أي خادم؛ تُحوَّل الصورة لمتجه رقمي لحظي ويُمسح فور الانتهاء.</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">LIGHTWEIGHT</span>
+            <h3>خفيف ويعمل على الموبايل</h3>
+            <p>حجم النماذج مضغوط بصيغة WebGL/WASM، يعمل بسلاسة على الهواتف المتوسطة والضعيفة.</p>
+          </div>
+          <div class="box green">
+            <span class="box-tag">CARD OCR</span>
+            <h3>قراءة البطاقة العربية الذكية</h3>
+            <p>مطابقة الاسم وتاريخ الميلاد والمحافظة مع السجل المدني مع التسامح الإملائي للهمزات والألقاب.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>محرك الذكاء الاصطناعي: <b>MobileNet + ResNet-128D + Liveness Tracker</b></div>
+        <div>الشريحة <b>05 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 6: التشفير والأمان التام ==================== -->
+    <section class="slide" data-slide="6">
+      <div class="file-tab">SLIDE 06 // APPLIED CRYPTOGRAPHY</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>العمق التقني: التشفير ومعمارية الأمان</b></div>
+          <code>HMAC TOKENS & CRYPTOGRAPHIC BLIND RECEIPT</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>SECURITY CORE</span>
+          <b>التشفير المطبق وحماية البيانات</b>
+          <i>ZERO-KNOWLEDGE PRIVACY</i>
+        </div>
+
+        <h2>الأمان التشفيري: <span>توقيعات عمياء وإيصال تحقق رياضي</span></h2>
+
+        <div class="grid-3">
+          <div class="box navy">
+            <span class="box-tag">HMAC-SHA256</span>
+            <h3>التوقيع الرقمي الأعمى</h3>
+            <p>
+              يُصدر الخادم رمز تصويت موقّع بـ <b>HMAC-SHA256</b> مع Nonce عشوائي وطابع زمني محدد بفترة صلاحية 5 دقائق، مما يمنع التزييف وهجمات إعادة الإرسال (Replay Attacks).
+            </p>
+          </div>
+
+          <div class="box cyan">
+            <span class="box-tag">SCHEMA ISOLATION</span>
+            <h3>عزل قواعد البيانات</h3>
+            <p>
+              جدول الناخبين (Voters) يحتوي فقط على هاش الرقم القومي وحالة التصويت. جدول الأصوات (Ballots) لا يحتوي على أي حقل للناخب أو جلسة المتصفح (Zero-Link By Design).
+            </p>
+          </div>
+
+          <div class="box green">
+            <span class="box-tag">HASH RECEIPT</span>
+            <h3>إيصال التحقق المشفر</h3>
+            <p>
+              يُولد كود إيصال مثل <code class="ltr">ABCDE-23456</code> مبني على هاش أحادي الاتجاه مع Salt مشفر، يتيح للناخب فحص وجود صوته بالصندوق دون كشف اسم مرشحه لأي مراقب.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:14px">
+          <div class="box yellow">
+            <span class="box-tag">RLS POLICIES</span>
+            <h3>حماية مستوى الصفوف (PostgreSQL RLS)</h3>
+            <p>حظر الوصول العام إلى جداول الناخبين والأصوات، وحصر العمليات الحساسة عبر خادم معتمد بمفتاح مشفر وسجل تدقيق أمني (Audit Log).</p>
+          </div>
+          <div class="box">
+            <span class="box-tag">FALLBACK RESILIENCE</span>
+            <h3>المحاكي الذكي للطوارئ</h3>
+            <p>نظام محاكاة متقدم يتيح تشغيل واختبار المنظومة بكفاءة 100% في المعارض ولجان التحكيم حتى لو كانت الكاميرا غير مفعلة، لضمان استمرارية الـ Demo.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>بروتوكول الأمان: <b>HMAC-SHA256 + Blind Tokens + Nonce Replay Prevention</b></div>
+        <div>الشريحة <b>06 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 7: دراسة الجدوى والعائد القومي ==================== -->
+    <section class="slide" data-slide="7">
+      <div class="file-tab">SLIDE 07 // FEASIBILITY & ROI</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>دراسة الجدوى والعائد القومي (Feasibility & ROI Study)</b></div>
+          <code>ECONOMIC, ENVIRONMENTAL & OPERATIONAL IMPACT</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>IMPACT MATRIX</span>
+          <b>مقارنة بالأرقام والنسب الحقيقية</b>
+          <i>MEASURABLE IMPACT</i>
+        </div>
+
+        <h2>العائد القومي والجدوى: <span>توفير مالي، حماية بيئية، ودقة 100%</span></h2>
+
+        <div class="grid-3">
+          <div class="box green">
+            <span class="box-tag" style="background:var(--green)">01 // العائد المالي (Financial ROI)</span>
+            <h3 style="font-size:24px;color:#1b5e20">وفر مالي &gt; 85%</h3>
+            <p>
+              إلغاء تكاليف طباعة بطاقات الاقتراع المؤمنة، والأحبار الفسفورية، وكبائن التصويت الخشبية، ومكافآت لجان الفرز اليدوي الطويلة، واستبدالها بخوادم سحابية خفيفة.
+            </p>
+          </div>
+
+          <div class="box cyan">
+            <span class="box-tag" style="background:#00838f">02 // الأثر البيئي (Green Tech)</span>
+            <h3 style="font-size:24px;color:#006064">Zero-Paper 100%</h3>
+            <p>
+              توفير أطنان من الأوراق سنوياً، وإنقاذ آلاف الأشجار، وتخفيض البصمة الكربونية لأسطول النقل اللوجستي وتوزيع الصناديق في المحافظات إلى الصفر.
+            </p>
+          </div>
+
+          <div class="box yellow">
+            <span class="box-tag">03 // الكفاءة التشغيلية (Operational)</span>
+            <h3 style="font-size:24px;color:var(--navy)">فرز لحظي في 0.1 ثانية</h3>
+            <p>
+              إعلان النتائج فور إغلاق الصندوق بدقة رياضية 100% وانعدام تام للأخطاء البشرية أو إبطال الأصوات العشوائي، مع تدقيق فوري للنتائج.
+            </p>
+          </div>
+        </div>
+
+        <!-- حاسبة الوفر التفاعلية للمحكمين -->
+        <div class="calc-card">
+          <div class="calc-row">
+            <label for="voter-slider">🎛️ جرب محاكي الوفر التقديري لعدد ناخبين / طلاب:</label>
+            <input type="range" id="voter-slider" class="calc-slider" min="1000" max="1000000" step="5000" value="50000">
+            <span id="voter-display" class="pill navy mono" style="font-size:14px">50,000 طالب / ناخب</span>
+          </div>
+          <div class="calc-metrics">
+            <div class="metric-box">
+              <small>التكلفة الورقية التقليدية المتوقعة</small>
+              <b id="cost-trad" style="color:var(--red)">~ 250,000 ج.م</b>
+            </div>
+            <div class="metric-box">
+              <small>تكلفة منظومة «صوت موثّق» السحابية</small>
+              <b id="cost-soot" style="color:var(--green)">~ 18,000 ج.م</b>
+            </div>
+            <div class="metric-box">
+              <small>الورق والمياه التي تم إنقاذها (Green ROI)</small>
+              <b id="env-saved" style="color:var(--navy)">50,000 ورقة · 500 كجم كربون</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>مؤشر الاستدامة: <b>Green Tech + Cost Reduction &gt; 85% + Zero Counting Latency</b></div>
+        <div>الشريحة <b>07 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 8: المقارنة المباشرة المعمارية ==================== -->
+    <section class="slide" data-slide="8">
+      <div class="file-tab">SLIDE 08 // DIRECT COMPARISON</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>المقارنة المعمارية المباشرة (Comparative Matrix)</b></div>
+          <code>TRADITIONAL PAPER VS. SOOT-MAWATHAQ</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>BENCHMARK</span>
+          <b>مصفوفة المقارنة المباشرة</b>
+          <i>HEAD-TO-HEAD MATRIX</i>
+        </div>
+
+        <h2>مقارنة شاملة: <span>الاقتراع الورقي مقابل منظومة «صوت موثّق»</span></h2>
+
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>وجه المقارنة</th>
+              <th>الاقتراع الورقي التقليدي</th>
+              <th>منظومة «صوت موثّق» (Soot-Mawathaq)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>التحقق من الهوية</b></td>
+              <td class="bad">بصري يدوي بالعين المجردة (عرضة للتزوير والتساهل)</td>
+              <td class="good">بيومتري عصبي 128-D فوري + كشف حيوية متعدد المستويات</td>
+            </tr>
+            <tr>
+              <td><b>منع تكرار التصويت</b></td>
+              <td class="bad">حبر فسفوري يزول بالمواد الكيميائية وغياب ربط اللجان</td>
+              <td class="good">قفل تشفيري لحظي مركزي في قاعدة البيانات بالرقم القومي</td>
+            </tr>
+            <tr>
+              <td><b>سرية الاقتراع</b></td>
+              <td class="bad">صناديق شفافة أو كبائن قد تتعرض للتجسس أو الإكراه</td>
+              <td class="good">معمارية Zero-Link تفصل هوية الناخب عن الصوت رياضيًا</td>
+            </tr>
+            <tr>
+              <td><b>زمن إعلان النتائج</b></td>
+              <td class="bad">من 6 إلى 24 ساعة من الفرز اليدوي المرهق</td>
+              <td class="good">فرز لحظي فوري (0.1 ثانية) مع رسوم بيانية حية ومفتوحة</td>
+            </tr>
+            <tr>
+              <td><b>إمكانية تدقيق الناخب لصوته</b></td>
+              <td class="bad">مستحيل (بمجرد إسقاط الورقة لا يعلم هل احتسبت)</td>
+              <td class="good">إيصال تحقق مشفر (Cryptographic Receipt) لفحص وجود الصوت</td>
+            </tr>
+            <tr>
+              <td><b>التكلفة والأثر البيئي</b></td>
+              <td class="bad">باهظة جداً + أطنان من الأوراق ومخلفات ضارة بالبيئة</td>
+              <td class="good">توفير 85%+ من الميزانية وZero-Paper خضراء مستدامة</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="slide-footer">
+        <div>المعيار: <b>تطبيق المعايير الدولية للاقتراع الموثوق (E2E Verifiable Voting)</b></div>
+        <div>الشريحة <b>08 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 9: سيناريو التطبيق الطلابي ==================== -->
+    <section class="slide" data-slide="9">
+      <div class="file-tab">SLIDE 09 // STUDENT ELECTIONS 2026/2027</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>سيناريو التطبيق: انتخابات اتحاد طلاب المدارس</b></div>
+          <code>PILOT SCENARIO // STUDENT UNION 2026-2027</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>PILOT EXECUTION</span>
+          <b>التطبيق في البيئة المدرسية والتعليمية</b>
+          <i>STUDENT LEADERSHIP</i>
+        </div>
+
+        <h2>البيئة الميدانية: <span>انتخابات اتحاد طلاب المدارس</span></h2>
+        <p class="lead">
+          تم تصميم هذا النموذج الأولي لمحاكاة انتخابات اتحاد طلاب المدارس المصرية وترسيخ قيم المشاركة والشفافية الرقمية بين الطلاب:
+        </p>
+
+        <div class="grid-4">
+          <div class="box">
+            <span class="box-tag">مرشح رئيس الاتحاد 📘</span>
+            <h3 style="font-size:16px">آدم شريف عبد الله</h3>
+            <p style="font-size:12.5px;color:var(--muted)">مدرسة ثانوية نموذجية — بيانات افتراضية</p>
+            <p style="font-size:12.5px;margin-top:6px"><b>صوت الفصل:</b> لقاء مفتوح مع الإدارة وصندوق مقترحات ومتابعة معلنة للتنفيذ.</p>
+          </div>
+
+          <div class="box">
+            <span class="box-tag">مرشح نائب الرئيس ☀️</span>
+            <h3 style="font-size:16px">سليم أحمد بركات</h3>
+            <p style="font-size:12.5px;color:var(--muted)">مدرسة ثانوية نموذجية — بيانات افتراضية</p>
+            <p style="font-size:12.5px;margin-top:6px"><b>زميل يساند زميل:</b> مجموعات دعم دراسي ومكتبة لتبادل الكتب والأدوات المدرسية.</p>
+          </div>
+
+          <div class="box">
+            <span class="box-tag">أمين اللجنة الثقافية والعلمية 🔥</span>
+            <h3 style="font-size:16px">كريم خالد فؤاد</h3>
+            <p style="font-size:12.5px;color:var(--muted)">مدرسة ثانوية نموذجية — بيانات افتراضية</p>
+            <p style="font-size:12.5px;margin-top:6px"><b>الثقافة والعلوم:</b> نادي قراءة ومسرح مدرسي ومعرض علوم ومسابقات مفتوحة لكل الصفوف.</p>
+          </div>
+
+          <div class="box">
+            <span class="box-tag">أمين اللجنة الاجتماعية والرياضية 🌴</span>
+            <h3 style="font-size:16px">أحمد منصور</h3>
+            <p style="font-size:12.5px;color:var(--muted)">مدرسة ثانوية نموذجية — بيانات افتراضية</p>
+            <p style="font-size:12.5px;margin-top:6px"><b>النشاط للجميع:</b> دوري رياضي وأيام تطوع ورحلات تعليمية وأنشطة مهيأة للجميع.</p>
+          </div>
+        </div>
+
+        <div class="box yellow" style="margin-top:14px;padding:14px 18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <b style="font-size:15px;color:var(--navy)">🎯 تجربة نموذج واقعي جاهز:</b>
+              <span style="font-size:13px;color:#475467"> بيانات المرشحين وبرامجهم افتراضية للتجربة، وتُستبدل بالقائمة المعتمدة لكل مدرسة قبل أي اقتراع فعلي.</span>
+            </div>
+            <a class="sketch-btn primary" href="/register">بدء التصويت في انتخابات اتحاد الطلاب ←</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>النموذج التطبيقي: <b>انتخابات اتحاد طلاب المدارس (دورة 2026/2027)</b></div>
+        <div>الشريحة <b>09 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 10: خارطة الطريق المستقبلية ==================== -->
+    <section class="slide" data-slide="10">
+      <div class="file-tab">SLIDE 10 // FUTURE ROADMAP</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>خارطة الطريق المستقبلية (Future Roadmap)</b></div>
+          <code>MERKLE PROOFS, ACCESSIBILITY & DECENTRALIZATION</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>WHAT'S NEXT</span>
+          <b>التطوير المستقبلي والتوسع القومي</b>
+          <i>FUTURE SCALE</i>
+        </div>
+
+        <h2>خارطة الطريق: <span>من النموذج الأولي إلى النضج الرقمي الشامل</span></h2>
+
+        <div class="grid-3">
+          <div class="box cyan">
+            <span class="box-tag">PHASE 1 // CRYPTO AUDIT</span>
+            <h3>إثبات الوجود (Merkle Tree Proofs)</h3>
+            <p>
+              بناء شجرة ميركل تشفيرية تراكمية (Merkle Tree) للأصوات، تتيح لأي مراقب أو محكم أو ناخب التحقق الرياضي التام من أن صوته مدرج في الشجرة دون كشف خياره (End-to-End Verifiability).
+            </p>
+          </div>
+
+          <div class="box yellow">
+            <span class="box-tag">PHASE 2 // INCLUSION</span>
+            <h3>الشمول الرقمي لذوي الهمم</h3>
+            <p>
+              تطوير واجهات صوتية تفاعلية بالكامل (Speech-Driven Interface) وتتبع حركة العين والرأس (Eye-Tracking Gestures) لتمكين الطلاب ذوي القدرات الخاصة والمكفوفين من التصويت باستقلالية تامة.
+            </p>
+          </div>
+
+          <div class="box green">
+            <span class="box-tag">PHASE 3 // DECENTRALIZATION</span>
+            <h3>العقد الرقابية الموزعة</h3>
+            <p>
+              توزيع مفاتيح التشفير وسجلات التدقيق عبر عُقد مستقلة تديرها لجان إشراف متعددة (اللجنة القضائية، إدارة المدرسة، اتحاد الطلاب) لضمان عدم انفراد جهة واحدة بالصندوق.
+            </p>
+          </div>
+        </div>
+
+        <div class="box navy" style="margin-top:16px;padding:16px 20px">
+          <h4 style="margin:0 0 6px;color:var(--yellow);font-size:16px">🏛️ الرؤية الوطنية والتعليمية للجمهورية الجديدة:</h4>
+          <p style="margin:0;font-size:13.5px;line-height:1.7;color:#e2e8f0">
+            تحويل منظومة «صوت موثّق» إلى منصة قياسية وطنية مفتوحة المصدر للاقتراع الطلابي والنقابي والمؤسسي في مصر، تجمع بين أعلى معايير الأمان التشفيري وسهولة الاستخدام البيومتري.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>الرؤية المستقبلية: <b>Zero-Knowledge Voting & Universal Digital Inclusion</b></div>
+        <div>الشريحة <b>10 من 11</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 11: الختام والتجربة الحية ==================== -->
+    <section class="slide" data-slide="11">
+      <div class="file-tab">SLIDE 11 // LIVE DEMO & CONCLUSION</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot"></span><b>شريحة الختام والتجربة الحية (Conclusion & Live Demo)</b></div>
+          <code>SOOT-MAWATHAQ // LIVE DEMONSTRATION</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>READY TO TEST</span>
+          <b>جاهزون لتجربة لجان التحكيم الحية</b>
+          <i>SCAN & VOTE NOW</i>
+        </div>
+
+        <h1>صوت موثّق<br><span>مستقبل الاقتراع الآمن يبدأ الآن</span></h1>
+        <p class="lead">
+          ندعو السادة أعضاء لجنة التحكيم لمسح الـ QR Code وبدء تجربة الاقتراع الحي والتأكد من سرية الصوت وكفاءة المنظومة الآن:
+        </p>
+
+        <div class="qr-banner-card" style="background:#fffdf2;border-color:var(--navy);box-shadow:7px 7px 0 var(--navy)">
+          <div class="qr-img-box" style="width:150px;height:150px">
+            <img src="/assets/qr-code.svg" alt="QR Code لموقع صوت موثّق" id="end-qr-img">
+          </div>
+          <div class="qr-text-box">
+            <h3 style="margin:0 0 8px;font-size:22px;color:var(--navy)">📲 ابدأ التجربة الحية الآن من هاتفك:</h3>
+            <p style="font-size:14px;color:#334155;line-height:1.7">
+              1. افتح كاميرا هاتفك وامسح الرمز.<br>
+              2. جرب التحقق البيومتري من الوجه وكشف الحيوية.<br>
+              3. صوّت لمرشحك واستلم إيصالك المشفر وافحصه في الصندوق.
+            </p>
+            <div style="margin-top:8px">
+              <a class="qr-link-mono" href="https://soot-mawathaq.vercel.app/" target="_blank" rel="noopener">https://soot-mawathaq.vercel.app/</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-4" style="margin-top:16px">
+          <a class="sketch-btn primary" href="/register" target="_blank">
+            <span>🚀 بدء التصويت الحي</span>
+          </a>
+          <a class="sketch-btn navy" href="/results" target="_blank">
+            <span>📊 النتائج والفرز المباشر</span>
+          </a>
+          <a class="sketch-btn yellow" href="/verify-receipt" target="_blank">
+            <span>🧾 فحص إيصال التصويت</span>
+          </a>
+          <a class="sketch-btn" href="/admin" target="_blank">
+            <span>🛡️ لوحة لجنة الإشراف</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div><b>إعداد وتطوير: م / علي أحمد (Ali Ahmed) — مبتكر مشروع «صوت موثّق» ✨</b></div>
+        <div>جاهزون للإجابة على جميع استفسارات السادة المحكمين 💬</div>
+        <div>الشريحة <b>11 من 11</b></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- درج التنقل السريع السفلي للشرائح -->
+  <nav class="deck-drawer" id="deck-drawer" aria-label="شريط الانتقال السريع بين الشرائح">
+    <button type="button" class="drawer-dot active" data-goto="1">01 // الغلاف وQR</button>
+    <button type="button" class="drawer-dot" data-goto="2">02 // المشكلة القبلية</button>
+    <button type="button" class="drawer-dot" data-goto="3">03 // المعضلة الكبرى</button>
+    <button type="button" class="drawer-dot" data-goto="4">04 // الحل ومعمارية Zero-Link</button>
+    <button type="button" class="drawer-dot" data-goto="5">05 // الذكاء الاصطناعي 128-D</button>
+    <button type="button" class="drawer-dot" data-goto="6">06 // التشفير والأمان</button>
+    <button type="button" class="drawer-dot" data-goto="7">07 // الجدوى والعائد القومي</button>
+    <button type="button" class="drawer-dot" data-goto="8">08 // المقارنة المعمارية</button>
+    <button type="button" class="drawer-dot" data-goto="9">09 // السيناريو الطلابي</button>
+    <button type="button" class="drawer-dot" data-goto="10">10 // خارطة الطريق</button>
+    <button type="button" class="drawer-dot" data-goto="11">11 // الختام والتجربة الحية</button>
+  </nav>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const total = slides.length;
+      let current = 1;
+
+      const counter = document.getElementById('slide-counter');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const btnFull = document.getElementById('btn-fullscreen');
+      const drawerDots = Array.from(document.querySelectorAll('.drawer-dot'));
+
+      function goTo(n) {
+        if (n < 1) n = 1;
+        if (n > total) n = total;
+        current = n;
+        slides.forEach((s) => s.classList.toggle('active', Number(s.dataset.slide) === current));
+        if (counter) counter.textContent = String(current).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+        
+        drawerDots.forEach((dot) => {
+          dot.classList.toggle('active', Number(dot.dataset.goto) === current);
+        });
+
+      }
+
+      btnPrev?.addEventListener('click', () => goTo(current - 1));
+      btnNext?.addEventListener('click', () => goTo(current + 1));
+
+      drawerDots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          goTo(Number(dot.dataset.goto));
+        });
+      });
+
+      // اختصارات لوحة المفاتيح
+      window.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+        if (e.key === 'ArrowRight' || e.key === 'PageUp') { e.preventDefault(); goTo(current - 1); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+        else if (e.key === 'Home') { e.preventDefault(); goTo(1); }
+        else if (e.key === 'End') { e.preventDefault(); goTo(total); }
+        else if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
+      });
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+          if (btnFull) btnFull.textContent = 'إنهاء الملء ✕';
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+          if (btnFull) btnFull.textContent = 'ملء الشاشة ⛶';
+        }
+      }
+      btnFull?.addEventListener('click', toggleFullscreen);
+
+      // حاسبة الوفر التفاعلية (Interactive ROI Calculator)
+      const voterSlider = document.getElementById('voter-slider');
+      const voterDisplay = document.getElementById('voter-display');
+      const costTrad = document.getElementById('cost-trad');
+      const costSoot = document.getElementById('cost-soot');
+      const envSaved = document.getElementById('env-saved');
+
+      function updateCalculator() {
+        if (!voterSlider) return;
+        const count = Number(voterSlider.value);
+        if (voterDisplay) voterDisplay.textContent = count.toLocaleString('ar-EG') + ' طالب / ناخب';
+        
+        // التكلفة الورقية: طباعة أوراق + أحبار + لوجستيات + لجان فرز (~ 5.00 ج.م لكل ناخب)
+        const tradCost = count * 5;
+        // تكلفة صوت موثق: خادم سحابي خفيف (~ 0.35 ج.م لكل ناخب)
+        const sootCost = Math.round(count * 0.35 + 500);
+        // الأثر البيئي: أوراق وكربون
+        const paperCount = count;
+        const carbonKg = Math.round(count * 0.01);
+
+        if (costTrad) costTrad.textContent = '~ ' + tradCost.toLocaleString('ar-EG') + ' ج.م';
+        if (costSoot) costSoot.textContent = '~ ' + sootCost.toLocaleString('ar-EG') + ' ج.م';
+        if (envSaved) envSaved.textContent = paperCount.toLocaleString('ar-EG') + ' ورقة · ' + carbonKg.toLocaleString('ar-EG') + ' كجم كربون';
+      }
+
+      voterSlider?.addEventListener('input', updateCalculator);
+      updateCalculator();
+    })();
+  </script>
+</body>
+</html>

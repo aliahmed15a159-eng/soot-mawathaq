@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1012 638" width="1012" height="638">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f2ece0"/>
+      <stop offset="55%" stop-color="#e8dfd0"/>
+      <stop offset="100%" stop-color="#dfe5e2"/>
+    </linearGradient>
+    <linearGradient id="hdr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bc9c86"/>
+      <stop offset="100%" stop-color="#a0826c"/>
+    </linearGradient>
+    <clipPath id="pclip"><rect x="38" y="130" width="310" height="390" rx="8"/></clipPath>
+  </defs>
+  <rect width="1012" height="638" rx="18" fill="url(#bg)" stroke="#876c54" stroke-width="6"/>
+  <rect width="1012" height="108" rx="14" fill="url(#hdr)"/>
+  <line x1="0" y1="108" x2="1012" y2="108" stroke="#7d5c46" stroke-width="3"/>
+  <circle cx="535" cy="315" r="95" fill="none" stroke="#a08269" stroke-opacity="0.14" stroke-width="2"/>
+  <circle cx="535" cy="315" r="65" fill="none" stroke="#a08269" stroke-opacity="0.14" stroke-width="2"/>
+  <text x="968" y="48" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="34" font-weight="700" fill="#20140f">جمهورية مصر العربية</text>
+  <text x="968" y="88" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="25" font-weight="700" fill="#372319">بطاقة تحقيق الشخصية</text>
+  <text x="430" y="62" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="18" font-weight="700" fill="#412d20">وزارة الداخلية — قطاع الأحوال المدنية</text>
+
+  <rect x="33" y="125" width="320" height="400" rx="10" fill="#f8f5f0" stroke="#a5917d" stroke-width="2"/>
+  <image href="/candidates/c3.jpg" x="38" y="130" width="310" height="390" preserveAspectRatio="xMidYMid slice" clip-path="url(#pclip)"/>
+  <circle cx="331" cy="493" r="42" fill="#b4d2cd" fill-opacity="0.35" stroke="#8cafaa" stroke-width="2"/>
+
+  <text x="968" y="158" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="21" font-weight="700" fill="#5f4637">الاسم /</text>
+  <text x="890" y="156" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="31" font-weight="700" fill="#121216">يوسف</text>
+  <text x="968" y="202" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="31" font-weight="700" fill="#121216">محمود عبد الرحمن</text>
+  <line x1="385" y1="226" x2="968" y2="226" stroke="#c3b4a2" stroke-width="2"/>
+
+  <text x="968" y="264" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="21" font-weight="700" fill="#5f4637">العنوان :</text>
+  <text x="880" y="264" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="25" font-weight="700" fill="#19191e">ش الجمهورية — قسم أول الجيزة</text>
+  <text x="968" y="306" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="25" font-weight="700" fill="#19191e">محافظة الجيزة</text>
+  <line x1="385" y1="330" x2="968" y2="330" stroke="#c3b4a2" stroke-width="2"/>
+
+  <text x="968" y="372" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="25" font-weight="700" fill="#1c1c22">النوع : ذكر</text>
+  <text x="755" y="372" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="25" font-weight="700" fill="#1c1c22">محل الميلاد : الجيزة</text>
+
+  <rect x="382" y="418" width="594" height="117" rx="10" fill="#e9e1d2" stroke="#aa947a" stroke-width="2"/>
+  <text x="960" y="446" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="20" font-weight="700" fill="#5a3e2c">الرقم القومي</text>
+  <text x="447.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٣</text><text x="480.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٠</text><text x="513.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٩</text><text x="546.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٠</text><text x="579.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٧</text><text x="612.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">١</text><text x="645.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٥</text><text x="712.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٢</text><text x="745.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">١</text><text x="778.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٠</text><text x="811.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">١</text><text x="844.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٢</text><text x="877.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٣</text><text x="910.5" y="502" text-anchor="middle" font-family="Cairo, monospace" font-size="38" font-weight="700" fill="#0f0f12">٤</text>
+
+  <text x="343" y="554" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="18" font-weight="700" fill="#554132">تاريخ الميلاد</text>
+  <text x="121" y="592" text-anchor="middle" font-family="Cairo, sans-serif" font-size="28" font-weight="700" fill="#141418">١٥</text><text x="150" y="592" text-anchor="middle" font-family="Cairo, sans-serif" font-size="28" font-weight="700" fill="#141418">/</text><text x="179" y="592" text-anchor="middle" font-family="Cairo, sans-serif" font-size="28" font-weight="700" fill="#141418">٠٧</text><text x="208" y="592" text-anchor="middle" font-family="Cairo, sans-serif" font-size="28" font-weight="700" fill="#141418">/</text><text x="248" y="592" text-anchor="middle" font-family="Cairo, sans-serif" font-size="28" font-weight="700" fill="#141418">٢٠٠٩</text>
+  <text x="968" y="582" text-anchor="end" direction="rtl" font-family="Cairo, sans-serif" font-size="18" font-weight="700" fill="#4b3c30">إصدار : ٢٠٢٦/٠٩ — سارية</text>
+  <text x="400" y="584" text-anchor="start" direction="ltr" font-family="Cairo, monospace" font-size="21" font-weight="700" fill="#46413c">ID-EG-2101234</text>
+</svg>

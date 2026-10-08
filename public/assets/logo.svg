@@ -1,12 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="صوت">
   <defs>
-    <linearGradient id="sbg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="lbg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#17A97D"/>
       <stop offset="1" stop-color="#0B7A58"/>
     </linearGradient>
   </defs>
-  <rect x="1" y="1" width="46" height="46" rx="13" fill="url(#sbg)"/>
+  <rect x="1" y="1" width="46" height="46" rx="13" fill="url(#lbg)"/>
+  <!-- ورقة الاقتراع -->
   <path d="M16.4 11.5h9.4l8.7 8.7V36a2.5 2.5 0 0 1-2.5 2.5H16.4a2.5 2.5 0 0 1-2.5-2.5V14a2.5 2.5 0 0 1 2.5-2.5z" fill="#F7FAF8"/>
+  <!-- الزاوية المطوية -->
   <path d="M25.8 11.5v6.2a2.5 2.5 0 0 0 2.5 2.5h6.2z" fill="#BFE9D9"/>
+  <!-- علامة التحقق -->
   <path d="m18.7 27.3 4 4 7.1-8.2" fill="none" stroke="#0F8F6B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

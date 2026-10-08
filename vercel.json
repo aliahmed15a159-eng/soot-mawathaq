@@ -1,5 +1,14 @@
 {
   "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Permissions-Policy", "value": "camera=*, microphone=()" },
+        { "key": "Feature-Policy", "value": "camera *" }
+      ]
+    }
+  ],
   "functions": {
     "api/index.js": {
       "maxDuration": 30,
