@@ -89,6 +89,23 @@ RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
     check('كود الموبايل معطّل (OTP_MODE=off) — التخطي', true, 'مقبول');
   }
 
+  const verifyPage = await req('GET', '/verify');
+  check('صفحة التحقق تعرض أدوات الكاميرا الفعلية فقط', verifyPage.status === 200
+    && verifyPage.data.raw.includes('btn-start-camera')
+    && !verifyPage.data.raw.includes(['btn', 'sim', 'camera'].join('-')));
+
+  const appScript = await req('GET', '/app.js');
+  check('تعذّر فتح الكاميرا يعرض تعليمات واضحة', appScript.status === 200
+    && appScript.data.raw.includes('async function startCamera()')
+    && appScript.data.raw.includes('تعذّر فتح الكاميرا — اسمح بالوصول للكاميرا ثم أعد المحاولة'));
+
+  const styles = await req('GET', '/styles.css');
+  check('تنسيقات الهيرو للموبايل مضبوطة', styles.status === 200
+    && styles.data.raw.includes('@media (max-width: 560px)')
+    && styles.data.raw.includes('.hero h1 { font-size: 42px; }')
+    && styles.data.raw.includes('.primary-button { width: 100%; }')
+    && styles.data.raw.includes('.hand-arrow { display: none; }'));
+
   const badReg = await req('POST', '/api/register', {
     full_name: 'أحمد محمد علي', national_id: '12345678901234', birth_date: '1998-01-01',
     governorate: 'القاهرة', phone: '01012345678', consent: true,

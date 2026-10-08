@@ -136,7 +136,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
       </div>
       <div class="eyebrow">
         ${icon('sparkle', 14)}
-        <span>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</span>
+        <span>مختبر ونموذج تجريبي متقدم للاقتراع البيومتري السري</span>
       </div>
       <h1 class="hero-title"><span class="title-line1">من هويتك ..</span><br><span class="title-line2">إلى صوتك</span></h1>
       <p>
@@ -232,8 +232,8 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
           <div class="consent-row">
             ${icon('camera', 18)}
             <span>
-              <b>كاميرا حقيقية + محاكي ذكي</b>
-              <small>يعمل بالكاميرا المباشرة أو بالمحاكي التفاعلي عند غياب الكاميرا.</small>
+              <b>تحقق مباشر بالكاميرا</b>
+              <small>تُستخدم الكاميرا الحقيقية للتحقق من حيوية الوجه ومطابقة بصمته.</small>
             </span>
           </div>
           <div class="consent-row">
@@ -314,7 +314,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
     <article>
       <span>02</span>
       <div>
-        <b>تحقق بالكاميرا الحية أو المحاكي</b>
+        <b>تحقق بالكاميرا الحية</b>
         <p>فحص حيوية الوجه ومطابقة البصمة العصبية (128-D) مع صورة البطاقة المسجّلة.</p>
       </div>
       <small>STEP / 02</small>
@@ -687,9 +687,9 @@ function verifyPage({ voter, election, rollCard } = {}) {
           <div class="camera-meta-bar">
             <span class="small"><b>حركات التحقق الحي:</b></span>
             <ul id="challenge-list" class="challenge-chips">
-              <li data-code="blink" class="done">ارمش بعينيك</li>
-              <li data-code="smile" class="done">ابتسم قليلًا</li>
-              <li data-code="close" class="done">اقترب قليلًا من الكاميرا</li>
+              <li data-code="blink">ارمش بعينيك</li>
+              <li data-code="smile">ابتسم قليلًا</li>
+              <li data-code="close">اقترب قليلًا من الكاميرا</li>
             </ul>
           </div>
 
@@ -704,7 +704,7 @@ function verifyPage({ voter, election, rollCard } = {}) {
             </div>
             <div class="scanline" aria-hidden="true"></div>
             <div class="liveness-meter" title="مؤشر التحقق الحي">
-              <span id="liveness-bar" style="width:100%"></span>
+              <span id="liveness-bar" style="width:0%"></span>
             </div>
           </div>
 
@@ -718,10 +718,6 @@ function verifyPage({ voter, election, rollCard } = {}) {
               <button type="button" id="btn-start-camera" class="sketch-button btn-sm">
                 ${icon('refresh', 15)}
                 <span>تشغيل / إعادة فتح الكاميرا</span>
-              </button>
-              <button type="button" id="btn-sim-camera" class="sketch-button btn-sm">
-                ${icon('sparkle', 15)}
-                <span>المحاكي الذكي التفاعلي</span>
               </button>
               <button type="button" id="btn-switch-cam" class="sketch-button btn-sm">
                 ${icon('camera', 15)}
@@ -1176,7 +1172,7 @@ function cardsDemoPage() {
       <i>READY</i>
     </div>
     <h1>بطاقات <span>التجربة الجاهزة</span></h1>
-    <p class="muted">استخدم أي بطاقة من البطاقات التالية لتجربة التسجيل والتحقق بالكاميرا أو المحاكي الذكي فورًا.</p>
+    <p class="muted">استخدم أي بطاقة من البطاقات التالية لتجربة التسجيل والتحقق بالكاميرا المباشرة فورًا.</p>
   </section>
 
   <div class="cards-grid" style="margin-bottom:44px">
