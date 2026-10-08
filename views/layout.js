@@ -43,7 +43,7 @@ function shell({ title, body, activeStep = 0, active = 0, showStepper = false, b
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/styles.css?v=13"/>
+  <link rel="stylesheet" href="/styles.css?v=14"/>
 </head>
 <body class="antialiased ${esc(bodyClass)}">
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
@@ -137,7 +137,7 @@ function shell({ title, body, activeStep = 0, active = 0, showStepper = false, b
     </div>
   </main>
 
-  <script src="/app.js?v=13" defer></script>
+  <script src="/app.js?v=14" defer></script>
 </body>
 </html>`;
 }

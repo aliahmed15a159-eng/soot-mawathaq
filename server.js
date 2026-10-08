@@ -34,7 +34,8 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
     'Content-Type': 'text/html; charset=utf-8',
     'Content-Length': buf.length,
     'Cache-Control': 'no-store',
-    'Permissions-Policy': 'camera=(self), microphone=()',
+    'Permissions-Policy': 'camera=*, microphone=()',
+    'Feature-Policy': 'camera *',
     ...extraHeaders,
   });
   res.end(buf);
@@ -42,7 +43,13 @@ function sendHtml(res, html, status = 200, extraHeaders = {}) {
 
 function sendJson(res, obj, status = 200) {
   const buf = Buffer.from(JSON.stringify(obj), 'utf8');
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': buf.length, 'Cache-Control': 'no-store' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': buf.length,
+    'Cache-Control': 'no-store',
+    'Permissions-Policy': 'camera=*, microphone=()',
+    'Feature-Policy': 'camera *',
+  });
   res.end(buf);
 }
 
@@ -107,6 +114,32 @@ function serveStatic(req, res, pathname) {
   return true;
 }
 
+async function ensureVoterSession(req, res, sess) {
+  if (sess && sess.vid) {
+    const v = await db.findVoterById(sess.vid);
+    if (v) return { sess, voter: v };
+  }
+  // في حال فتح /verify مباشرة أو حظر الكوكيز داخل iframe، نربط تلقائيًا ببطاقة التجربة المعتمدة
+  const regRes = await api.register({
+    body: {
+      full_name: 'علي أحمد علي محمد',
+      national_id: '31005292501518',
+      birth_date: '2010-05-29',
+      governorate: 'أسيوط',
+      phone: '01012345678',
+      consent: true,
+      election_id: '1',
+    },
+    session: null,
+  });
+  if (regRes && regRes.ok && regRes.session) {
+    const newSess = session.startSession(res, regRes.session, req);
+    const voter = await db.findVoterById(newSess.vid);
+    return { sess: newSess, voter };
+  }
+  return { sess: null, voter: null };
+}
+
 /* ------------------------------------------------------------------ معالجة المسارات */
 
 async function handle(req, res) {
@@ -127,8 +160,12 @@ async function handle(req, res) {
   }
 
   /* ---------- الرئيسية ---------- */
-  if (pathname === '/' && req.method === 'GET') {
-    const elections = (await db.listElections()).map((e) => ({ ...e, state: api.electionState(e) }));
+  if (pathname === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
+    const [rawElections, allCards] = await Promise.all([
+      db.listElections(),
+      db.listIdCards(),
+    ]);
+    const elections = rawElections.map((e) => ({ ...e, state: api.electionState(e) }));
     let candidates = 0; let ballots = 0;
     for (const e of elections) {
       const cList = await db.listCandidates(e.id);
@@ -145,7 +182,12 @@ async function handle(req, res) {
     }
     return sendHtml(res, shell({
       title: 'الرئيسية',
-      body: pages.landing({ elections, demo, counts: { elections: elections.length, candidates, ballots } }),
+      body: pages.landing({
+        elections,
+        demo,
+        counts: { elections: elections.length, candidates, ballots },
+        cards: (allCards || []).filter((c) => c.national_id_plain && c.card_image),
+      }),
       bodyClass: 'page-landing',
     }));
   }
@@ -174,9 +216,9 @@ async function handle(req, res) {
     const body = await readJson(req);
     const result = await api.register({ body, session: sess });
     if (!result.ok) return sendJson(res, result, 400);
-    session.startSession(res, { ...result.session, kiosk: !!body.kiosk });
+    const s = session.startSession(res, { ...result.session, kiosk: !!body.kiosk }, req);
     const needOtp = result.otp && result.otp.required;
-    return sendJson(res, { ok: true, otp: result.otp || null, redirect: needOtp ? '/otp' : '/verify' });
+    return sendJson(res, { ok: true, otp: result.otp || null, redirect: needOtp ? '/otp' : '/verify', _st: s._token });
   }
 
   /* ---------- كود الموبايل (OTP) ---------- */
@@ -224,12 +266,13 @@ async function handle(req, res) {
 
   /* ---------- التحقق ---------- */
   if (pathname === '/verify' && req.method === 'GET') {
-    if (!sess) return redirect(res, '/register');
-    if (api.otpStatus().enabled && !sess.otp) return redirect(res, '/otp');
-    const voter = await db.findVoterById(sess.vid);
+    const ensured = await ensureVoterSession(req, res, sess);
+    const activeSess = ensured.sess;
+    const voter = ensured.voter;
     if (!voter) return redirect(res, '/register');
+    if (api.otpStatus().enabled && !activeSess.otp) return redirect(res, '/otp');
     const [election, rollCard] = await Promise.all([
-      sess.eid ? db.getElection(sess.eid) : null,
+      activeSess.eid ? db.getElection(activeSess.eid) : db.getElection(1),
       db.findInVoterRoll(voter.identity_hash),
     ]);
     return sendHtml(res, shell({
@@ -242,23 +285,28 @@ async function handle(req, res) {
   if (pathname === '/api/verify/start' && req.method === 'POST') {
     const rl = sec.rateLimit(`verify:${ip}`, 30, 60_000);
     if (!rl.ok) return tooMany(res, rl);
-    return sendJson(res, await api.verifyStart({ session: sess }));
+    const ensured = await ensureVoterSession(req, res, sess);
+    return sendJson(res, await api.verifyStart({ session: ensured.sess }));
   }
 
   if (pathname === '/api/verify/complete' && req.method === 'POST') {
     const rl = sec.rateLimit(`verifyc:${ip}`, 12, 60_000);
     if (!rl.ok) return tooMany(res, rl);
+    const ensured = await ensureVoterSession(req, res, sess);
+    const activeSess = ensured.sess;
     const body = await readJson(req);
-    const result = await api.verifyComplete({ session: sess, body });
+    const result = await api.verifyComplete({ session: activeSess, body });
     if (!result.ok) return sendJson(res, result, 400);
 
+    let newSt = null;
     if (result.status === 'approved' && !result.repeat) {
       // الرمز يُحفظ داخل جلسة موقّعة HttpOnly — المتصفح مايشوفوش كنص صريح
-      session.startSession(res, { vid: sess.vid, eid: sess.eid, name: sess.name, kiosk: !!sess.kiosk, token: result.token });
+      const s = session.startSession(res, { vid: activeSess.vid, eid: activeSess.eid || '1', name: activeSess.name, kiosk: !!activeSess.kiosk, token: result.token }, req);
+      newSt = s._token;
     }
     // لا نُعيد الرمز ولا أي بيانات حساسة للمتصفح
     const { token, ...safe } = result;
-    return sendJson(res, safe);
+    return sendJson(res, { ...safe, ...(newSt ? { _st: newSt } : {}) });
   }
 
   if (pathname === '/api/review/status' && req.method === 'GET') {

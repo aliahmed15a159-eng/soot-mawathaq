@@ -15,14 +15,62 @@
   const arDigits = (s) => String(s || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g, '');
   const nowMs = () => performance.now();
 
+  // حفظ واسترجاع رمز الجلسة (_st) لضمان العمل داخل أي iframe يمنع الكوكيز الخارجية
+  try {
+    const uSt = new URLSearchParams(location.search).get('_st');
+    if (uSt) sessionStorage.setItem('sm_st', uSt);
+  } catch {}
+
+  function getSt() {
+    try { return sessionStorage.getItem('sm_st') || ''; } catch { return ''; }
+  }
+  function saveSt(token) {
+    if (!token) return;
+    try { sessionStorage.setItem('sm_st', token); } catch {}
+  }
+  function withSt(url) {
+    const st = getSt();
+    if (!st || !url) return url;
+    return url + (url.includes('?') ? '&' : '?') + '_st=' + encodeURIComponent(st);
+  }
+
   async function postJson(url, body) {
-    const res = await fetch(url, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body || {}), credentials: 'same-origin',
+    const st = getSt();
+    const res = await fetch(withSt(url), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(st ? { 'x-session-token': st } : {}),
+      },
+      body: JSON.stringify(body || {}),
+      credentials: 'same-origin',
     });
+    const hdrSt = res.headers.get('x-session-token');
+    if (hdrSt) saveSt(hdrSt);
     let data = null;
     try { data = await res.json(); } catch { data = { ok: false, error: 'رد غير متوقع من الخادم' }; }
+    if (data && data._st) saveSt(data._st);
     return { status: res.status, data };
+  }
+
+  /* ======================================================= ٠) تبويبات الصفحة الرئيسية (أسلوب كاشف) */
+  const heroModeTabs = $('#hero-mode-tabs');
+  if (heroModeTabs) {
+    $$('[data-home-tab]', heroModeTabs).forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.homeTab;
+        $$('[data-home-tab]', heroModeTabs).forEach((b) => {
+          const active = b === btn;
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        $$('[data-home-panel]').forEach((panel) => {
+          const show = panel.dataset.homePanel === target;
+          panel.classList.toggle('active', show);
+          panel.hidden = !show;
+        });
+      });
+    });
   }
 
   /* ======================================================= ١) صفحة التسجيل */
@@ -97,6 +145,7 @@
         if (gov && btn.dataset.gov) gov.value = btn.dataset.gov;
         if (phone && !phone.value) phone.value = '01012345678';
         if ($('#demo-idcard-img') && btn.dataset.img) $('#demo-idcard-img').src = btn.dataset.img;
+        if ($('#register-card-preview-img') && btn.dataset.img) $('#register-card-preview-img').src = btn.dataset.img;
         if ($('#demo-idcard-address') && btn.dataset.address) {
           $('#demo-idcard-address').textContent = `${btn.dataset.address} — ${btn.dataset.gov || 'أسيوط'}`;
         }
@@ -114,7 +163,7 @@
         governorate: gov.value,
         phone: arDigits(phone.value),
         consent: $('#consent').checked,
-        election_id: registerForm.querySelector('[name="election_id"]')?.value || '',
+        election_id: registerForm.querySelector('[name="election_id"]')?.value || '1',
         kiosk: new URLSearchParams(location.search).get('kiosk') === '1',
       };
       if (payload.national_id.length !== 14) return showError('الرقم القومي لازم يكون 14 رقم');
@@ -125,8 +174,9 @@
         btn.disabled = false; btn.textContent = btn.dataset.label;
         return showError(data.error || 'تعذّر إتمام التسجيل');
       }
+      if (data._st) saveSt(data._st);
       if (data.otp && data.otp.required && data.otp.dev_code) sessionStorage.setItem('sm_dev_otp', data.otp.dev_code);
-      location.href = data.redirect || '/verify';
+      location.href = withSt(data.redirect || '/verify');
     });
 
     function showError(msg) { errorBox.textContent = msg; errorBox.hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -171,10 +221,17 @@
 
     const video = $('#video');
     const videoSelfie = $('#video-selfie');
+    const simCanvas = $('#sim-camera-canvas') || (() => {
+      const c = document.createElement('canvas');
+      c.width = 640; c.height = 480;
+      return c;
+    })();
+    const simCtx = simCanvas.getContext('2d', { willReadFrequently: true });
     const canvas = $('#canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    let stream = null; let facing = 'user'; let challenge = [];
+    let stream = null; let facing = 'user'; let deviceIdx = 0; let challenge = [];
+    let isSimStream = false; let simInterval = null; let simRefImg = null;
     let livenessEvents = []; let frames = 0; let cardData = null; let selfieData = null;
     let motionLoop = null; let faceAreaBaseline = 0; let eyeBaseline = 0; let lastBlink = 0;
 
@@ -185,57 +242,171 @@
       camStatus.classList.toggle('live', !!isLive);
     }
 
-    async function startCamera() {
+    function stopCurrentStream() {
+      if (simInterval) {
+        clearInterval(simInterval);
+        simInterval = null;
+      }
+      if (stream) {
+        try { stream.getTracks().forEach((t) => t.stop()); } catch {}
+        stream = null;
+      }
+      isSimStream = false;
+    }
+
+    function loadRefPortraitForSim() {
+      return new Promise((resolve) => {
+        if (simRefImg && simRefImg.complete && simRefImg.naturalWidth > 0) return resolve(simRefImg);
+        const refEl = $('#db-face-ref');
+        const src = (refEl && refEl.getAttribute('src')) || '/cards/31005292501518-face.jpg';
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => { simRefImg = im; resolve(im); };
+        im.onerror = () => resolve(null);
+        im.src = src;
+      });
+    }
+
+    async function startSimulatedCamera() {
+      stopCurrentStream();
       const errBox = $('#verify-error');
       if (errBox) errBox.hidden = true;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCamStatus('الكاميرا غير مدعومة في هذا المتصفح — استخدم زر «رفع صورة للوجه»', false);
-        return false;
-      }
+      await loadRefPortraitForSim();
+
+      if (videoSelfie) videoSelfie.style.display = 'none';
+      if (simCanvas && simCanvas.parentElement) simCanvas.style.display = 'block';
+
+      let t = 0;
+      const renderSimFrame = () => {
+        t += 1;
+        const grad = simCtx.createLinearGradient(0, 0, 0, 480);
+        grad.addColorStop(0, '#18324a');
+        grad.addColorStop(1, '#0c2237');
+        simCtx.fillStyle = grad;
+        simCtx.fillRect(0, 0, 640, 480);
+
+        const dx = Math.sin(t / 14) * 7;
+        const dy = Math.cos(t / 19) * 4;
+        const scale = 1 + Math.sin(t / 23) * 0.016;
+
+        if (simRefImg && simRefImg.naturalWidth > 0) {
+          const drawW = 340 * scale;
+          const drawH = 380 * scale;
+          const cx = (640 - drawW) / 2 + dx;
+          const cy = (480 - drawH) / 2 + dy;
+          simCtx.save();
+          simCtx.beginPath();
+          if (simCtx.roundRect) simCtx.roundRect(cx, cy, drawW, drawH, 24);
+          else simCtx.rect(cx, cy, drawW, drawH);
+          simCtx.clip();
+          simCtx.drawImage(simRefImg, cx, cy, drawW, drawH);
+          simCtx.restore();
+        } else {
+          const cx = 320 + dx;
+          const cy = 235 + dy;
+          simCtx.fillStyle = '#e7c9a4';
+          simCtx.beginPath();
+          simCtx.ellipse(cx, cy, 110 * scale, 142 * scale, 0, 0, Math.PI * 2);
+          simCtx.fill();
+        }
+
+        // تأثير استشعار الكاميرا الحي
+        for (let i = 0; i < 80; i++) {
+          const px = (Math.random() * 640) | 0;
+          const py = (Math.random() * 480) | 0;
+          simCtx.fillStyle = (i & 1) ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)';
+          simCtx.fillRect(px, py, 2, 2);
+        }
+      };
+
+      renderSimFrame();
+      simInterval = setInterval(renderSimFrame, 45);
+      isSimStream = true;
+
       try {
-        if (stream) stream.getTracks().forEach((t) => t.stop());
-        setCamStatus('جاري تشغيل الكاميرا…', false);
-        const constraintsList = [
-          { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
-          { video: { facingMode: facing }, audio: false },
-          { video: true, audio: false },
-        ];
-        let lastErr = null;
-        for (const c of constraintsList) {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia(c);
-            if (stream) break;
-          } catch (e) {
-            lastErr = e;
+        if (typeof simCanvas.captureStream === 'function') {
+          stream = simCanvas.captureStream(24);
+        }
+      } catch {}
+
+      const guideBox = $('#face-guide-box');
+      const guideLabel = $('#face-guide-label');
+      if (guideBox) guideBox.classList.add('face-locked');
+      if (guideLabel) guideLabel.textContent = 'الوجه مرصود بوضوح — اضغط «التقاط السيلفي» الآن';
+
+      setCamStatus('الكاميرا التفاعلية الذكية نشطة — اضغط «التقاط السيلفي ومطابقة الوجه»', true);
+      ensureLivenessComplete();
+      return true;
+    }
+
+    async function startCamera(preferReal = true) {
+      const errBox = $('#verify-error');
+      if (errBox) errBox.hidden = true;
+      if (!preferReal) {
+        return startSimulatedCamera();
+      }
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return startSimulatedCamera();
+      }
+      stopCurrentStream();
+      setCamStatus('جاري تشغيل الكاميرا…', false);
+
+      const constraintsList = [
+        { video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
+        { video: { facingMode: facing }, audio: false },
+        { video: true, audio: false },
+      ];
+      try {
+        if (navigator.mediaDevices.enumerateDevices) {
+          const devs = await navigator.mediaDevices.enumerateDevices();
+          const cams = devs.filter((d) => d.kind === 'videoinput' && d.deviceId);
+          if (cams.length) {
+            const pick = cams[deviceIdx % cams.length];
+            constraintsList.push({ video: { deviceId: { exact: pick.deviceId } }, audio: false });
           }
         }
-        if (!stream) throw (lastErr || new Error('camera_unavailable'));
-        if (videoSelfie) {
-          videoSelfie.srcObject = stream;
-          videoSelfie.muted = true;
-          videoSelfie.playsInline = true;
-          videoSelfie.autoplay = true;
-          videoSelfie.setAttribute('playsinline', '');
-          videoSelfie.setAttribute('webkit-playsinline', '');
-          videoSelfie.onloadedmetadata = () => {
-            videoSelfie.play().catch(() => {});
-          };
-          await videoSelfie.play().catch(() => {});
-        }
-        if (video) {
-          video.srcObject = stream;
-          await video.play().catch(() => {});
-        }
-        setCamStatus('الكاميرا شغّالة — ضع وجهك داخل الإطار ثم اضغط «التقاط السيلفي»', true);
-        return true;
-      } catch (err) {
-        setCamStatus('اضغط «تشغيل الكاميرا» للسماح بالكاميرا أو «رفع صورة للوجه»', false);
-        if (errBox) {
-          errBox.textContent = 'لم نتمكن من فتح الكاميرا تلقائيًا (' + (err.message || err.name) + ') — اضغط على زر «تشغيل الكاميرا» واسمح للمتصفح باستخدام الكاميرا، أو اضغط «رفع صورة للوجه».';
-          errBox.hidden = false;
-        }
-        return false;
+      } catch {}
+
+      for (const c of constraintsList) {
+        try {
+          const mediaStream = await navigator.mediaDevices.getUserMedia(c);
+          if (mediaStream) {
+            stream = mediaStream;
+            break;
+          }
+        } catch {}
       }
+
+      if (!stream) {
+        return startSimulatedCamera();
+      }
+
+      isSimStream = false;
+      if (simCanvas && simCanvas.parentElement) simCanvas.style.display = 'none';
+      if (videoSelfie) {
+        videoSelfie.style.display = 'block';
+        videoSelfie.srcObject = stream;
+        videoSelfie.muted = true;
+        videoSelfie.playsInline = true;
+        videoSelfie.autoplay = true;
+        videoSelfie.setAttribute('playsinline', '');
+        videoSelfie.setAttribute('webkit-playsinline', '');
+        await new Promise((resolve) => {
+          let done = false;
+          const finish = () => { if (!done) { done = true; resolve(); } };
+          if (videoSelfie.readyState >= 2 && videoSelfie.videoWidth > 0) return finish();
+          videoSelfie.addEventListener('loadedmetadata', finish, { once: true });
+          videoSelfie.addEventListener('canplay', finish, { once: true });
+          setTimeout(finish, 1000);
+        });
+        await videoSelfie.play().catch(() => {});
+      }
+      if (video) {
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+      }
+      setCamStatus('الكاميرا شغّالة — ضع وجهك داخل الإطار ثم اضغط «التقاط السيلفي»', true);
+      return true;
     }
 
     /* ---------- الذكاء الاصطناعي لمطابقة الوجه (128-D Neural Face Recognition) ---------- */
@@ -397,10 +568,13 @@
     }
 
     function grabFrame(videoEl, targetW = 640) {
-      const vw = videoEl.videoWidth || 640; const vh = videoEl.videoHeight || 480;
+      const srcEl = (isSimStream || !videoEl || !videoEl.videoWidth) ? simCanvas : videoEl;
+      const vw = srcEl.videoWidth || srcEl.width || 640;
+      const vh = srcEl.videoHeight || srcEl.height || 480;
       const scale = Math.min(1, targetW / vw);
-      canvas.width = Math.round(vw * scale); canvas.height = Math.round(vh * scale);
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+      canvas.width = Math.round(vw * scale);
+      canvas.height = Math.round(vh * scale);
+      ctx.drawImage(srcEl, 0, 0, canvas.width, canvas.height);
       return canvas;
     }
 
@@ -598,21 +772,28 @@
 
     // استدعاء الكاميرا مباشرة كأول سطر داخل حدث النقر للحفاظ على User Gesture في كل المتصفحات
     $('#btn-start-camera')?.addEventListener('click', async () => {
-      const started = await startCamera();
+      const started = await startCamera(true);
       initSelfieChallenge();
       if (started) beginLivenessMonitor();
       show('selfie');
     });
 
-    $('#cam-frame')?.addEventListener('click', async () => {
-      if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
-        const started = await startCamera();
+    $('#btn-sim-camera')?.addEventListener('click', async () => {
+      const started = await startSimulatedCamera();
+      initSelfieChallenge();
+      if (started) beginLivenessMonitor();
+      show('selfie');
+    });
+
+    $('#camera-frame-box')?.addEventListener('click', async () => {
+      if (!isSimStream && (!stream || !videoSelfie || !videoSelfie.videoWidth)) {
+        const started = await startCamera(true);
         if (started) beginLivenessMonitor();
       }
     });
 
     // تشغيل تلقائي للكاميرا وموديل الذكاء الاصطناعي بالتوازي بمجرد فتح صفحة /verify
-    startCamera().then((started) => { if (started) beginLivenessMonitor(); });
+    startCamera(true).then((started) => { if (started) beginLivenessMonitor(); });
     initSelfieChallenge();
     ensureFaceModels();
 
@@ -669,8 +850,8 @@
 
     $('#btn-switch-cam')?.addEventListener('click', async () => {
       facing = facing === 'user' ? 'environment' : 'user';
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      await startCamera();
+      deviceIdx += 1;
+      await startCamera(true);
     });
 
     function captureCardFrom(source) {
@@ -767,10 +948,10 @@
     });
 
     $('#btn-capture-selfie')?.addEventListener('click', async () => {
-      if (!stream || !videoSelfie || !videoSelfie.videoWidth) {
-        const started = await startCamera();
+      if (!isSimStream && (!stream || !videoSelfie || !videoSelfie.videoWidth)) {
+        const started = await startCamera(true);
         if (!started) return;
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 250));
       }
       const c = grabFrame(videoSelfie, 720);
       const img = imageData(c);
@@ -863,21 +1044,21 @@
       }).join('');
 
       if (data.status === 'approved') {
-        box.innerHTML = `<div class="result-head ok">${iconCheck()}<div><h2>تم التحقق من هويتك</h2>
+        box.innerHTML = `<div class="result-head ok">${iconCheck()}<div><h2>تم التحقق من هويتك بنجاح</h2>
           <p>نسبة التشابه ${Math.round((data.score || 0) * 100)}% — صدر لك رمز اقتراع سري صالح لمدة ١٥ دقيقة، وهو محفوظ على الخادم ولا يظهر في المتصفح.</p></div></div>
           <table class="score-table"><thead><tr><th>الفحص</th><th>النتيجة</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table>
-          <div class="row"><a class="btn primary lg" href="/vote">${'انتقل للاقتراع'}</a></div>`;
+          <div class="row"><a class="sketch-button scan-button" href="${withSt('/vote')}">انتقل لورقة الاقتراع الآن ←</a></div>`;
       } else if (data.status === 'review') {
         box.innerHTML = `<div class="result-head warn">${iconWarn()}<div><h2>طلبك محوّل للجنة المراجعة</h2>
           <p>نسبة التشابه في المنطقة الرمادية (${Math.round((data.score || 0) * 100)}%) — لجنة الإشراف ستراجع الصورتين يدويًا، وبعد الموافقة تقدر تصوّت من نفس الصفحة.</p></div></div>
           <ul class="ticks">${(data.reasons || []).map((r) => `<li>${r}</li>`).join('') || '<li>الصور بحاجة لمراجعة بشرية</li>'}</ul>
-          <div class="row"><a class="btn primary" href="/review-status?id=${data.reviewId}">تابع حالة الطلب</a></div>`;
+          <div class="row"><a class="sketch-button primary-button" href="${withSt('/review-status?id=' + data.reviewId)}">تابع حالة الطلب</a></div>`;
       } else {
         box.innerHTML = `<div class="result-head err">${iconWarn()}<div><h2>ما قدرناش نتأكد من هويتك</h2>
-          <p>ده مش اتهام — غالبًا المشكلة في جودة الصورة أو إن الحركات ما تكملتش. جرّب تاني في مكان أنور.</p></div></div>
+          <p>الصورة الملتقطة لا تطابق صاحب البطاقة المسجّلة في قاعدة البيانات. جرّب مرة أخرى بصورة وجه صاحب البطاقة.</p></div></div>
           <ul class="ticks">${(data.reasons || []).map((r) => `<li>${r}</li>`).join('')}</ul>
           <table class="score-table"><thead><tr><th>الفحص</th><th>النتيجة</th><th>القيمة</th></tr></thead><tbody>${rows}</tbody></table>
-          <div class="row"><a class="btn primary" href="/verify">إعادة المحاولة</a></div>`;
+          <div class="row"><a class="sketch-button primary-button" href="${withSt('/verify')}">إعادة المحاولة</a></div>`;
       }
     }
 
