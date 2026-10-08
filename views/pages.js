@@ -16,29 +16,29 @@ const DEMO_CARDS = [
     phone: '01012345678',
     cardImg: '/cards/31005292501518.jpg',
     faceImg: '/cards/31005292501518-face.jpg',
-    badge: 'البطاقة الأساسية للتجربة',
+    badge: 'بطاقة طالب أساسية للتجربة',
   },
   {
-    nid: '30203120102345',
-    name: 'سارة محمود عبد الرحمن',
-    dob: '2002-03-12',
+    nid: '30804150102345',
+    name: 'عمر خالد إبراهيم حسن',
+    dob: '2008-04-15',
     gov: 'القاهرة',
-    gender: 'أنثى',
+    gender: 'ذكر',
     phone: '01123456789',
-    cardImg: '/cards/30203120102345.svg',
-    faceImg: '/cards/30203120102345.svg',
-    badge: 'بطاقة تجريبية ٢',
+    cardImg: '/cards/30804150102345.svg',
+    faceImg: '/cards/30804150102345.svg',
+    badge: 'بطاقة طالب تجريبية ٢',
   },
   {
-    nid: '29807152101234',
-    name: 'مينا عبد المسيح حنا',
-    dob: '1998-07-15',
+    nid: '30907152101234',
+    name: 'يوسف محمود عبد الرحمن',
+    dob: '2009-07-15',
     gov: 'الجيزة',
     gender: 'ذكر',
     phone: '01234567890',
-    cardImg: '/cards/29807152101234.svg',
-    faceImg: '/cards/29807152101234.svg',
-    badge: 'بطاقة تجريبية ٣',
+    cardImg: '/cards/30907152101234.svg',
+    faceImg: '/cards/30907152101234.svg',
+    badge: 'بطاقة طالب تجريبية ٣',
   },
 ];
 
@@ -59,15 +59,15 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
       </div>
       <div class="eyebrow">
         ${icon('sparkle', 14)}
-        <span>تحقق بيومتري حي بالذكاء الاصطناعي</span>
+        <span>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري</span>
       </div>
       <h1>من هويتك ..<br><span>إلى صوتك</span></h1>
       <p>
-        منصة تصويت إلكتروني موثّقة بالتحقق الحي من الوجه والبطاقة الشخصية.
-        نفحص تطابق البصمة البيومترية (128-D) مع كشف الحياة لحظيًا، ثم نصدر لك رمز اقتراع سريًا معزولًا تمامًا عن هويتك.
+        نموذج أولي تجريبي (Proof of Concept) لمنظومة اقتراع إلكتروني سري موثّق لانتخابات اتحاد طلاب مدارس الجمهورية.
+        نفحص تطابق البصمة البيومترية العصبية (128-D) مع كشف الحياة لحظيًا عبر الكاميرا، ثم نعزل هويتك تمامًا ونصنع رمز اقتراع سريًا مشفرًا.
       </p>
       <div class="hero-action-row">
-        <a class="sketch-button primary-button" href="/register${activeElection ? `?e=${activeElection.id}` : ''}">ابدأ التحقق والتصويت</a>
+        <a class="sketch-button primary-button" href="/register${activeElection ? `?e=${activeElection.id}` : ''}">ابدأ التحقق والتصويت التجريبي</a>
         <span class="hand-arrow" aria-hidden="true">←</span>
       </div>
       <div class="investigator-signature">
@@ -76,8 +76,8 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
           <span></span>
         </div>
         <div>
-          <b>مختبر صوت للتوثيق الانتخابي الرقمي</b>
-          <small>128-D FACE MATCH + LIVENESS + ZERO-LINK BALLOT</small>
+          <b>مختبر صوت للتوثيق الانتخابي الرقمي — نموذج PoC</b>
+          <small>STUDENT UNION ELECTIONS // 128-D FACE MATCH + ZERO-LINK BALLOT</small>
         </div>
       </div>
       <div class="trust-note">
@@ -336,7 +336,7 @@ function landing({ elections = [], counts = {}, cards = [] } = {}) {
 
 /* ---------------------------------------------------------- ٢) صفحة التسجيل */
 function registerPage({ election, elections = [], cards = [] } = {}) {
-  const active = election || elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'الانتخابات العامة', state: 'open' };
+  const active = election || elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية - دورة 2026/2027', state: 'open' };
   const sampleCards = cards && cards.length ? cards : DEMO_CARDS;
 
   return `
@@ -586,7 +586,7 @@ function verifyPage({ voter, election, rollCard } = {}) {
             </div>
             <div class="intel-check info">
               <span>الاستحقاق</span>
-              <b>${esc(election ? election.title : 'الانتخابات العامة')}</b>
+              <b>${esc(election ? election.title : 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية')}</b>
             </div>
           </div>
         </div>
@@ -635,7 +635,7 @@ function verifyPage({ voter, election, rollCard } = {}) {
           <div class="camera-controls">
             <button type="button" id="btn-capture-selfie" class="sketch-button scan-button" style="margin-top:0">
               ${icon('camera', 18)}
-              <span>التقاط الصورة الآن</span>
+              <span>التقاط الصورة المباشرة الآن</span>
             </button>
             <div class="camera-sub-actions">
               <button type="button" id="btn-start-camera" class="sketch-button btn-sm">
@@ -644,15 +644,11 @@ function verifyPage({ voter, election, rollCard } = {}) {
               </button>
               <button type="button" id="btn-sim-camera" class="sketch-button btn-sm">
                 ${icon('sparkle', 15)}
-                <span>الكاميرا التفاعلية الذكية</span>
+                <span>المحاكي الذكي التفاعلي</span>
               </button>
               <button type="button" id="btn-switch-cam" class="sketch-button btn-sm">
                 ${icon('camera', 15)}
                 <span>تبديل الكاميرا</span>
-              </button>
-              <button type="button" id="btn-use-selfie-file" class="sketch-button btn-sm">
-                ${icon('upload', 15)}
-                <span>رفع صورة سيلفي</span>
               </button>
             </div>
           </div>
@@ -715,7 +711,7 @@ function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
       <i>ZERO-LINK</i>
     </div>
     <h1>ورقة <span>الاقتراع السري</span></h1>
-    <p class="muted">${esc(election ? election.title : 'الانتخابات العامة')} — اختر مرشحًا واحدًا فقط ثم اضغط اعتماد الصوت.</p>
+    <p class="muted">${esc(election ? election.title : 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية')} — اختر مرشحًا واحدًا فقط ثم اضغط اعتماد الصوت.</p>
   </section>
 
   <div class="ballot-banner" style="margin-bottom:18px">
@@ -797,7 +793,7 @@ function votePage({ election, candidates = [], voter, kiosk = false } = {}) {
 function receiptPage({ receipt, election, electionTitle, total = 0, castAt } = {}) {
   const code = (typeof receipt === 'string' ? receipt : (receipt && (receipt.receipt_code || receipt.code))) || '—';
   const time = castAt || (receipt && (receipt.cast_at || receipt.created_at)) || new Date().toISOString();
-  const title = electionTitle || (election && election.title) || (receipt && receipt.election_title) || 'الانتخابات العامة';
+  const title = electionTitle || (election && election.title) || (receipt && receipt.election_title) || 'انتخابات اتحاد طلاب مدارس الجمهورية';
 
   return `
   <section class="page-head">
@@ -890,7 +886,7 @@ function receiptPage({ receipt, election, electionTitle, total = 0, castAt } = {
 function receiptLookupPage({ code = '', result = null } = {}) {
   const isFound = result && (result.ok || result.kind === 'found');
   const castAt = result && (result.cast_at || (result.ballot && result.ballot.cast_at) || '');
-  const eTitle = result && (result.election_title || (result.election && result.election.title) || 'الانتخابات العامة');
+  const eTitle = result && (result.election_title || (result.election && result.election.title) || 'انتخابات اتحاد طلاب مدارس الجمهورية');
 
   return `
   <section class="page-head">
@@ -1123,7 +1119,7 @@ function cardsDemoPage() {
 
 /* ---------------------------------------------------------- ١٠) صفحة كشك الاقتراع /vote-here */
 function kioskPage({ elections = [], done = false } = {}) {
-  const active = elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'الانتخابات العامة' };
+  const active = elections.find((e) => e.state === 'open') || elections[0] || { id: 1, title: 'انتخابات المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية' };
   return `
   <div class="scanner-frame" style="max-width:680px;margin:28px auto 44px;text-align:center">
     <div class="file-tab">KIOSK // MODE</div>

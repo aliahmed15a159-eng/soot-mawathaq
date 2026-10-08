@@ -65,7 +65,7 @@ RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
 
   // ---------------------------------------------------------------- تسجيل
   const reg = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا',
+    full_name: 'عمر خالد إبراهيم',
     national_id: RUN.national_id,
     birth_date: RUN.birth_date,
     governorate: 'الجيزة',
@@ -96,13 +96,13 @@ RUN.national_id = `2${RUN.yy}${RUN.mm}${RUN.dd}21${RUN.serial}${RUN.gender}`;
   check('رفض رقم قومي غير صحيح', badReg.status === 400 && !badReg.data.ok, badReg.data.error);
 
   const dobMismatch = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا', national_id: RUN.national_id,
+    full_name: 'عمر خالد إبراهيم', national_id: RUN.national_id,
     birth_date: '1990-01-01', governorate: 'الجيزة', phone: '01012345678', consent: true,
   });
   check('رفض تاريخ ميلاد لا يطابق الرقم القومي', dobMismatch.status === 400, dobMismatch.data.error);
 
   const noConsent = await req('POST', '/api/register', {
-    full_name: 'مينا عبد المسيح حنا', national_id: RUN.national_id,
+    full_name: 'عمر خالد إبراهيم', national_id: RUN.national_id,
     birth_date: RUN.birth_date, governorate: 'الجيزة', phone: '01012345678', consent: false,
   });
   check('رفض التسجيل بدون موافقة صريحة', noConsent.status === 400, noConsent.data.error);
