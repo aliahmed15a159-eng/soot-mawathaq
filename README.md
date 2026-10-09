@@ -6,6 +6,7 @@
 - 📘 **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** — الدليل التوثيقي الشامل (شرح فكرة الموقع، طريقة عمله بالتفصيل، البنية الأمنية، وطريقة تشغيله خطوة بخطوة).
 - 📊 **[soot-mawathaq-presentation.pptx](soot-mawathaq-presentation.pptx)** — ملف العرض التقديمي (PowerPoint — ١٢ شريحة عربي RTL بمقاس 16:9).
 - 🖥️ **[public/presentation.html](public/presentation.html)** (أو عبر الرابط `/presentation` عند تشغيل الخادم) — العرض التقديمي التفاعلي المباشر بنفس هوية الموقع.
+- 🔁 **مزامنة ملف PowerPoint مع الصفحة:** بعد أي تعديل على `presentation.html` شغّل `python3 tools/build-presentation-pptx.py` لإعادة بناء الملف (وتحديث النسخة الجذرية معه)، ثم `python3 tools/check-presentation.py` للتحقق من تطابق الشرائح والعناوين والتذييلات والنصوص (يتطلب `pip install python-pptx pillow`).
 
 مبنية بـ **Node.js** بدون أي مكتبات خارجية على الخادم، و**قاعدة بيانات Supabase (PostgreSQL)** — وتشتغل فورًا في **وضع تجربة محلي** لو مفاتيح Supabase غير مضبوطة.
 
@@ -168,7 +169,7 @@ soot-mawathaq/
 ## ٧) الاختبارات
 
 ```bash
-node tools/smoke-test.js          # ٢٤ اختبار على رحلة كاملة عبر HTTP (٢٤/٢٤ ✅)
+node tools/smoke-test.js          # ٢٨ اختبارًا على رحلة كاملة عبر HTTP (٢٨/٢٨ ✅)
 node tools/browser-flow.js        # رحلة حقيقية داخل Chromium (كاميرا اختبارية)
 node tools/visual-check.js shots  # لقطات شاشة + كشف أخطاء الجافاسكربت والتمرير الأفقي
 ```
