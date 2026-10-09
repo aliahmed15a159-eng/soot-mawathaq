@@ -477,6 +477,32 @@
       transform: translateY(-2px);
     }
 
+
+    /* عزل المقاطع اللاتينية داخل النص العربي (مثل 128-D) حتى لا تنعكس */
+    .ltr { direction: ltr; unicode-bidi: isolate; }
+
+    /* ---------- شريحة بطاقة الرقم القومي ---------- */
+    .id-showcase { display: flex; gap: 22px; align-items: flex-start; margin-top: 6px; }
+    .id-card-wrap { position: relative; flex: 0 0 52%; max-width: 600px; }
+    .id-card-img { display: block; width: 100%; height: auto; border: 2.5px solid var(--ink); border-radius: 8px; box-shadow: 6px 6px 0 var(--navy); background: #fff; }
+    .id-pin { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: var(--red); color: #fff; border: 2px solid #fff; box-shadow: 0 0 0 2px var(--ink); font: 900 13px/22px var(--font-mono); text-align: center; }
+    .id-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+    .id-item { display: flex; gap: 10px; align-items: flex-start; background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 7px 12px; font-size: 13.5px; line-height: 1.65; font-weight: 600; }
+    .id-item b { font-weight: 900; color: var(--navy); }
+    .id-pin-sm { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; border: 2px solid var(--ink); font: 900 12px/18px var(--font-mono); text-align: center; margin-top: 2px; }
+    .nid-title { margin: 14px 0 6px; font-size: 14px; font-weight: 800; color: var(--muted); }
+    .nid-title span { font-family: var(--font-mono); color: var(--navy); font-weight: 900; letter-spacing: .04em; }
+    .nid-chips { direction: ltr; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .nid-chip { text-align: center; background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 6px 7px; }
+    .nid-chip .d { display: block; font: 900 20px/1.25 var(--font-mono); letter-spacing: .08em; color: var(--navy); }
+    .nid-chip small { display: block; font-size: 12.5px; font-weight: 900; color: var(--ink); direction: rtl; }
+    .nid-chip em { display: block; font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); direction: rtl; line-height: 1.5; }
+    @media (max-width: 900px) {
+      .id-showcase { flex-direction: column; }
+      .id-card-wrap { flex: none; max-width: none; width: 100%; }
+      .nid-chips { grid-template-columns: repeat(3, 1fr); }
+    }
+
     @media print {
       .deck-topbar, .deck-poc-strip, .deck-drawer { display: none !important; }
       .slide { display: block !important; page-break-after: always; box-shadow: none; border: 2px solid #000; min-height: auto; margin-bottom: 20px; }
@@ -516,7 +542,7 @@
 
     <div class="deck-controls">
       <button type="button" class="sketch-btn" id="btn-prev" title="الشريحة السابقة (السهم الأيمن)">→ السابقة</button>
-      <span class="slide-counter" id="slide-counter">01 / 11</span>
+      <span class="slide-counter" id="slide-counter">01 / 12</span>
       <button type="button" class="sketch-btn primary" id="btn-next" title="الشريحة التالية (السهم الأيسر أو مسافة)">التالية ←</button>
       <button type="button" class="sketch-btn yellow" id="btn-fullscreen">ملء الشاشة ⛶</button>
       <button type="button" class="sketch-btn" onclick="window.print()">طباعة / PDF 🖨️</button>
@@ -546,7 +572,7 @@
         <p class="lead">
           <b>مختبر ونموذج محاكاة تجريبي متقدم للاقتراع البيومتري السري (Proof of Concept)</b><br>
           تم تصميمه لانتخابات <b>المكتب التنفيذي لاتحاد طلاب مدارس الجمهورية (دورة 2026/2027)</b>.
-          يحل المنظومة معادلة التحقق الرقمي عبر الجمع بين <b>التحقق العصبي الحي من الوجه (128-D + Liveness)</b>
+          يحل المنظومة معادلة التحقق الرقمي عبر الجمع بين <b>التحقق العصبي الحي من الوجه (<span class="ltr">128-D + Liveness</span>)</b>
           و<b>معمارية عزل الهوية الصارمة (Zero-Link Architecture)</b> التي تمنع رياضيًا وتقنيًا ربط صوت الناخب بهويته.
         </p>
 
@@ -568,7 +594,7 @@
         <div class="grid-3" style="margin-top:16px">
           <div class="box cyan">
             <span class="box-tag">BIOMETRIC AI</span>
-            <h3>بصمة عصبية 128-D</h3>
+            <h3>بصمة عصبية <span class="ltr">128-D</span></h3>
             <p>مطابقة لحظية عبر المتصفح بين صورة الكاميرا وبيانات البطاقة القومية مع كشف الحيوية ومقاومة التزييف.</p>
           </div>
           <div class="box yellow">
@@ -587,7 +613,7 @@
       <div class="slide-footer">
         <div>المشروع: <b>صوت موثّق — مختبر الاقتراع السري</b></div>
         <div>المسار: <code class="ltr">/presentation</code> · الرابط المباشر: <code class="ltr">soot-mawathaq.vercel.app</code></div>
-        <div>الشريحة <b>01 من 11</b></div>
+        <div>الشريحة <b>01 من 12</b></div>
       </div>
     </section>
 
@@ -645,7 +671,7 @@
 
       <div class="slide-footer">
         <div>محور التحليل: <b>أوجه القصور في المنظومة التقليدية</b></div>
-        <div>الشريحة <b>02 من 11</b></div>
+        <div>الشريحة <b>02 من 12</b></div>
       </div>
     </section>
 
@@ -700,7 +726,7 @@
 
       <div class="slide-footer">
         <div>المعادلة الصعبة: <b>فصل التوثيق عن المحتوى</b></div>
-        <div>الشريحة <b>03 من 11</b></div>
+        <div>الشريحة <b>03 من 12</b></div>
       </div>
     </section>
 
@@ -735,7 +761,7 @@
             <span class="step-badge">2</span>
             <span class="box-tag">الذكاء الاصطناعي</span>
             <h3>كشف الحياة المباشر</h3>
-            <p>التقاط الوجه بالكاميرا واستخراج البصمة العصبية (128-D) وإتمام تحديات الحركة الحية.</p>
+            <p>التقاط الوجه بالكاميرا واستخراج البصمة العصبية (<span class="ltr">128-D</span>) وإتمام تحديات الحركة الحية.</p>
           </div>
           <div class="box yellow">
             <span class="step-badge">3</span>
@@ -761,17 +787,74 @@
 
       <div class="slide-footer">
         <div>المعمارية: <b>Zero-Link Token De-coupling</b></div>
-        <div>الشريحة <b>04 من 11</b></div>
+        <div>الشريحة <b>04 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 5: الذكاء الاصطناعي ورؤية الحاسوب ==================== -->
+    <!-- ==================== الشريحة 5: شكل بطاقة الرقم القومي (جديدة) ==================== -->
     <section class="slide" data-slide="5">
-      <div class="file-tab">SLIDE 05 // AI & COMPUTER VISION</div>
+      <div class="file-tab">SLIDE 05 // NATIONAL ID CARD</div>
+      <div>
+        <div class="slide-topline">
+          <div class="dot-group"><span class="status-dot" style="background:var(--yellow)"></span><b>شكل البطاقة الشخصية المعتمد في المنظومة (ID Card Design)</b></div>
+          <code>EGYPTIAN ID CARD // SAMPLE 31005292501518</code>
+        </div>
+
+        <div class="case-kicker">
+          <span>DOCUMENT</span>
+          <b>بطاقة تحقيق الشخصية — نموذج تجريبي</b>
+          <i>READ &amp; MATCH</i>
+        </div>
+
+        <h2>شكل البطاقة الشخصية: <span>كيف تُقرأ بيانات المواطن وصورته؟</span></h2>
+        <p class="lead">
+          بطاقة تجريبية مُولّدة بأداة البطاقات في المشروع لـ<b>علي أحمد علي محمد</b>، تحمل الحقول التي تعتمد عليها المنظومة: الصورة لمطابقة الوجه، والاسم والرقم القومي للقراءة والمقارنة.
+        </p>
+
+        <div class="id-showcase">
+          <div class="id-card-wrap">
+            <img class="id-card-img" src="/cards/31005292501518.jpg" alt="نموذج بطاقة تحقيق الشخصية — علي أحمد علي محمد" width="1012" height="638">
+            <span class="id-pin" style="left:3.26%;top:19.59%">1</span>
+            <span class="id-pin" style="left:72.63%;top:23.51%">2</span>
+            <span class="id-pin" style="left:49.41%;top:41.07%">3</span>
+            <span class="id-pin" style="left:51.38%;top:57.68%">4</span>
+            <span class="id-pin" style="left:38.54%;top:64.26%">5</span>
+            <span class="id-pin" style="left:7.11%;top:88.71%">6</span>
+          </div>
+          <div class="id-legend">
+            <div class="id-item"><span class="id-pin-sm">1</span><div><b>الصورة الشخصية</b> — تُستخرج منها بصمة الوجه العصبية (<span class="ltr">128-D</span>)، وتُقارَن بسيلفي الناخب الحي لاعتماد الهوية.</div></div>
+            <div class="id-item"><span class="id-pin-sm">2</span><div><b>الاسم</b> — يُطبَّع الاسم العربي (أ/إ/آ ← ا، ى ← ي، ة ← ه) ثم يُطابَق مع الاسم المُدخَل في التسجيل.</div></div>
+            <div class="id-item"><span class="id-pin-sm">3</span><div><b>العنوان والمحافظة</b> — المحافظة تُستخرج من كود الرقم القومي (الخانتان 8–9) وتُطابَق مع بيانات الناخب.</div></div>
+            <div class="id-item"><span class="id-pin-sm">4</span><div><b>النوع ومحل الميلاد</b> — النوع يُستنتج من الخانة 13 (الفردي = ذكر، والزوجي = أنثى).</div></div>
+            <div class="id-item"><span class="id-pin-sm">5</span><div><b>الرقم القومي</b> — 14 رقمًا يقرؤها النظام آليًا من البطاقة، ولا يُحفظ منها إلا بصمة مُجزَّأة (SHA-256 مع ملح سري).</div></div>
+            <div class="id-item"><span class="id-pin-sm">6</span><div><b>تاريخ الميلاد وبيانات الإصدار</b> — تاريخ الميلاد يُطابَق مع الرقم القومي، ورقم المرجع ID-EG وتاريخ الإصدار يظهران أسفل البطاقة.</div></div>
+          </div>
+        </div>
+
+        <div class="nid-title">تشريح الرقم القومي (14 خانة): <span class="ltr">31005292501518</span></div>
+        <div class="nid-chips">
+            <div class="nid-chip"><b class="d">3</b><small>القرن</small><em>2000 – 2099 (الخانة 1)</em></div>
+            <div class="nid-chip" style="background:#f0fdfc"><b class="d">100529</b><small>تاريخ الميلاد</small><em>29 / 05 / 2010 (الخانات 2–7)</em></div>
+            <div class="nid-chip" style="background:#fffdf2"><b class="d">25</b><small>كود المحافظة</small><em>أسيوط (الخانتان 8–9)</em></div>
+            <div class="nid-chip"><b class="d">015</b><small>التسلسل</small><em>(الخانات 10–12)</em></div>
+            <div class="nid-chip" style="background:#f0fbf5"><b class="d">1</b><small>النوع</small><em>فردي = ذكر (الخانة 13)</em></div>
+            <div class="nid-chip"><b class="d">8</b><small>رقم التحقق</small><em>(الخانة 14)</em></div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div>نموذج البطاقة: <b>علي أحمد علي محمد — بيانات تجريبية</b></div>
+        <div>الشريحة <b>05 من 12</b></div>
+      </div>
+    </section>
+
+    <!-- ==================== الشريحة 6: الذكاء الاصطناعي ورؤية الحاسوب ==================== -->
+    <section class="slide" data-slide="6">
+      <div class="file-tab">SLIDE 06 // AI & COMPUTER VISION</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>العمق التقني: الذكاء الاصطناعي ورؤية الحاسوب</b></div>
-          <code>128-D NEURAL EMBEDDINGS & LIVENESS DETECTION</code>
+          <code class="ltr">128-D NEURAL EMBEDDINGS & LIVENESS DETECTION</code>
         </div>
 
         <div class="case-kicker">
@@ -780,14 +863,14 @@
           <i>EDGE INFERENCE</i>
         </div>
 
-        <h2>الذكاء الاصطناعي: <span>بصمة عصبية 128-D وكشف حيوية متعدد الطبقات</span></h2>
+        <h2>الذكاء الاصطناعي: <span>بصمة عصبية <span class="ltr">128-D</span> وكشف حيوية متعدد الطبقات</span></h2>
 
         <div class="grid-2">
           <div class="box cyan">
             <span class="box-tag">NEURAL FACE EMBEDDINGS</span>
-            <h3>استخراج البصمة العصبية 128-D ومطابقتها</h3>
+            <h3>استخراج البصمة العصبية <span class="ltr">128-D</span> ومطابقتها</h3>
             <ul>
-              <li>استخراج 128 متجه عائم (128-Dimensional Float Vectors) يمثل الخصائص الهندسية الدقيقة للوجه.</li>
+              <li>استخراج 128 متجه عائم (<span class="ltr">128-Dimensional Float Vectors</span>) يمثل الخصائص الهندسية الدقيقة للوجه.</li>
               <li>تشغيل نموذج <b>MobileNet-SSD & ResNet</b> محلياً بالكامل على متصفح الناخب (Client-Side Edge Inference) لحماية الخصوصية ومنع إرسال الفيديو للخوادم.</li>
               <li>مطابقة المتجهات عبر المسافة الإقليدية (Euclidean Distance &lt; 0.52) وجيب التمام (Cosine Similarity) بدقة تتجاوز <b>99.4%</b>.</li>
             </ul>
@@ -825,13 +908,13 @@
 
       <div class="slide-footer">
         <div>محرك الذكاء الاصطناعي: <b>MobileNet + ResNet-128D + Liveness Tracker</b></div>
-        <div>الشريحة <b>05 من 11</b></div>
+        <div>الشريحة <b>06 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 6: التشفير والأمان التام ==================== -->
-    <section class="slide" data-slide="6">
-      <div class="file-tab">SLIDE 06 // APPLIED CRYPTOGRAPHY</div>
+    <!-- ==================== الشريحة 7: التشفير والأمان التام ==================== -->
+    <section class="slide" data-slide="7">
+      <div class="file-tab">SLIDE 07 // APPLIED CRYPTOGRAPHY</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>العمق التقني: التشفير ومعمارية الأمان</b></div>
@@ -883,13 +966,13 @@
 
       <div class="slide-footer">
         <div>بروتوكول الأمان: <b>HMAC-SHA256 + Blind Tokens + Nonce Replay Prevention</b></div>
-        <div>الشريحة <b>06 من 11</b></div>
+        <div>الشريحة <b>07 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 7: دراسة الجدوى والعائد القومي ==================== -->
-    <section class="slide" data-slide="7">
-      <div class="file-tab">SLIDE 07 // FEASIBILITY & ROI</div>
+    <!-- ==================== الشريحة 8: دراسة الجدوى والعائد القومي ==================== -->
+    <section class="slide" data-slide="8">
+      <div class="file-tab">SLIDE 08 // FEASIBILITY & ROI</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>دراسة الجدوى والعائد القومي (Feasibility & ROI Study)</b></div>
@@ -956,13 +1039,13 @@
 
       <div class="slide-footer">
         <div>مؤشر الاستدامة: <b>Green Tech + Cost Reduction &gt; 85% + Zero Counting Latency</b></div>
-        <div>الشريحة <b>07 من 11</b></div>
+        <div>الشريحة <b>08 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 8: المقارنة المباشرة المعمارية ==================== -->
-    <section class="slide" data-slide="8">
-      <div class="file-tab">SLIDE 08 // DIRECT COMPARISON</div>
+    <!-- ==================== الشريحة 9: المقارنة المباشرة المعمارية ==================== -->
+    <section class="slide" data-slide="9">
+      <div class="file-tab">SLIDE 09 // DIRECT COMPARISON</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>المقارنة المعمارية المباشرة (Comparative Matrix)</b></div>
@@ -989,7 +1072,7 @@
             <tr>
               <td><b>التحقق من الهوية</b></td>
               <td class="bad">بصري يدوي بالعين المجردة (عرضة للتزوير والتساهل)</td>
-              <td class="good">بيومتري عصبي 128-D فوري + كشف حيوية متعدد المستويات</td>
+              <td class="good">بيومتري عصبي <span class="ltr">128-D</span> فوري + كشف حيوية متعدد المستويات</td>
             </tr>
             <tr>
               <td><b>منع تكرار التصويت</b></td>
@@ -1022,13 +1105,13 @@
 
       <div class="slide-footer">
         <div>المعيار: <b>تطبيق المعايير الدولية للاقتراع الموثوق (E2E Verifiable Voting)</b></div>
-        <div>الشريحة <b>08 من 11</b></div>
+        <div>الشريحة <b>09 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 9: سيناريو التطبيق الطلابي ==================== -->
-    <section class="slide" data-slide="9">
-      <div class="file-tab">SLIDE 09 // STUDENT ELECTIONS 2026/2027</div>
+    <!-- ==================== الشريحة 10: سيناريو التطبيق الطلابي ==================== -->
+    <section class="slide" data-slide="10">
+      <div class="file-tab">SLIDE 10 // STUDENT ELECTIONS 2026/2027</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>سيناريو التطبيق: انتخابات اتحاد طلاب مدارس الجمهورية</b></div>
@@ -1089,13 +1172,13 @@
 
       <div class="slide-footer">
         <div>النموذج التطبيقي: <b>انتخابات اتحاد طلاب مدارس الجمهورية (دورة 2026/2027)</b></div>
-        <div>الشريحة <b>09 من 11</b></div>
+        <div>الشريحة <b>10 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 10: خارطة الطريق المستقبلية ==================== -->
-    <section class="slide" data-slide="10">
-      <div class="file-tab">SLIDE 10 // FUTURE ROADMAP</div>
+    <!-- ==================== الشريحة 11: خارطة الطريق المستقبلية ==================== -->
+    <section class="slide" data-slide="11">
+      <div class="file-tab">SLIDE 11 // FUTURE ROADMAP</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>خارطة الطريق المستقبلية (Future Roadmap)</b></div>
@@ -1146,13 +1229,13 @@
 
       <div class="slide-footer">
         <div>الرؤية المستقبلية: <b>Zero-Knowledge Voting & Universal Digital Inclusion</b></div>
-        <div>الشريحة <b>10 من 11</b></div>
+        <div>الشريحة <b>11 من 12</b></div>
       </div>
     </section>
 
-    <!-- ==================== الشريحة 11: الختام والتجربة الحية ==================== -->
-    <section class="slide" data-slide="11">
-      <div class="file-tab">SLIDE 11 // LIVE DEMO & CONCLUSION</div>
+    <!-- ==================== الشريحة 12: الختام والتجربة الحية ==================== -->
+    <section class="slide" data-slide="12">
+      <div class="file-tab">SLIDE 12 // LIVE DEMO & CONCLUSION</div>
       <div>
         <div class="slide-topline">
           <div class="dot-group"><span class="status-dot"></span><b>شريحة الختام والتجربة الحية (Conclusion & Live Demo)</b></div>
@@ -1206,7 +1289,7 @@
       <div class="slide-footer">
         <div><b>إعداد وتطوير: م / علي أحمد (Ali Ahmed) — مبتكر مشروع «صوت موثّق» ✨</b></div>
         <div>جاهزون للإجابة على جميع استفسارات السادة المحكمين 💬</div>
-        <div>الشريحة <b>11 من 11</b></div>
+        <div>الشريحة <b>12 من 12</b></div>
       </div>
     </section>
 
@@ -1218,13 +1301,14 @@
     <button type="button" class="drawer-dot" data-goto="2">02 // المشكلة القبلية</button>
     <button type="button" class="drawer-dot" data-goto="3">03 // المعضلة الكبرى</button>
     <button type="button" class="drawer-dot" data-goto="4">04 // الحل ومعمارية Zero-Link</button>
-    <button type="button" class="drawer-dot" data-goto="5">05 // الذكاء الاصطناعي 128-D</button>
-    <button type="button" class="drawer-dot" data-goto="6">06 // التشفير والأمان</button>
-    <button type="button" class="drawer-dot" data-goto="7">07 // الجدوى والعائد القومي</button>
-    <button type="button" class="drawer-dot" data-goto="8">08 // المقارنة المعمارية</button>
-    <button type="button" class="drawer-dot" data-goto="9">09 // السيناريو الطلابي</button>
-    <button type="button" class="drawer-dot" data-goto="10">10 // خارطة الطريق</button>
-    <button type="button" class="drawer-dot" data-goto="11">11 // الختام والتجربة الحية</button>
+    <button type="button" class="drawer-dot" data-goto="5">05 // بطاقة الرقم القومي</button>
+    <button type="button" class="drawer-dot" data-goto="6">06 // الذكاء الاصطناعي <span class="ltr">128-D</span></button>
+    <button type="button" class="drawer-dot" data-goto="7">07 // التشفير والأمان</button>
+    <button type="button" class="drawer-dot" data-goto="8">08 // الجدوى والعائد القومي</button>
+    <button type="button" class="drawer-dot" data-goto="9">09 // المقارنة المعمارية</button>
+    <button type="button" class="drawer-dot" data-goto="10">10 // السيناريو الطلابي</button>
+    <button type="button" class="drawer-dot" data-goto="11">11 // خارطة الطريق</button>
+    <button type="button" class="drawer-dot" data-goto="12">12 // الختام والتجربة الحية</button>
   </nav>
 
   <script>

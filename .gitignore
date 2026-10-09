@@ -7,3 +7,5 @@ data/demo-db.json*
 data/review/
 *.log
 .DS_Store
+submission/
+__pycache__/
