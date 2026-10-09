@@ -4,7 +4,10 @@
 
 ### 📂 ملفات الشرح والعرض التقديمي (جديد)
 - 📘 **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** — الدليل التوثيقي الشامل (شرح فكرة الموقع، طريقة عمله بالتفصيل، البنية الأمنية، وطريقة تشغيله خطوة بخطوة).
-- 📊 **[soot-mawathaq-presentation.pptx](soot-mawathaq-presentation.pptx)** — ملف العرض التقديمي (PowerPoint — ١٢ شريحة عربي RTL بمقاس 16:9).
+- 📊 **[soot-mawathaq-presentation-v2.pptx](public/soot-mawathaq-presentation-v2.pptx)** — ملف العرض التقديمي (PowerPoint — ١١ شريحة بمقاس 16:9، مطابقة تمامًا لصفحة العرض على الموقع). زر «تحميل PowerPoint» في `/presentation` يحمّل هذا الملف.
+  - لإعادة بنائه بعد أي تعديل على `public/presentation.html`: `npm run deck` (يحتاج متصفح Chromium: `npx playwright install chromium`).
+  - نسخة PDF للتسليم: `node tools/build-deck.js --out <مجلد>`.
+  - يبقى حجم الملف أقل من ٤٫٥ MB، لأن الموقع يخدم الملف عبر دالة Vercel وحدّها ٤٫٥ MB.
 - 🖥️ **[public/presentation.html](public/presentation.html)** (أو عبر الرابط `/presentation` عند تشغيل الخادم) — العرض التقديمي التفاعلي المباشر بنفس هوية الموقع.
 
 مبنية بـ **Node.js** بدون أي مكتبات خارجية على الخادم، و**قاعدة بيانات Supabase (PostgreSQL)** — وتشتغل فورًا في **وضع تجربة محلي** لو مفاتيح Supabase غير مضبوطة.
@@ -127,7 +130,7 @@ soot-mawathaq/
 │   ├── styles.css             الهوية البصرية المصرية الفرعونية
 │   └── assets/                خطوط مضغوطة (Reem Kufi + Cairo) وأيقونات SVG
 ├── supabase/schema.sql        مخطط قاعدة البيانات + RLS + النتائج (جاهز للتنفيذ)
-├── tools/                     اختبارات وأدوات (smoke / browser-flow / visual-check)
+├── tools/                     اختبارات وأدوات (smoke / browser-flow / visual-check / build-deck)
 └── .env.example               كل الإعدادات موثّقة
 ```
 
@@ -168,7 +171,8 @@ soot-mawathaq/
 ## ٧) الاختبارات
 
 ```bash
-node tools/smoke-test.js          # ٢٤ اختبار على رحلة كاملة عبر HTTP (٢٤/٢٤ ✅)
+node tools/smoke-test.js          # ٢٨ اختبارًا على رحلة كاملة عبر HTTP (٢٨/٢٨ ✅) — يحتاج الخادم شغّالًا
+node tools/phase2-check.js        # ٢٧ اختبارًا للمرحلة الثانية (٢٧/٢٧ ✅) — يعمل بدون خادم
 node tools/browser-flow.js        # رحلة حقيقية داخل Chromium (كاميرا اختبارية)
 node tools/visual-check.js shots  # لقطات شاشة + كشف أخطاء الجافاسكربت والتمرير الأفقي
 ```

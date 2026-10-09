@@ -136,6 +136,10 @@ async function handle(req, res) {
   if (req.method === 'GET' && pathname === '/presentation') {
     if (serveStatic(req, res, '/presentation.html')) return;
   }
+  // الاسم القديم لملف العرض (النسخة ذات الـ 12 شريحة) — نوجّه أي رابط قديم إلى النسخة الحالية
+  if (req.method === 'GET' && pathname === '/soot-mawathaq-presentation.pptx') {
+    return redirect(res, '/soot-mawathaq-presentation-v2.pptx');
+  }
   if (req.method === 'GET' && (pathname === '/' ? false : serveStatic(req, res, pathname))) return;
 
   /* ---------- الصحة ---------- */

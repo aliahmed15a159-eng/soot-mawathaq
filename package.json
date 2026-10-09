@@ -10,13 +10,15 @@
     "test": "node tools/smoke-test.js",
     "test:flow": "node tools/browser-flow.js",
     "test:visual": "node tools/visual-check.js shots",
-    "seed": "node tools/seed-supabase.js"
+    "seed": "node tools/seed-supabase.js",
+    "deck": "node tools/build-deck.js"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
-    "playwright": "^1.48.0"
+    "playwright": "^1.48.0",
+    "pptxgenjs": "^4.0.1"
   },
   "dependencies": {
     "qrcode": "^1.5.4"
